@@ -1,5 +1,5 @@
 #define AppName "PT2VHF Sat Tool"
-#define AppVersion "0.2.1"
+#define AppVersion "1.0.0"
 #ifndef BuildFlavor
   #define BuildFlavor "Win11-x64"
 #endif
