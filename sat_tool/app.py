@@ -956,6 +956,121 @@ class MainWindow(QMainWindow):
         age=abs((now_utc()-self.sat.epoch.utc_datetime().replace(tzinfo=timezone.utc)).total_seconds()/86400)
         return age<=7
 
+    def trail_changed(self,*args):
+        period=self.trail_period.currentText()
+        self.trail_custom.setVisible(period=="Personalizado")
+        self.config.values.update({
+            "trail_period":period,"trail_direction":self.trail_direction.currentText(),
+            "trail_custom_hours":float(self.trail_custom.value())})
+        self.config.save()
+        self.track_cache_key=None
+        self.update_map()
+
+    def requested_track_period(self):
+        period=self.trail_period.currentText()
+        direction=self.trail_direction.currentText()
+        hours=float(self.trail_custom.value()) if period=="Personalizado" else float(period.split()[0]) if period!="Última passagem" else 2.0
+        return hours, ("Última passagem" if period=="Última passagem" else direction)
+
+    def refresh_track_async(self):
+        if self.sat is None:return
+        ident=str(self.sat_combo.currentData())
+        span,direction=self.requested_track_period()
+        timestamp=now_utc()
+        key=(ident,span,direction,int(timestamp.timestamp()//300))
+        if key==self.track_cache_key or "trail" in self.pending_jobs:return
+        self.track_pending_key=key
+        sat=self.sat
+        try:site=self.station()
+        except Exception:return
+        def work():
+            last_pass=None
+            if direction=="Última passagem":
+                recent=predict_passes(sat,site,now=timestamp-timedelta(hours=26),hours=26,ts=self.ts)
+                completed=[p for p in recent if p["los"]<=timestamp]
+                last_pass=completed[-1] if completed else None
+            old_bounds,future_bounds=track_period_bounds(timestamp,span,direction,last_pass)
+            past=ground_track_between(sat,*old_bounds,ts=self.ts) if old_bounds else []
+            future=ground_track_between(sat,*future_bounds,ts=self.ts) if future_bounds else []
+            caption="Última passagem reconstruída" if last_pass is not None else "Histórico reconstruído + previsão por OMM"
+            return key,past,future,caption
+        self.background("trail",work)
+
+    def select_next_candidate(self):
+        event=self.next_candidate
+        if not event:return
+        ident=str(event["id"])
+        self.search.clear()
+        index=self.sat_combo.findData(ident)
+        if index<0:return
+        self.sat_combo.setCurrentIndex(index)
+        ch=event["channel"]
+        for i,option in enumerate(self.options):
+            # Match the operating service without applying any CAT command.
+            if option.get("downlink")==ch["downlink_hz"] or (
+                    option.get("downlink",0)<=ch["downlink_hz"]<=option.get("downlink_high",0)):
+                self.mode_combo.setCurrentIndex(i+1)
+                break
+
+    def update_next_indicator(self):
+        now=now_utc()
+        try:site=self.station()
+        except Exception:
+            self.next_candidate=None
+            self.next_select.setEnabled(False)
+            self.next_event_label.setText("Cadastre latitude/longitude e escolha os modos da estação")
+            self.next_countdown.setText("--:--:--")
+            self.next_times.setText("AOS — · TCA — · LOS —")
+            self.next_frequencies.setText("RX/TX: aguardando localização")
+            self.pass_progress.setValue(0)
+            return
+        rows={sid:load_transmitters(self.config.dir,int(sid))
+              for sid in set(p["id"] for p in self.passes)}
+        c=self.config.values
+        event=select_next_pass(self.passes,rows,c.get("radio_modes",[]),c.get("radio_bands",[]),
+                               now,self.enabled_satellite_ids())
+        self.next_candidate=event
+        self.next_select.setEnabled(event is not None)
+        if event is None:
+            self.next_event_label.setText("Nenhuma passagem com canal publicado compatível")
+            self.next_countdown.setText("--:--:--")
+            self.next_times.setText("Consulte seleção FM/SSB/CW, bandas, elevação e dados SatNOGS")
+            self.next_frequencies.setText("Sem dados de frequências compatíveis · não inferir uplink")
+            self.pass_progress.setValue(0)
+            return
+        status,countdown=status_at(event,now)
+        channel=event["channel"]
+        self.next_event_label.setText(f'{status} · {event["name"]} · {channel["mode"]}'+
+                                      (" · RX apenas" if channel["rx_only"] else " · RX/TX"))
+        self.next_countdown.setText(countdown)
+        if event["in_progress"]:
+            self.next_event_label.setStyleSheet("font-size:14px;font-weight:800;color:#69e3bc")
+        else:
+            self.next_event_label.setStyleSheet("font-size:14px;font-weight:800;color:#70d8ed")
+        fmt=lambda dt:dt.astimezone().strftime("%d/%m %H:%M:%S") if dt else "—"
+        self.next_times.setText(f'AOS {fmt(event["aos"])} · TCA {fmt(event.get("tca"))} · LOS {fmt(event["los"])} · Máx {event["max_el"]:.0f}° (hora local)')
+        progress=(now-event["aos"]).total_seconds()/max(1,(event["los"]-event["aos"]).total_seconds())
+        self.pass_progress.setValue(round(max(0,min(1,progress))*1000))
+        try:
+            ident=event["id"]
+            sat=self.plan_satellites.get(ident)
+            if sat is None:
+                sat=make_satellite(self.omm[ident],self.ts)
+                self.plan_satellites[ident]=sat
+            age=orbital_age_days(sat.epoch.utc_datetime().replace(tzinfo=timezone.utc),now)
+            if age>7:
+                self.next_frequencies.setText(f"OMM/TLE antigo ({age:.1f} dias); previsão Doppler indisponível. Atualize dados.")
+                return
+            when=now if event["in_progress"] else event["aos"]
+            radial=position(sat,site,when=when,ts=self.ts)["radial_m_s"]
+            f=frequency_prediction(channel,radial)
+            rx=f'RX {f["rx_hz"]/1e6:.6f} MHz ({f["rx_offset_hz"]:+d} Hz)'
+            tx=f'TX {f["tx_hz"]/1e6:.6f} MHz ({f["tx_offset_hz"]:+d} Hz)' if f["tx_hz"] is not None else "TX indisponível (RX apenas)"
+            moment="AGORA" if event["in_progress"] else "PREVISTO NO AOS"
+            self.next_frequencies.setText(f'{moment} · {rx} · {tx} · TLE/OMM {age:.1f} d · apenas cálculo (CAT não acionado)')
+        except Exception as exc:
+            self.next_frequencies.setText(f"Doppler indisponível: {exc}")
+
     def refresh_passes(self):
         try:station=self.station()
         except Exception:
