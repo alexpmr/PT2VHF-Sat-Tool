@@ -1108,21 +1108,30 @@ class MainWindow(QMainWindow):
             station=self.station()
             pos=position(self.sat,station,ts=self.ts)
             self.last_pos=pos
-            track=ground_track(self.sat,ts=self.ts)
-            circle=footprint(pos['sat_lat'],pos['sat_lon'],pos['footprint_radius_deg'])
-            payload={"name":self.sat.name,"satellite":{"lat":pos['sat_lat'],"lon":pos['sat_lon'],"height_km":pos['height_km']},
+            self.refresh_track_async()
+            circle=footprint(pos["sat_lat"],pos["sat_lon"],pos["footprint_radius_deg"])
+            payload={"name":self.sat.name,
+                     "satellite":{"lat":pos["sat_lat"],"lon":pos["sat_lon"],"height_km":pos["height_km"]},
                      "station":{"lat":station.lat,"lon":station.lon,"callsign":station.callsign},
-                     "track":track,"footprint":circle,
-                     "label":f"{self.sat.name} · elevação {pos['elevation']:.1f}° · alcance {pos['range_km']:.0f} km"}
+                     "track_past":self.track_cache["past"] if self.track_cache_key and self.track_cache_key[0]==str(self.sat_combo.currentData()) else [],
+                     "track_future":self.track_cache["future"] if self.track_cache_key and self.track_cache_key[0]==str(self.sat_combo.currentData()) else [],
+                     "footprint":circle,
+                     "label":f"{self.sat.name} · elevação {pos['elevation']:.1f}° · alcance {pos['range_km']:.0f} km · órbita TLE/OMM"}
             self.map.page().runJavaScript('window.updateOrbit && window.updateOrbit('+json.dumps(payload)+');')
+            # A past error banner must not survive a successful map render.
+            self.map_desc.setText("Trajetória passada reconstruída · futuro previsto por OMM/TLE · Natural Earth offline")
+        except (ValueError,TypeError) as exc:
+            self.map_desc.setText(f"Cadastre uma estação válida para calcular a órbita: {exc}")
         except Exception as exc:
-            self.map_desc.setText(f"Para ver órbitas/passagens, cadastre sua estação. {exc}")
+            self.map_desc.setText(f"Erro ao atualizar a órbita: {exc}")
+            self.log(f"Mapa/órbita: {exc}")
 
     def tick(self):
         # No network calls in the GUI tick; asynchronous check respects the configured period.
         if int(now_utc().timestamp()) % 60 == 0:
             self.check_for_updates()
         now=now_utc();self.utc.setText(now.strftime('%d/%m/%Y  %H:%M:%S UTC'))
+        self.update_next_indicator()
         if self.sat:
             try:
                 station=self.station()
@@ -1173,6 +1182,13 @@ class MainWindow(QMainWindow):
             if key.split(':')[1]==str(self.sat_combo.currentData()):
                 self.photo.setHtml(photo_html(data),QUrl("https://commons.wikimedia.org/"))
             return
+        if key=='trail':
+            track_key,past,future,description=data
+            self.track_cache_key=track_key
+            self.track_cache={"past":past,"future":future}
+            self.map_desc.setText(description+" · Natural Earth offline")
+            self.update_map()
+            return
         if key=='cat-poll':
             if self.radio.connected:self.render_radio_state(data)
             return
@@ -1216,6 +1232,8 @@ class MainWindow(QMainWindow):
                 for j,value in enumerate((p['name'],aos,peak,los,f"{p['max_el']:.0f}",modes)):
                     self.pass_table.setItem(i,j,QTableWidgetItem(value))
             self.log(f'Previsão: {len(data)} passagens nas próximas 36 h (lista limitada a 100)')
+            self.update_next_indicator()
+            self.prefetch_upcoming_modes()
 
     def background_error(self,key,message):
         self.pending_jobs.discard(key)
@@ -1236,6 +1254,8 @@ class MainWindow(QMainWindow):
             if key=='update-download' or self.manual_update_requested:
                 QMessageBox.warning(self,'Falha de atualização',message)
             self.manual_update_requested = False
+        if key=='trail':
+            self.map_desc.setText(f"Falha no cálculo da trajetória: {message}")
         if key=='omm':self.summary.setText('Sem atualização: usando cache OMM, se existente')
         if key.startswith('photo:') and key.split(':')[1]==str(self.sat_combo.currentData()):
             self.photo.setHtml(photo_html(None))
