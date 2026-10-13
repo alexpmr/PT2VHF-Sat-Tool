@@ -1,5 +1,19 @@
 # PT2VHF Sat Tool — backlog
 
+## v1.0.0 — entregas e limites de validação
+- [x] Selecionar a próxima passagem por satélite habilitado, modos FM/SSB/CW e bandas da estação usando canais publicados no SatNOGS.
+- [x] Indicador com nome/NORAD associado à agenda, AOS/TCA/LOS, elevação máxima, contagem regressiva até AOS e tempo restante até LOS; barra de progresso.
+- [x] Exibir RX/downlink e TX/uplink **calculados e rotulados como previsão Doppler**, com offsets separados em Hz; previsão futura usa AOS e passagem ativa usa hora atual, baseada na época OMM/TLE.
+- [x] Respeitar RX-only, transponder linear normal/invertido, TLE vencido (>7 dias), sem CAT automático ao clicar no evento.
+- [x] Controles de trajetória principal: Última passagem, 2/5/10/24 h, personalizado 0,5–48 h e modos Passado/Futuro/Ambos, com escolhas persistentes e worker orbital.
+- [x] Trajetória passada reconstruída em linha sólida e prevista em tracejado; segmentação no meridiano de 180°; cálculo em cache sem downloads no refresh visual.
+- [x] Corrigir o CSS legado do mapa (`inset` → bordas explícitas) para mitigar renderização reduzida no QtWebEngine do Win7; limpar aviso de estação quando mapa renderizado.
+- [x] Preservar instalador e portátil **.exe direto** (Win7 e Win11); ampliar testes automatizados para janelas temporais, serviços FM/SSB/CW, beacons e Doppler.
+- [ ] Validar **visualmente** janela redimensionada e mapa no Windows 7 SP1 físico, trajetória escolhida e contador em passagem real; conferir precisão com AMSAT/SatNOGS e a época orbital.
+- [ ] Validar Doppler real no Kenwood TS-2000 via CAT, identificação dos VFOs, inversão, comandos SAT/TRACE, leitura MAIN/SUB e atualização ao alterar o rádio manualmente.
+- [ ] Verificar transição automática AOS/LOS com satélites simultâneos e banda VHF/UHF, bem como atualização e migração do EXE portátil em Windows 7/11 reais.
+- [ ] Funcionalidade de fotos e status operacional de todos os satélites depende de dados externos e licença confirmada; catálogo Orbital não certifica satélite ativo.
+
 ## Mapa principal — janela configurável de visualização da trajetória orbital
 - [ ] Adicionar controle compacto **Período da órbita / Trajetória** à barra do mapa, para escolher a janela temporal representada na tela. **Sugestões** de presets: **Última passagem**, **2 h**, **5 h**, **10 h**, **24 h** e **Personalizado**; os períodos não são limites fixos e poderão ser alterados após testes de usabilidade.
 - [ ] Diferenciar claramente **histórico da trajetória** (trecho já percorrido, linha sólida), **posição atual** (marcador de satélite) e **trajetória futura prevista** (linha tracejada). Oferecer opções separadas `Passado`, `Futuro` ou `Ambos`, com indicação explícita do intervalo, evitando confundir histórico calculado com posições recebidas.
