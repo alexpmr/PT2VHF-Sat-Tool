@@ -27,6 +27,7 @@ from .config import Config
 from .satellite_info import orbital_characteristics, operational_characteristics, characteristics_text
 from .updater import check_for_update, download_update, install_flavor, launch_staged_update
 from .profile import choose_satellites, capability, render_service
+from .media import find_photo, photo_html
 from .core import (Station, now_utc, make_satellite, position, ground_track, footprint,
                    predict_passes, transponder_options, doppler_frequencies, paired_linear_uplink)
 
@@ -155,6 +156,10 @@ class MainWindow(QMainWindow):
         self.sat_detail = label("Atualize o catálogo OMM")
         self.sat_detail.setStyleSheet("color:#a9c5d9")
         pv.addWidget(self.sat_detail)
+        self.photo=QWebEngineView()
+        self.photo.setMaximumHeight(165)
+        self.photo.setHtml(photo_html(None))
+        pv.addWidget(self.photo)
         self.refresh_omm_btn = QPushButton("Atualizar órbitas (OMM + TLE)")
         self.refresh_omm_btn.clicked.connect(self.refresh_catalog)
         pv.addWidget(self.refresh_omm_btn)
@@ -657,6 +662,9 @@ class MainWindow(QMainWindow):
         self.config.values['selected_norad']=ident
         self.config.save()
         age=(now_utc()-self.sat.epoch.utc_datetime().replace(tzinfo=timezone.utc)).total_seconds()/86400
+        self.photo.setHtml(photo_html(None))
+        photo_name=str(item.get("OBJECT_NAME",ident))
+        self.background('photo:'+str(ident),lambda:find_photo(self.config.dir,photo_name,ident))
         self.sat_detail.setText(
             characteristics_text(item,load_transmitters(self.config.dir,int(ident))) +
             f"\nÉpoca {'TLE' if item.get('TLE_LINE1') else 'OMM'}: {self.sat.epoch.utc_strftime('%d/%m/%Y %H:%M UTC')} ({age:+.1f} d)")
@@ -872,6 +880,10 @@ class MainWindow(QMainWindow):
 
     def background_result(self,key,data):
         self.pending_jobs.discard(key)
+        if key.startswith('photo:'):
+            if key.split(':')[1]==str(self.sat_combo.currentData()):
+                self.photo.setHtml(photo_html(data),QUrl("https://commons.wikimedia.org/"))
+            return
         if key=='cat-poll':
             if self.radio.connected:self.render_radio_state(data)
             return
@@ -931,6 +943,8 @@ class MainWindow(QMainWindow):
                 QMessageBox.warning(self,'Falha de atualização',message)
             self.manual_update_requested = False
         if key=='omm':self.summary.setText('Sem atualização: usando cache OMM, se existente')
+        if key.startswith('photo:') and key.split(':')[1]==str(self.sat_combo.currentData()):
+            self.photo.setHtml(photo_html(None))
 
     def enabled_satellite_ids(self):
         c=self.config.values
