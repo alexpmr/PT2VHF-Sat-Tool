@@ -568,15 +568,30 @@ class MainWindow(QMainWindow):
                 raise RuntimeError("O sistema não forneceu um provedor de localização")
             self.pos_source=source
             source.positionUpdated.connect(self.position_found)
-            source.updateTimeout.connect(lambda:QMessageBox.warning(self,"Localização","Sem coordenadas: habilite a permissão de localização do Windows ou digite manualmente."))
+            self.location_waiting=True
+            if getattr(self,"location_timer",None) is None:
+                self.location_timer=QTimer(self)
+                self.location_timer.setSingleShot(True)
+                self.location_timer.timeout.connect(self.location_timed_out)
+            self.location_timer.start(13000)
             source.requestUpdate(12000)
             self.log("Solicitada a localização do computador ao sistema operacional")
         except Exception as exc:
             QMessageBox.warning(self,"Localização indisponível",f"{exc}\nInforme as coordenadas manualmente ou habilite a localização no Windows.")
 
+    def location_timed_out(self):
+        if getattr(self,"location_waiting",False):
+            self.location_waiting=False
+            self.log("Geolocalização: o serviço do Windows não retornou coordenadas em 13 s")
+            QMessageBox.warning(self,"Localização indisponível",
+                "O Windows não retornou coordenadas. Verifique as permissões de localização ou informe latitude/longitude manualmente.")
+
     def position_found(self, info):
         coord=info.coordinate()
         if not coord.isValid(): return
+        self.location_waiting=False
+        timer=getattr(self,"location_timer",None)
+        if timer is not None:timer.stop()
         self.lat.setText(f"{coord.latitude():.7f}")
         self.lon.setText(f"{coord.longitude():.7f}")
         if coord.altitude() and math.isfinite(coord.altitude()):
@@ -604,8 +619,8 @@ class MainWindow(QMainWindow):
             self.map_radio_label.setText("CAT desconectado · RX — MHz · TX — MHz · Modo —")
             self.cat_status.setText("● Desconectado · CAT inativo")
             self.cat_status.setStyleSheet("color:#efc17b;font-size:12px")
-            self.cat_rx.setText("RX / DOWNLINK (CAT)\\n— MHz")
-            self.cat_tx.setText("TX / UPLINK (CAT)\\n— MHz")
+            self.cat_rx.setText("RX / DOWNLINK (CAT)\n— MHz")
+            self.cat_tx.setText("TX / UPLINK (CAT)\n— MHz")
             self.cat_details.setText("SAT —  ·  MAIN —  ·  sem leitura atual")
             self.log("CAT desconectado")
             return
@@ -637,8 +652,8 @@ class MainWindow(QMainWindow):
         self.map_radio_label.setStyleSheet("font-size:13px;color:#69e3bc;font-weight:700")
         self.cat_status.setText(f"● Conectado · {st.model} · SAT {'ON' if st.sat else 'OFF'}")
         self.cat_status.setStyleSheet("color:#69e3bc;font-size:12px")
-        self.cat_rx.setText(f"RX / DOWNLINK (CAT)\\n{st.downlink/1e6:.6f} MHz")
-        self.cat_tx.setText(f"TX / UPLINK (CAT)\\n{st.uplink/1e6:.6f} MHz")
+        self.cat_rx.setText(f"RX / DOWNLINK (CAT)\n{st.downlink/1e6:.6f} MHz")
+        self.cat_tx.setText(f"TX / UPLINK (CAT)\n{st.uplink/1e6:.6f} MHz")
         self.cat_details.setText(f"SAT {'ON' if st.sat else 'OFF'}  ·  MAIN {st.mode}  ·  Última leitura {self.last_cat_success.astimezone():%H:%M:%S} local")
 
     def refresh_catalog(self):
@@ -1028,8 +1043,8 @@ class MainWindow(QMainWindow):
             self.map_radio_label.setStyleSheet("color:#e98b81;font-weight:700")
             self.cat_status.setText("● Erro de leitura CAT")
             self.cat_status.setStyleSheet("color:#e98b81;font-size:12px")
-            self.cat_rx.setText("RX / DOWNLINK (CAT)\\n—")
-            self.cat_tx.setText("TX / UPLINK (CAT)\\n—")
+            self.cat_rx.setText("RX / DOWNLINK (CAT)\n—")
+            self.cat_tx.setText("TX / UPLINK (CAT)\n—")
             self.cat_details.setText("Leitura falhou · confira LOGs / CAT")
         if key.startswith('update-'):
             self.version_btn.setText(f'v{__version__} · atualização indisponível')
