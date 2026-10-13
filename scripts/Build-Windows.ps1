@@ -3,7 +3,7 @@
 param([ValidateSet('Win7-x86','Win11-x64')][string]$Target = 'Win11-x64')
 $ErrorActionPreference = 'Stop'
 Set-Location (Split-Path -Parent $PSScriptRoot)
-$Version = '0.1.3'
+$Version = '0.2.0'
 if ($Target -eq 'Win7-x86') {
   $PythonSelector = '-3.8-32'
   $Deps = 'requirements-win7.txt'
@@ -44,11 +44,14 @@ $Result = Start-Process -FilePath (Resolve-Path $Bin).Path -ArgumentList @('--se
 if (-not (Test-Path $Report)) { throw "EXE nao gerou relatorio: $($Result.ExitCode)" }
 $Smoke = Get-Content $Report -Raw | ConvertFrom-Json
 if ($Result.ExitCode -ne 0 -or $Smoke.status -ne 'passed' -or -not $Smoke.frozen) { throw "EXE falhou: $(Get-Content $Report -Raw)" }
-New-Item -Path (Join-Path $AppDir 'portable.flag') -ItemType File -Force | Out-Null
-$Portable = "dist/PT2VHF-Sat-Tool-v$Version-$Target-Portable.zip"
-if (Test-Path $Portable) { Remove-Item $Portable -Force }
-Compress-Archive -Path "$AppDir/*" -DestinationPath $Portable -CompressionLevel Optimal -Force
-Remove-Item (Join-Path $AppDir 'portable.flag') -Force
+$Portable = "dist/PT2VHF-Sat-Tool-v$Version-$Target-Portable.exe"
+Invoke-Checked 'Compilando portatil onefile EXE' $Exe @('-m','PyInstaller','--noconfirm','--clean','--windowed','--onefile','--name',"PT2VHF-Sat-Tool-v$Version-$Target-Portable",'--add-data','sat_tool/map.html;sat_tool','--add-data','scripts/apply-update.ps1;scripts','--collect-all','skyfield','--collect-binaries','numpy','run.py')
+if (-not (Test-Path $Portable)) { throw "Portable EXE ausente: $Portable" }
+$PortableReport = Join-Path (Resolve-Path 'dist').Path "portable-selftest-$Target.json"
+$PResult = Start-Process -FilePath (Resolve-Path $Portable).Path -ArgumentList @('--self-test',('"' + $PortableReport + '"'),$ExpectedBinding) -PassThru -Wait
+if (-not (Test-Path $PortableReport)) { throw "Portable EXE nao gerou relatorio (exit $($PResult.ExitCode))" }
+$PData = Get-Content $PortableReport -Raw | ConvertFrom-Json
+if ($PResult.ExitCode -ne 0 -or $PData.status -ne 'passed') { throw "Falha portable: $(Get-Content $PortableReport -Raw)" }
 $ISCC = 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe'
 if (-not (Test-Path $ISCC)) { throw 'Inno Setup 6 nao encontrado: https://jrsoftware.org/isinfo.php' }
 Invoke-Checked 'Compilando instalador' $ISCC @("/DBuildFlavor=$Target","/DMinTarget=$Minimum","/DTargetArch=$Arch",'installer/setup.iss')
