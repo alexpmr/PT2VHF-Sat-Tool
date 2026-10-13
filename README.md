@@ -1,3 +1,5 @@
+<p align="center"><img src="assets/branding/logo-horizontal.svg" alt="PT2VHF Sat Tool" width="560"></p>
+
 # PT2VHF Sat Tool
 
 ## Downloads — instaladores e portáteis
