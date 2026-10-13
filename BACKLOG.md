@@ -1,5 +1,20 @@
 # PT2VHF Sat Tool — backlog
 
+## v0.2.0 — entregas integradas (homologação de campo pendente)
+- [x] Quatro downloads EXE diretos: Win7 x86 Setup e Portable onefile; Win11 x64 Setup e Portable onefile. **Nenhum portátil em ZIP**.
+- [x] Atualizador seleciona `Portable.exe` por variante, verifica SHA-256 e substitui o EXE somente depois do encerramento; os dados locais ficam em `data/`.
+- [x] Perfil da estação com seleção de modos **FM/SSB/CW** e bandas, persistente; fabricante Kenwood, modelo TS-2000 e porta serial configuráveis.
+- [x] Sugestão inicial de satélites por modos/bandas baseada em canais SatNOGS em cache e candidatos históricos rotulados como **não confirmados**; seleção manual por NORAD prevalece.
+- [x] Filtro de satélites da página principal pelos habilitados, agenda de próximas passagens AOS/TCA/LOS/elevação/mode e seleção no mapa.
+- [x] Foto de satélite pesquisada no Wikimedia Commons com metadados de licença e crédito, sem usar imagem quando a identificação for incerta.
+- [x] Configuração de intervalo TLE/OMM (4 h por padrão, mínimo 2 h), aba Sobre e painel CAT acima do mapa com frequências reais FA/FB e modo, polling não bloqueante.
+- [x] Autoteste nos executáveis Setup/Portable congelados no Windows CI (NumPy/Skyfield/Qt); falha impede publicação.
+- [ ] Validar instalação e primeiro início em Windows 7 SP1 e Windows 11 físicos, com porta COM real, QtWebEngine e provedores orbitais.
+- [ ] Homologar comandos CAT, sequenciamento SAT/TRACE e Doppler no TS-2000 real sem transmissão involuntária.
+- [ ] Obter índice operacional completo e atualizado de todos os transponders ativos (hoje a descoberta é progressiva e usa cache/candidatos marcados como não confirmados).
+- [ ] Automatizar controle SUB/TX mode conforme CAT TS-2000 validado e ampliar metadados fotográficos oficiais do operador.
+- [ ] Migração de Portable ZIP da v0.1.x para Portable EXE da v0.2.x deve ser **manual**: a edição antiga procura ZIP e não entende o novo formato. Manter a pasta `data/` ao lado do novo EXE.
+
 ## MVP 0.1.1 (código e pipelines preparados — validar em Windows/TS-2000)
 - [x] Windows desktop PySide6 (Win11) e PySide2 (Win7) com mapa central, satélite e órbita desenhados sobre OpenStreetMap.
 - [x] Estação cadastrável: indicativo, latitude, longitude, altitude, elevação mínima.
@@ -83,10 +98,10 @@
 - CelesTrak Usage Policy: https://celestrak.org/usage-policy.php
 - Wikimedia Commons metadata: https://www.mediawiki.org/wiki/Extension:CommonsMetadata
 
-## Regra de distribuição — instaladores EXE diretos (todas as releases)
+## Regra de distribuição — QUATRO EXEs DIRETOS (a partir de v0.2.0)
 - [x] Os instaladores Windows 7 x86 e Windows 11 x64 devem ser gerados e publicados como arquivos **`*-Setup.exe`**, disponíveis para download direto nos assets da Release e no README.
 - [x] **Nunca compactar o instalador em ZIP** nem exigir que o usuário extraia arquivos para executá-lo.
-- [x] O pacote **portátil permanece `*-Portable.zip`**, pois contém o executável e suas dependências em diretórios.
+- [x] **O portátil deve ser um único `*-Portable.exe`** via PyInstaller onefile, nunca ZIP a partir da v0.2.0.
 - [ ] Nas próximas versões, validar no pipeline a existência dos dois assets `*-Setup.exe` independentes e rejeitar `*-Setup.zip`, `*-Installer.zip` ou equivalentes.
 
 ## Validação obrigatória antes de chamar versão estável
