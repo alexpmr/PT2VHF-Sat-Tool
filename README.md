@@ -2,28 +2,42 @@
 
 ## Downloads — instaladores e portáteis
 
-**Versão v0.1.3 — Windows 7 SP1 e Windows 11.** Os links abaixo estarão ativos após o pipeline de compilação e autoteste concluir. Binários compilados ainda exigem validação nos sistemas Windows reais.
+**Versão v0.2.0 — Windows 7 SP1 e Windows 11.** Todos os quatro downloads são arquivos `.exe`. A versão portátil é um **EXE único**, sem ZIP ou instalador; os links tornam-se válidos depois do sucesso da compilação e publicação.
 
 | Windows | Instalável | Portátil |
 | --- | --- | --- |
-| **Windows 7 SP1** (x86; executável de 32 bits também para Win7 x64) | [Instalador Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v0.1.3/PT2VHF-Sat-Tool-v0.1.3-Win7-x86-Setup.exe) | [Portable Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v0.1.3/PT2VHF-Sat-Tool-v0.1.3-Win7-x86-Portable.zip) |
-| **Windows 11** (x64) | [Instalador Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v0.1.3/PT2VHF-Sat-Tool-v0.1.3-Win11-x64-Setup.exe) | [Portable Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v0.1.3/PT2VHF-Sat-Tool-v0.1.3-Win11-x64-Portable.zip) |
+| **Windows 7 SP1** (x86; executável de 32 bits também para Win7 x64) | [Instalador Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v0.2.0/PT2VHF-Sat-Tool-v0.2.0-Win7-x86-Setup.exe) | [Portable Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v0.2.0/PT2VHF-Sat-Tool-v0.2.0-Win7-x86-Portable.exe) |
+| **Windows 11** (x64) | [Instalador Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v0.2.0/PT2VHF-Sat-Tool-v0.2.0-Win11-x64-Setup.exe) | [Portable Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v0.2.0/PT2VHF-Sat-Tool-v0.2.0-Win11-x64-Portable.exe) |
 
-**Formato dos downloads:** os instaladores são fornecidos **diretamente em `.exe`**, sem ZIP. Somente a edição **portátil** é distribuída em `.zip`, contendo o executável e as bibliotecas necessárias.
+**Formato dos downloads:** tanto instaladores quanto portáteis são entregues diretamente como arquivos **`.exe`**. O portátil inclui as dependências dentro do mesmo EXE (PyInstaller onefile) e não requer descompactação.
 
 **[Todas as releases](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases)** · **[Acompanhar compilação](https://github.com/alexpmr/PT2VHF-Sat-Tool/actions)**
 
 - **Instalável:** instalação por usuário, atalho e desinstalação, atualização pelo aplicativo usando o Setup de sua edição.
-- **Portátil:** descompacte e execute `PT2VHF-Sat-Tool.exe`. Configurações armazenadas na pasta `data/` ao lado do programa e preservadas no update.
+- **Portátil:** execute diretamente `PT2VHF-Sat-Tool-v0.2.0-*-Portable.exe` (um único arquivo). Configurações ficam em `data/` ao lado do EXE, preservadas após atualizações.
 - **Win7:** Python 3.8 x86 + PySide2/Qt5 + PyInstaller 5.13.2 (legado, precisa ser validado no Windows 7 real).
 - **Win11:** Python 3.11 x64 + PySide6/Qt6 + PyInstaller 6.13.0.
 - Arquivos SHA256 acompanham cada compilação. A versão Windows 7 é experimental; não confundir sucesso do CI com homologação em campo.
 
 ---
 
+## Seleção inteligente e agenda orbital
+- Em **Configurações**, selecione os modos da estação (**FM, SSB e CW**) e as bandas disponíveis. O TS-2000 está disponível como modelo inicial em **Rádio / Conexão CAT**; a porta COM pode ser selecionada ou digitada.
+- Ao abrir, os satélites candidatos são sugeridos por capacidades e dados conhecidos; hipóteses históricas são rotuladas **não confirmadas** e não autorizam transmissão. A disponibilidade operacional depende dos dados de transponders.
+- Em **Satélites para a página principal**, confirme favoritos ou exclusões por NORAD. A agenda lateral mostra apenas habilitados, ordenada por AOS, com TCA, LOS, elevação máxima e modos; o mapa central acompanha o selecionado.
+- Na área do mapa, o painel CAT mostra as frequências realmente lidas **FA RX / FB TX**, SAT e modo MAIN, independentemente das frequências nominais ou calculadas por Doppler. A consulta CAT é assíncrona, aproximadamente a cada segundo, com alerta quando a leitura está desatualizada.
+- A seção **TLE / Efemérides** permite ajustar a cadência (mínimo de 2 h); a aba **Sobre** apresenta versão, fontes e licença.
+- Fotos são pesquisadas no **Wikimedia Commons** por título correspondente, com autoria/licença; quando não identificáveis, mostra-se um aviso em vez de uma imagem não verificada.
+
+## Publicação e verificações dos EXEs
+- O GitHub Actions gera dois instaladores `*-Setup.exe` e dois portáteis `*-Portable.exe`, um par por plataforma.
+- O portable usa PyInstaller **--onefile** e executa seu próprio teste de inicialização NumPy/Skyfield/Qt antes da release. Os checksums SHA-256 são publicados separadamente.
+- O GitHub Actions roda em Windows Server 2022; isso **não comprova execução em Windows 7 SP1 real**, funcionalidade do QtWebEngine em todo hardware, conexão serial TS-2000 ou homologação CAT/Doppler.
+- O aplicativo não transmite nem envia PTT; conecte o rádio somente após conferir alimentação, cabo serial/nível elétrico, parâmetros CAT, frequências e permissões.
+
 ## Descrição do aplicativo
 
-Aplicação independente para Windows, voltada ao rastreamento de satélites amadores e ao controle CAT do **Kenwood TS-2000** pela porta serial. **Versão 0.1.3 — MVP ainda sem homologação em TS-2000 físico.**
+Aplicação independente para Windows, voltada ao rastreamento de satélites amadores e ao controle CAT do **Kenwood TS-2000** pela porta serial. **Versão 0.2.0 — MVP ainda sem homologação em TS-2000 físico.**
 
 ## Principais funcionalidades
 
@@ -40,7 +54,7 @@ Aplicação independente para Windows, voltada ao rastreamento de satélites ama
 
 - **Win7 SP1 atualizado (x86 ou x64)** ou **Win11 x64**, conforme o pacote; porta serial RS-232 do Kenwood TS-2000 com cabo/interface elétrica apropriada; mesma configuração de baud rate no rádio e no aplicativo.
 - Internet para atualizar efemérides, transponders e carregar as camadas do mapa; dados em cache permanecem disponíveis para cálculo orbital, sujeitos ao vencimento.
-- Para executar em desenvolvimento: Windows 11 usa Python 3.11 + PySide6 e `requirements-win11.txt`. Windows 7 usa Python 3.8 (última linha com suporte ao Win7), PySide2, `requirements-win7.txt`. `python run.py` inicia a aplicação. **O pacote Portable inclui Python e bibliotecas; não instale Python no computador apenas para usá-lo.**
+- Para executar em desenvolvimento: Windows 11 usa Python 3.11 + PySide6 e `requirements-win11.txt`. Windows 7 usa Python 3.8 (última linha com suporte ao Win7), PySide2, `requirements-win7.txt`. `python run.py` inicia a aplicação. **O portátil onefile inclui Python e bibliotecas; não instale Python no computador apenas para executá-lo.**
 
 ## Uso e segurança
 
@@ -56,7 +70,7 @@ Aplicação independente para Windows, voltada ao rastreamento de satélites ama
 
 ## Publicação do código e das releases
 
-O repositório `alexpmr/PT2VHF-Sat-Tool` começou com `README.md` e `LICENSE` MIT. A publicação no `main` dispara a compilação e, somente após os autotestes dos EXEs, publica a release v0.1.3 com os quatro arquivos e respectivos checksums.
+O repositório `alexpmr/PT2VHF-Sat-Tool` começou com `README.md` e `LICENSE` MIT. A publicação no `main` dispara a compilação e, somente após os autotestes dos EXEs, publica a release v0.2.0 com os quatro arquivos e respectivos checksums.
 
 ## Fontes, créditos e licenças
 
@@ -91,7 +105,7 @@ A aba **Satélites** é gerada a partir do **catálogo atual CelesTrak OMM/TLE**
 
 
 
-## Diagnóstico de inicialização (v0.1.3)
+## Diagnóstico de inicialização (v0.2.0)
 
 O build anterior apenas verificava a existência do EXE. Agora o GitHub Actions **executa os binários congelados**, verificando importação nativa do NumPy, BLAS, Skyfield, Qt e da aplicação. Se falhar, o pipeline bloqueia a release.
 
