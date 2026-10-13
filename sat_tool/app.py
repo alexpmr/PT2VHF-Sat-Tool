@@ -1090,6 +1090,75 @@ class MainWindow(QMainWindow):
         self.refresh_tracked_table()
         self.refresh_passes()
 
+    def catalog_filtered_ids(self):
+        ids=[]
+        for row in range(self.catalog_table.rowCount()):
+            cell=self.catalog_table.item(row,0)
+            if cell is not None:ids.append(str(cell.data(Qt.UserRole)))
+        return ids
+
+    def bulk_catalog_selection(self,select):
+        """One config save and one passes recompute, even for hundreds of satellites."""
+        all_ids=set(self.omm)
+        ids=set(self.catalog_filtered_ids()) if self.scope_filtered.isChecked() else all_ids
+        if not ids:
+            self.catalog_progress.setText("Nenhum satélite corresponde à pesquisa")
+            return
+        current=set(self.enabled_satellite_ids())
+        new=(current|ids) if select else (current-ids)
+        self.config.values["satellite_selection"]=sorted(new)
+        self.config.save()
+        self.refresh_tracked_table()
+        self.filter_sats(self.search.text())
+        self.refresh_passes()
+        self.catalog_progress.setText(f"Seleção salva: {len(new)} de {len(self.omm)} satélites · ação em {len(ids)} registros")
+        self.log(f"Seleção: {'marcados' if select else 'desmarcados'} {len(ids)} satélites (sem CAT)")
+
+    def refresh_catalog_transmitters(self):
+        choice=self.catalog_refresh_scope.currentText()
+        if choice=="Selecionado":
+            selected=self.catalog_table.selectedItems()
+            ids=[str(selected[0].data(Qt.UserRole))] if selected else [str(self.sat_combo.currentData())] if self.sat_combo.currentData() else []
+        elif choice=="Habilitados":
+            ids=self.enabled_satellite_ids()
+        else:ids=self.catalog_filtered_ids()
+        ids=list(dict.fromkeys(ident for ident in ids if ident in self.omm))
+        if not ids:
+            self.catalog_progress.setText("Selecione pelo menos um satélite")
+            return
+        if "tx-batch" in self.pending_jobs:
+            self.catalog_progress.setText("Já existe atualização em execução")
+            return
+        if len(ids)>25:
+            reply=QMessageBox.question(self,"Atualizar frequências",
+                f"Consultar SatNOGS para {len(ids)} satélites? Requisições sequenciais e canceláveis.",
+                QMessageBox.Yes|QMessageBox.No,QMessageBox.No)
+            if reply!=QMessageBox.Yes:return
+        self.freq_update_cancel=False
+        self.refresh_catalog_freq.setEnabled(False)
+        self.stop_catalog_freq.setEnabled(True)
+        self.catalog_progress.setText(f"SatNOGS: iniciando 0/{len(ids)}")
+        def work():
+            import time
+            stats={"total":len(ids),"ok":0,"failed":[],"cancelled":False}
+            for i,ident in enumerate(ids,1):
+                if self.freq_update_cancel:
+                    stats["cancelled"]=True;break
+                try:
+                    rows=refresh_transmitters(self.config.dir,int(ident))
+                    stats["ok"]+=1
+                    self.events.result.emit("tx-batch-item",(ident,rows,i,len(ids)))
+                except Exception as exc:
+                    stats["failed"].append(f"{ident}: {exc}")
+                    self.events.result.emit("tx-batch-item",(ident,None,i,len(ids)))
+                if i<len(ids):time.sleep(0.4)
+            return stats
+        self.background("tx-batch",work)
+
+    def cancel_catalog_transmitters(self):
+        self.freq_update_cancel=True
+        self.catalog_progress.setText("Cancelamento solicitado; aguardando consulta atual")
+
     def refresh_satellite_table(self, text=None):
         text=(text if isinstance(text,str) else self.catalog_search.text()).casefold().strip()
         rows=[]
