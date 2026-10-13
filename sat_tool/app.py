@@ -98,7 +98,7 @@ class MainWindow(QMainWindow):
         self.load_fields()
         self.populate_catalog(load_orbits(self.config.dir))
         self.update_ports()
-        if all(age_hours(self.config.dir, f) is None or age_hours(self.config.dir, f)>24 for f in ("amateur_omm.json","amateur.tle")):
+        if age_hours(self.config.dir,"amateur_omm.json") is None or age_hours(self.config.dir,"amateur_omm.json")>self.config.values.get("tle_update_hours",4):
             self.refresh_catalog()
         self.tick_timer = QTimer(self)
         self.tick_timer.timeout.connect(self.tick)
@@ -380,6 +380,14 @@ class MainWindow(QMainWindow):
         clear=QPushButton("Limpar logs da tela");clear.clicked.connect(self.log_view.clear)
         ll.addWidget(clear)
         root.addTab(logs,"LOGs / CAT")
+        about=QWidget();about_layout=QVBoxLayout(about)
+        about_layout.addWidget(label(f"PT2VHF Sat Tool v{__version__} — Controle CAT do TS-2000"))
+        about_layout.addWidget(label("Distribuição: Windows 7 / Windows 11; instalador Setup EXE e portátil EXE único."))
+        about_layout.addWidget(label("Elementos orbitais: CelesTrak OMM/TLE. Transponders e modos: SatNOGS (créditos e licenças nos provedores)."))
+        about_layout.addWidget(label("Repositório: https://github.com/alexpmr/PT2VHF-Sat-Tool · Licença MIT"))
+        btn=QPushButton("Verificar versão");btn.clicked.connect(lambda:self.request_update(manual=True))
+        about_layout.addWidget(btn);about_layout.addStretch()
+        root.addTab(about,"Sobre")
         self.statusBar().showMessage("PT2VHF Sat Tool • Monitoramento passivo | TX/PTT não controlado")
 
     def load_fields(self):
@@ -567,6 +575,10 @@ class MainWindow(QMainWindow):
         self.map_radio_label.setStyleSheet("font-size:13px;color:#69e3bc;font-weight:700")
 
     def refresh_catalog(self):
+        age=age_hours(self.config.dir,"amateur_omm.json")
+        if age is not None and age<2:
+            self.summary.setText(f"OMM em cache há {age:.1f} h; nova consulta permitida após 2 h")
+            return
         self.summary.setText("Atualizando elementos orbitais…")
         self.background('omm',lambda:refresh_orbits(self.config.dir))
 
@@ -847,11 +859,16 @@ class MainWindow(QMainWindow):
                                 self.apply_freqs(silent=True)
             except Exception:
                 self.visibility.setText('Cadastre a estação')
-        if self.radio.connected and int(now.timestamp())%8==0 and not self.doppler_checkbox.isChecked():
-            try:self.render_radio_state(self.radio.poll())
-            except Exception as exc:
-                self.log(f'Erro leitura CAT: {exc}')
-                self.doppler_checkbox.setChecked(False)
+        if self.radio.connected and not self.doppler_checkbox.isChecked():
+            interval=max(1,int(self.config.values.get("poll_interval_s",1)))
+            if now.timestamp()-self.last_radio_poll>=interval:
+                self.last_radio_poll=now.timestamp()
+                self.background("cat-poll",self.radio.poll)
+        if self.radio.connected and self.last_cat_success:
+            age=(now-self.last_cat_success).total_seconds()
+            if age>10:
+                self.map_radio_label.setText(f"CAT sem leitura há {age:.0f}s · valores desatualizados")
+                self.map_radio_label.setStyleSheet("color:#e3ad61;font-weight:700")
 
     def background_result(self,key,data):
         self.pending_jobs.discard(key)
@@ -884,6 +901,8 @@ class MainWindow(QMainWindow):
             ident=key.split(':')[1]
             if ident==self.sat_combo.currentData():
                 self.choose_cached_modes(int(ident))
+            self.refresh_tracked_table()
+            if self.config.values.get("satellite_selection") is None:self.refresh_passes()
             self.log(f'Transponders SatNOGS atualizados para NORAD {ident}: {len(data)}')
         elif key=='passes':
             self.passes=data[:75]
@@ -900,6 +919,9 @@ class MainWindow(QMainWindow):
     def background_error(self,key,message):
         self.pending_jobs.discard(key)
         self.log(f'Falha {key}: {message}')
+        if key=="cat-poll":
+            self.map_radio_label.setText("CAT erro de leitura · dados desatualizados")
+            self.map_radio_label.setStyleSheet("color:#e98b81;font-weight:700")
         if key.startswith('update-'):
             self.version_btn.setText(f'v{__version__} · atualização indisponível')
             if self.update_dialog:
