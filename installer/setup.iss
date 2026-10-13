@@ -1,23 +1,27 @@
 #define AppName "PT2VHF Sat Tool"
-#define AppVersion "1.1.0"
+#define AppVersion "1.1.1"
 #ifndef BuildFlavor
   #define BuildFlavor "Win11-x64"
 #endif
 #ifndef MinTarget
-  #define MinTarget "10.0.22000"
+  #define MinTarget "10.0.17763"
 #endif
 #ifndef TargetArch
   #define TargetArch "x64compatible"
 #endif
 [Setup]
-; Win7 and Win11 have separate install identities to prevent overwriting
+; Win7/Qt5 and modern Win10/11/Qt6 have separate install identities to prevent overwriting
 ; an older (legacy Qt5) edition with a Qt6 executable by accident.
 #if BuildFlavor == "Win7-x86"
 AppId={{733AA8A2-ABBD-41FA-8D26-BDE04044D23B}
 #else
 AppId={{833AA8A2-ABBD-41FA-8D26-BDE04044D23B}
 #endif
+#if BuildFlavor == "Win11-x64"
+AppName={#AppName} (Windows 10/11 x64)
+#else
 AppName={#AppName} ({#BuildFlavor})
+#endif
 AppVersion={#AppVersion}
 AppPublisher=PT2VHF
 AppPublisherURL=https://github.com/alexpmr/PT2VHF-Sat-Tool
