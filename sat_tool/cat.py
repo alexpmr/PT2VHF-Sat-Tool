@@ -44,6 +44,37 @@ def satellite_mode_command(answer: str) -> str:
     return f"SA1{p[1]}10000;"
 
 
+
+def parse_smeter(answer: str, receiver: int) -> int:
+    """SM0/SM1 reports 4 digits, scaled 0-30 MAIN, 0-15 SUB."""
+    prefix=f"SM{receiver}"
+    if receiver not in (0,1) or not answer.startswith(prefix) or not answer.endswith(";"):
+        raise ValueError("Resposta de S-meter inválida")
+    digits=answer[3:-1]
+    limit=30 if receiver==0 else 15
+    if len(digits)!=4 or not digits.isdigit() or int(digits)>limit:
+        raise ValueError("S-meter fora da escala do TS-2000")
+    return int(digits)
+
+
+def parse_power_setting(answer:str) -> int:
+    if not answer.startswith("PC") or not answer.endswith(";") or len(answer)!=6:
+        raise ValueError("Resposta PC inválida")
+    digits=answer[2:5]
+    if not digits.isdigit() or not 0<=int(digits)<=100:
+        raise ValueError("Potência configurada inválida")
+    return int(digits)
+
+
+def parse_meter(answer:str):
+    if not answer.startswith("RM") or not answer.endswith(";") or len(answer)!=8:
+        raise ValueError("Resposta RM inválida")
+    scale=answer[2]
+    value=answer[3:7]
+    if scale not in "0123" or not value.isdigit() or int(value)>30:
+        raise ValueError("Escala RM inválida")
+    return {"0":"—","1":"SWR","2":"COMP","3":"ALC"}[scale],int(value)
+
 @dataclass
 class RadioState:
     connected: bool = False
@@ -53,6 +84,11 @@ class RadioState:
     uplink: int | None = None
     mode: str = "?"
     sat_raw: str = ""
+    signal_main: int | None = None
+    signal_sub: int | None = None
+    power_set_w: int | None = None
+    meter_type: str = ""
+    meter_value: int | None = None
 
 
 class TS2000:
@@ -118,6 +154,25 @@ class TS2000:
         self.state.downlink = parse_frequency(fa, "FA")
         self.state.uplink = parse_frequency(fb, "FB")
         self.state.mode = MODES_REV.get(md[2:3], "?")
+        # Optional read-only telemetry. Some firmware/operating modes do not reply.
+        # Do not turn a working CAT session into an error if a meter is unavailable.
+        self.state.signal_main=None
+        self.state.signal_sub=None
+        self.state.power_set_w=None
+        self.state.meter_type=""
+        self.state.meter_value=None
+        for command,expected,parse,attr in (
+            ("SM0;","SM0",lambda raw:parse_smeter(raw,0),"signal_main"),
+            ("SM1;","SM1",lambda raw:parse_smeter(raw,1),"signal_sub"),
+            ("PC;","PC",parse_power_setting,"power_set_w"),
+            ("RM;","RM",parse_meter,"meter")):
+            try:
+                value=parse(self._exchange(command,expected))
+                if attr=="meter":
+                    self.state.meter_type,self.state.meter_value=value
+                else:setattr(self.state,attr,value)
+            except (TimeoutError,ValueError,ConnectionError) as exc:
+                self.logger(f"CAT leitura opcional {command}: {exc}")
         return self.state
 
     def enable_satellite_mode(self):
