@@ -628,7 +628,12 @@ class MainWindow(QMainWindow):
         cell=self.catalog_table.item(row,0)
         if cell is None:return
         ident=str(cell.data(Qt.UserRole))
+        if ident not in self.enabled_satellite_ids():
+            self.config.values["satellite_selection"]=list(dict.fromkeys(self.enabled_satellite_ids()+[ident]))
+            self.config.save()
+            self.refresh_tracked_table()
         self.search.clear()
+        self.filter_sats("")
         idx=self.sat_combo.findData(ident)
         if idx>=0:self.sat_combo.setCurrentIndex(idx)
         self.centralWidget().setCurrentIndex(0)
@@ -638,7 +643,9 @@ class MainWindow(QMainWindow):
         self.sat_combo.blockSignals(True)
         self.sat_combo.clear()
         search=text.casefold().strip()
+        enabled=set(self.enabled_satellite_ids())
         for ident,o in sorted(self.omm.items(),key=lambda item:item[1].get('OBJECT_NAME','')):
+            if ident not in enabled:continue
             name=o.get('OBJECT_NAME',ident)
             if search in f"{name} {ident}".casefold():self.sat_combo.addItem(f"{name}  ·  {ident}",ident)
         if selected:
@@ -987,15 +994,16 @@ class MainWindow(QMainWindow):
             if entry and entry.checkState()==Qt.Checked:ids.append(str(entry.data(Qt.UserRole)))
         self.config.values["satellite_selection"]=ids
         self.config.save()
+        self.filter_sats(self.search.text())
         self.refresh_passes()
 
     def bulk_select_satellites(self,select):
         self.config.values["satellite_selection"]=list(self.omm) if select else []
-        self.config.save();self.refresh_tracked_table();self.refresh_passes()
+        self.config.save();self.refresh_tracked_table();self.filter_sats(self.search.text());self.refresh_passes()
 
     def restore_auto_selection(self):
         self.config.values["satellite_selection"]=None
-        self.config.save();self.refresh_tracked_table();self.refresh_passes()
+        self.config.save();self.refresh_tracked_table();self.filter_sats(self.search.text());self.refresh_passes()
 
     def save_profile(self):
         modes=[name for name,w in self.station_modes.items() if w.isChecked()]
@@ -1003,7 +1011,7 @@ class MainWindow(QMainWindow):
         if not modes or not bands:
             QMessageBox.warning(self,"Perfil inválido","Escolha ao menos um modo e uma banda.");return
         self.config.values.update({"radio_modes":modes,"radio_bands":bands})
-        self.config.save();self.refresh_tracked_table();self.refresh_passes()
+        self.config.save();self.refresh_tracked_table();self.filter_sats(self.search.text());self.refresh_passes()
 
     def connect_from_settings(self):
         port=self.config_port.currentText().strip()
