@@ -13,6 +13,26 @@
 - [x] Workflow Windows em matriz (Win7 SP1 x86 e Win11 x64): dois ZIP portáteis e dois instaladores Inno Setup, com checksums e release automática em tag.
 - [x] Log CAT RX/TX, eventos e falhas; dados do usuário persistentes.
 
+## Configurações — conexão CAT e rádio
+- [ ] Criar grupo dedicado **Conexão / Rádio** na aba Configurações, separado da configuração da estação.
+- [ ] **Fabricante** selecionável; valor padrão **Kenwood**. Não apresentar fabricantes ainda não suportados como operacionais.
+- [ ] **Modelo** dependente do fabricante; padrão **TS-2000**. Preparar drivers CAT por fabricante/modelo, com identificação, capacidades e comandos específicos.
+- [ ] **Porta serial COM** selecionável com nome e descrição do adaptador; botão **Atualizar portas**; permitir entrada manual e informar porta ausente/ocupada.
+- [ ] Configurar e persistir **baud rate**, bits de dados, paridade, stop bits e timeout conforme capacidades do equipamento; padrões TS-2000: 9600, 8N1. Validar parâmetros antes de conectar.
+- [ ] Botões **Conectar / Desconectar** com indicador de conexão e mensagem de erro detalhada; testar comando de identificação CAT (`ID;`) e confrontar resposta com modelo selecionado.
+- [ ] Salvar fabricante, modelo, porta e parâmetros; nunca habilitar escrita CAT/Doppler sem conexão válida e autorização explícita do operador.
+
+## Mapa — painel CAT em tempo real (rádio conectado)
+- [ ] Exibir **sobre ou junto do mapa**, sempre visível durante o rastreio, painel de telemetria do rádio com **Fabricante / Modelo**, **porta COM**, **estado CAT (conectado/desconectado)** e **modo SAT (ON/OFF)**.
+- [ ] Mostrar **frequência RX/downlink real lida do TS-2000** (`FA`), **frequência TX/uplink real lida** (`FB`) em MHz com resolução adequada, e **modos de modulação** reportados por CAT (pelo menos MAIN/`MD`; SUB somente após implementar leitura confiável, sem inferir).
+- [ ] Apresentar **VFO / MAIN / SUB** conforme leitura CAT do TS-2000 em SAT, distinguindo explicitamente canais controlados e os dados que o protocolo efetivamente consegue confirmar.
+- [ ] Mostrar separadamente **frequências CAT confirmadas**, **frequências-alvo calculadas pelo Doppler** e o **offset Doppler** (Hz, com sinal) para RX e TX. Não tratar cálculo como leitura real do rádio.
+- [ ] Fazer atualização periódica enquanto conectado (alvo 1 segundo, configurável) e atualização imediata depois de comandos CAT confirmados; refletir alterações manuais feitas diretamente no transceptor.
+- [ ] Executar polling em worker não bloqueante com serialização dos acessos CAT, tratamento de timeout/reconexão, evitando congelar a interface, colisões com escrita Doppler e cargas excessivas na porta COM.
+- [ ] Mostrar **hora da última leitura bem-sucedida**, estado **atualizando / desatualizado / erro / desconectado**, e limpar ou marcar valores antigos; jamais exibir telemetria vencida como estado atual.
+- [ ] Estado real **RX/TX/PTT** somente se houver comando CAT comprovadamente suportado e validado; caso contrário apresentar **indisponível** e não inferir transmissão a partir da frequência ou operação Doppler.
+- [ ] Painel compacto, legível em Win7/Win11, permitindo expandir detalhes técnicos e mantendo mapa/órbita visíveis. CAT deve continuar exclusivamente sem acionamento PTT pelo aplicativo.
+
 ## Regra de distribuição — instaladores EXE diretos (todas as releases)
 - [x] Os instaladores Windows 7 x86 e Windows 11 x64 devem ser gerados e publicados como arquivos **`*-Setup.exe`**, disponíveis para download direto nos assets da Release e no README.
 - [x] **Nunca compactar o instalador em ZIP** nem exigir que o usuário extraia arquivos para executá-lo.
