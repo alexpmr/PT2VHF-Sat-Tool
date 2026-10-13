@@ -26,6 +26,7 @@ from .catalog import refresh_orbits, load_orbits, refresh_transmitters, load_tra
 from .config import Config
 from .geolocation import GeoFix, lookup_approximate_ip, read_gps_serial
 from .location_map import parse_coordinate_fields, sanitize_map_pick, valid_coordinates
+from .frequency import format_frequency,parse_mhz_input,frequency_label
 from .satellite_info import orbital_characteristics, operational_characteristics, characteristics_text
 from .updater import check_for_update, download_update, install_flavor, launch_staged_update
 from .profile import choose_satellites, capability, render_service
@@ -122,6 +123,9 @@ class MainWindow(QMainWindow):
         self.last_freqs = (None, None)
         self.last_radio_poll = 0
         self.last_cat_success = None
+        self.selected_cat_target = None
+        self.freq_update_cancel = False
+        self.freq_update_stats = None
         self._loading_satellites = False
         self.pos_source = None
         self.map_pick_active = False
@@ -254,8 +258,7 @@ class MainWindow(QMainWindow):
         form=QGridLayout()
         self.down_edit=QLineEdit();self.up_edit=QLineEdit()
         for inp in (self.down_edit,self.up_edit):
-            inp.setPlaceholderText("MHz (ex. 145.825000)")
-            inp.setValidator(QDoubleValidator(0.0,1300.0,6,inp))
+            inp.setPlaceholderText("145.825.00 ou 145,825000 MHz")
         form.addWidget(label("Downlink · RX (MHz)"),0,0)
         form.addWidget(self.down_edit,1,0)
         form.addWidget(label("Uplink · TX (MHz)"),2,0)
@@ -388,6 +391,17 @@ class MainWindow(QMainWindow):
         self.cat_details=label("SAT: —  ·  MAIN: —  ·  Leitura CAT: —")
         self.cat_details.setStyleSheet("color:#a8cee0;font-size:12px")
         cv.addWidget(self.cat_details)
+        meter=QHBoxLayout()
+        self.smeter_main=QProgressBar();self.smeter_main.setRange(0,30);self.smeter_main.setTextVisible(True)
+        self.smeter_sub=QProgressBar();self.smeter_sub.setRange(0,15);self.smeter_sub.setTextVisible(True)
+        for w in (self.smeter_main,self.smeter_sub):
+            w.setFormat("sem leitura");w.setValue(0);w.setMaximumHeight(19)
+        meter.addWidget(label("S MAIN:"));meter.addWidget(self.smeter_main,1)
+        meter.addWidget(label("S SUB:"));meter.addWidget(self.smeter_sub,1)
+        cv.addLayout(meter)
+        self.cat_telemetry=label("Potência ajustada: — W · Medidor: — · RX/TX: indisponível via CAT")
+        self.cat_telemetry.setToolTip("Potência PC é um ajuste, não medição de potência RF. RM mostra medidor selecionado; PTT não é comandado.")
+        cv.addWidget(self.cat_telemetry)
         rv.addWidget(catview)
         splitter.addWidget(right)
         splitter.setSizes([340,810,445])
@@ -410,7 +424,8 @@ class MainWindow(QMainWindow):
         row2=QHBoxLayout()
         self.radio_label=label("Desconectado · CAT inativo · transmissão nunca acionada pelo aplicativo")
         self.radio_label.setStyleSheet('color:#ecc48f')
-        self.corrected_label=label("Doppler RX: —  |  TX: —")
+        self.corrected_label=label("Doppler calculado RX: — | TX: —")
+        self.corrected_label.setToolTip("Previsão SGP4 da estação salva. Não é leitura CAT.")
         row2.addWidget(self.radio_label,2);row2.addWidget(self.corrected_label,1)
         rb.addLayout(row2)
         op.addWidget(radio_box)
