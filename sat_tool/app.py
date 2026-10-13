@@ -313,6 +313,9 @@ class MainWindow(QMainWindow):
             box.setPlaceholderText(placeholder)
             box.setMaximumWidth(120)
             box.editingFinished.connect(self.update_station_map_numeric)
+        self.map_edit_copy=QPushButton("Copiar")
+        self.map_edit_copy.setToolTip("Copiar latitude, longitude decimais para a área de transferência")
+        self.map_edit_copy.clicked.connect(self.copy_station_map)
         self.map_edit_restore=QPushButton("Restaurar anterior")
         self.map_edit_restore.clicked.connect(self.restore_station_map)
         self.map_edit_confirm=QPushButton("Confirmar posição")
@@ -323,6 +326,7 @@ class MainWindow(QMainWindow):
         map_edit_layout.addWidget(self.map_edit_notice,3)
         map_edit_layout.addWidget(label("Lat:"));map_edit_layout.addWidget(self.map_edit_lat)
         map_edit_layout.addWidget(label("Lon:"));map_edit_layout.addWidget(self.map_edit_lon)
+        map_edit_layout.addWidget(self.map_edit_copy)
         map_edit_layout.addWidget(self.map_edit_restore);map_edit_layout.addWidget(self.map_edit_confirm)
         map_edit_layout.addWidget(self.map_edit_cancel)
         self.map_edit_bar.setVisible(False)
@@ -751,6 +755,15 @@ class MainWindow(QMainWindow):
                 f"window.setLocationPickPreview && window.setLocationPickPreview({lat},{lon})")
         except ValueError as exc:
             self.map_edit_notice.setText(str(exc)+" · ajuste os valores antes de confirmar")
+
+    def copy_station_map(self):
+        if not self.map_pick_active:return
+        try:
+            lat,lon=parse_coordinate_fields(self.map_edit_lat.text(),self.map_edit_lon.text())
+            QApplication.clipboard().setText(f"{lat:.7f}, {lon:.7f}")
+            self.map_edit_notice.setText("Coordenadas copiadas · ainda não salvas")
+        except ValueError as exc:
+            self.map_edit_notice.setText(str(exc))
 
     def restore_station_map(self):
         if not self.map_pick_active:return
