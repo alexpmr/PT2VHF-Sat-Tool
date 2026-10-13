@@ -656,11 +656,70 @@ class MainWindow(QMainWindow):
         self.refresh_passes()
         self.update_map()
 
+    def change_location_source(self,*args):
+        source=self.location_source.currentIndex()
+        gps=(source==2)
+        self.gps_port.setVisible(gps)
+        self.gps_baud.setVisible(gps)
+        # The serial settings are independent of the TS-2000 CAT port.
+        self.get_position.setText(
+            ("Solicitar coordenadas ao Windows",
+             "Consultar IP aproximado (pedir autorização)",
+             "Ler posição GPS por COM",
+             "Inserir coordenadas manualmente")[source])
+        if source==0:
+            self.location_status.setText("Windows: exige serviço/provedor de localização e permissões habilitadas.")
+        elif source==1:
+            self.location_status.setText("IP aproximado: será enviada uma consulta HTTPS a ipwho.is SOMENTE após sua autorização.")
+        elif source==2:
+            self.location_status.setText("GPS NMEA: receptor conectado e porta COM exclusiva; nenhuma solicitação à Internet.")
+        else:
+            self.location_status.setText("Manual: digite latitude e longitude, confira altitude e clique em Salvar estação.")
+
     def geolocate(self):
+        choice=self.location_source.currentIndex()
+        if choice==3:
+            self.lat.setFocus()
+            self.location_status.setText("Digite as coordenadas da antena manualmente e clique em Salvar estação.")
+            return
+        if choice==1:
+            consent=QMessageBox.question(self,"Localização aproximada por IP",
+                "Quer consultar sua região aproximada em https://ipwho.is/?\n\n"
+                "O serviço externo receberá seu IP público e metadados normais da requisição HTTPS. "
+                "O resultado pode indicar apenas a cidade ou região, NÃO a posição exata da estação.\n\n"
+                "Nada será salvo nem enviado ao rádio automaticamente. Continuar?",
+                QMessageBox.Yes | QMessageBox.No,QMessageBox.No)
+            if consent!=QMessageBox.Yes:
+                self.location_status.setText("Consulta IP cancelada. Coordenadas anteriores preservadas.")
+                return
+            self.location_status.setText("Consultando localização aproximada por IP com autorização…")
+            self.background("geo-ip",lookup_approximate_ip)
+            return
+        if choice==2:
+            port=self.gps_port.currentText().strip()
+            if not port:
+                QMessageBox.warning(self,"GPS","Selecione ou digite a porta COM do receptor GPS.")
+                return
+            cat=(self.ports.currentText() or self.config.values.get("port","")).strip()
+            if port.casefold()==cat.casefold():
+                QMessageBox.warning(self,"Porta em uso",
+                    "A porta do GPS deve ser diferente da porta CAT do TS-2000. "
+                    "Não usaremos o rádio como fonte de GPS.")
+                return
+            baud=int(self.gps_baud.currentText())
+            self.config.values.update({"gps_port":port,"gps_baud":baud})
+            self.config.save()
+            self.location_status.setText("Aguardando posição válida do GPS NMEA (até 12 s)…")
+            self.background("geo-gps",lambda:read_gps_serial(port,baud=baud,timeout_s=12))
+            return
         try:
             source=QGeoPositionInfoSource.createDefaultSource(self)
             if source is None:
-                raise RuntimeError("O sistema não forneceu um provedor de localização")
+                self.location_status.setText(
+                    "Windows sem provedor de localização. Use coordenadas manuais, IP aproximado "
+                    "com consentimento ou GPS serial.")
+                self.log("QtPositioning: provedor de localização indisponível no sistema")
+                return
             self.pos_source=source
             source.positionUpdated.connect(self.position_found)
             self.location_waiting=True
@@ -670,29 +729,62 @@ class MainWindow(QMainWindow):
                 self.location_timer.timeout.connect(self.location_timed_out)
             self.location_timer.start(13000)
             source.requestUpdate(12000)
-            self.log("Solicitada a localização do computador ao sistema operacional")
+            self.location_status.setText("Aguardando serviço de localização do Windows (até 13 s)…")
         except Exception as exc:
-            QMessageBox.warning(self,"Localização indisponível",f"{exc}\nInforme as coordenadas manualmente ou habilite a localização no Windows.")
+            self.location_waiting=False
+            self.location_status.setText(
+                "Windows não forneceu localização. Tente manual, IP opcional ou GPS serial.")
+            self.log(f"Falha ao consultar localização do Windows: {exc}")
 
     def location_timed_out(self):
         if getattr(self,"location_waiting",False):
             self.location_waiting=False
-            self.log("Geolocalização: o serviço do Windows não retornou coordenadas em 13 s")
-            QMessageBox.warning(self,"Localização indisponível",
-                "O Windows não retornou coordenadas. Verifique as permissões de localização ou informe latitude/longitude manualmente.")
+            self.log("Localização Windows: sem resposta dentro de 13 s")
+            self.location_status.setText(
+                "Tempo excedido no Windows; use GPS serial, IP aproximado (opcional) ou digite as coordenadas.")
 
-    def position_found(self, info):
+    def position_found(self,info):
+        if not getattr(self,"location_waiting",False):
+            return
         coord=info.coordinate()
-        if not coord.isValid(): return
+        if not coord.isValid():
+            self.location_status.setText("O Windows retornou uma posição inválida; nenhuma coordenada alterada.")
+            return
         self.location_waiting=False
         timer=getattr(self,"location_timer",None)
         if timer is not None:timer.stop()
-        self.lat.setText(f"{coord.latitude():.7f}")
-        self.lon.setText(f"{coord.longitude():.7f}")
-        if coord.altitude() and math.isfinite(coord.altitude()):
-            self.altitude.setValue(coord.altitude())
-        self.log("Coordenadas obtidas do serviço de localização do computador; confirme antes de salvar")
-        QMessageBox.information(self,"Localização recebida","Latitude e longitude preenchidas. Confira a precisão e clique em Salvar estação.")
+        try:
+            lat=float(coord.latitude())
+            lon=float(coord.longitude())
+            altitude=float(coord.altitude())
+            fix=GeoFix(lat,lon,"Localização do Windows",
+                       altitude_m=altitude if math.isfinite(altitude) else None,
+                       description="Provedor Qt/Windows").validate()
+            self.apply_location_fix(fix)
+        except (ValueError,TypeError) as exc:
+            self.location_status.setText(f"Posição Windows rejeitada: {exc}. Dados anteriores preservados.")
+
+    def apply_location_fix(self,fix):
+        """Explicit preview; applies to edit controls only after confirmation."""
+        fix=fix.validate()
+        alt=f" · altitude {fix.altitude_m:.1f} m" if fix.altitude_m is not None else ""
+        accuracy=(f" · precisão informada ±{fix.accuracy_m:.0f} m"
+                  if fix.accuracy_m is not None else " · precisão não informada")
+        approximate="\nATENÇÃO: resultado aproximado; não use como localização precisa da antena." if fix.approximate else ""
+        summary=(f"Fonte: {fix.source}\n"
+                 f"Latitude: {fix.latitude:.7f}\nLongitude: {fix.longitude:.7f}"
+                 f"{alt}{accuracy}\n{fix.description}{approximate}\n\n"
+                 "Preencher os campos? A estação só será alterada ao clicar em Salvar estação.")
+        if QMessageBox.question(self,"Conferir coordenadas",summary,
+                                QMessageBox.Yes | QMessageBox.No,QMessageBox.No)!=QMessageBox.Yes:
+            self.location_status.setText("Sugestão recusada; coordenadas anteriores preservadas.")
+            return
+        self.lat.setText(f"{fix.latitude:.7f}")
+        self.lon.setText(f"{fix.longitude:.7f}")
+        if fix.altitude_m is not None and -500<=fix.altitude_m<=9000:
+            self.altitude.setValue(fix.altitude_m)
+        self.location_status.setText(f"{fix.source}: campos preenchidos, aguardando Salvar estação.")
+        self.log(f"Nova posição pré-preenchida (origem: {fix.source}); salvar estação requer ação manual")
 
     def update_ports(self):
         previous=self.ports.currentText() or self.config.values['port']
@@ -1235,6 +1327,9 @@ class MainWindow(QMainWindow):
             if key.split(':')[1]==str(self.sat_combo.currentData()):
                 self.photo.setHtml(photo_html(data),QUrl("https://commons.wikimedia.org/"))
             return
+        if key in ("geo-ip","geo-gps"):
+            self.apply_location_fix(data)
+            return
         if key=='trail':
             track_key,past,future,description=data
             self.track_cache_key=track_key
@@ -1293,6 +1388,9 @@ class MainWindow(QMainWindow):
     def background_error(self,key,message):
         self.pending_jobs.discard(key)
         self.log(f'Falha {key}: {message}')
+        if key in ("geo-ip","geo-gps"):
+            self.location_status.setText(f"Localização não obtida: {message}. Coordenadas preservadas.")
+            return
         if key=="cat-poll":
             self.map_radio_label.setText("CAT erro de leitura · dados desatualizados")
             self.map_radio_label.setStyleSheet("color:#e98b81;font-weight:700")
