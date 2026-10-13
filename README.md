@@ -50,7 +50,7 @@ O resultado da localização é mostrado para conferência, incluindo origem, al
 
 A release também preserva a agenda FM/SSB/CW, as frequências previstas de Doppler por TLE/OMM, o mapa vetorial offline e o CAT do Kenwood TS-2000 com autorização explícita.
 
-## Novo na versão 1.0.0 — planejamento por passagem e Doppler
+## Histórico: v1.0.0 — planejamento por passagem e Doppler
 
 - **Próxima passagem automaticamente selecionada:** somente satélites habilitados e canais SatNOGS compatíveis com o perfil da estação FM/SSB/CW e bandas RX/TX. Satélite, modo e situação de RX apenas/RX-TX ficam explícitos.
 - **Cronômetro ao vivo:** antes de AOS, tempo até a passagem; durante, tempo restante até LOS, barra de progresso e horários locais AOS/TCA/LOS. Quando a passagem termina, o indicador troca para a próxima elegível.
