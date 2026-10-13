@@ -6,6 +6,7 @@ Portable updates are staged and applied after process exit; never touch data/.
 from __future__ import annotations
 
 import hashlib
+import shutil
 import os
 import platform
 import re
@@ -41,7 +42,7 @@ def install_flavor(qt_binding: str, *, frozen: Optional[bool] = None, exe_path: 
     if sys.platform != 'win32':
         return None
     root = (exe_path or Path(sys.executable)).resolve().parent
-    portable = (root / 'portable.flag').exists()
+    portable = (root / 'portable.flag').exists() or (exe_path or Path(sys.executable)).stem.casefold().endswith('-portable')
     variant = 'Win7-x86' if qt_binding == 'PySide2' else 'Win11-x64'
     return variant, ('Portable' if portable else 'Setup')
 
@@ -76,7 +77,7 @@ def select_release(releases: list, current_version: str, variant: str, kind: str
         ver = version_tuple(tag)
         if not ver or ver <= current:
             continue
-        name = f'PT2VHF-Sat-Tool-v{ver[0]}.{ver[1]}.{ver[2]}-{variant}-{kind}.' + ('exe' if kind == 'Setup' else 'zip')
+        name = f'PT2VHF-Sat-Tool-v{ver[0]}.{ver[1]}.{ver[2]}-{variant}-{kind}.' + 'exe'
         assets = {a.get('name'): a for a in release.get('assets', []) if a.get('state') == 'uploaded'}
         asset = assets.get(name)
         if not asset or not _safe_github_url(str(asset.get('browser_download_url', ''))):
@@ -132,7 +133,7 @@ def _missing_checksum():
 
 
 def download_update(update: AvailableUpdate, progress: Optional[Callable[[int, int], None]] = None) -> Path:
-    """Stage verified installer or ZIP. Caller owns cleanup after successful handoff."""
+    """Stage verified EXE installer or onefile portable executable."""
     expected = _manifest_checksum(update)
     folder = Path(tempfile.mkdtemp(prefix='pt2vhf_sat_update_'))
     dest = folder / update.asset_name
@@ -192,11 +193,16 @@ def launch_staged_update(package: Path, *, portable: bool, script_path: Path,
         raise RuntimeError('Atualização local só é permitida nos EXEs Windows')
     exe = (exe_path or Path(sys.executable)).resolve()
     destination = exe.parent
-    candidate = safe_extract_portable(package) if portable else package
+    if package.suffix.lower() != '.exe' or not package.is_file():
+        raise ValueError('Atualização requer pacote EXE verificado')
+    candidate = package
+    # Onefile extraction is deleted at exit; external updater must live in temp.
+    helper = package.parent / 'apply-update.ps1'
+    shutil.copy2(script_path, helper)
     if not script_path.is_file():
         raise FileNotFoundError('Atualizador externo não incluído no pacote')
     args = [str(Path(os.environ.get('SYSTEMROOT', r'C:\Windows')) / 'System32' / 'WindowsPowerShell' / 'v1.0' / 'powershell.exe'),
-            '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', str(script_path),
+            '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', str(helper),
             '-WaitPid', str(os.getpid()), '-Package', str(candidate), '-Destination', str(destination),
             '-Executable', str(exe), '-Mode', 'Portable' if portable else 'Setup']
     subprocess.Popen(args, close_fds=True, creationflags=getattr(subprocess, 'CREATE_NEW_PROCESS_GROUP', 0))
