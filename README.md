@@ -4,26 +4,40 @@
 
 ## Downloads — instaladores e portáteis
 
-**PT2VHF Sat Tool v1.1.0 — Windows 7 SP1 e Windows 11.** Os quatro downloads são arquivos `.exe` diretos. Links ficam disponíveis após aprovação dos builds Windows. Embora seja o marco 1.0 de funcionalidades, permanece em pré-lançamento até a homologação CAT com TS-2000 físico e Windows 7 real.
+**PT2VHF Sat Tool v1.1.1 — Windows 7 SP1, Windows 10 e Windows 11.** Os quatro downloads são arquivos `.exe` diretos. Links ficam disponíveis após aprovação dos builds Windows. Embora seja o marco 1.0 de funcionalidades, permanece em pré-lançamento até a homologação CAT com TS-2000 físico e Windows 7 real.
 
 | Windows | Instalável | Portátil |
 | --- | --- | --- |
-| **Windows 7 SP1** (x86; executável de 32 bits também para Win7 x64) | [Instalador Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.1.0/PT2VHF-Sat-Tool-v1.1.0-Win7-x86-Setup.exe) | [Portable Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.1.0/PT2VHF-Sat-Tool-v1.1.0-Win7-x86-Portable.exe) |
-| **Windows 11** (x64) | [Instalador Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.1.0/PT2VHF-Sat-Tool-v1.1.0-Win11-x64-Setup.exe) | [Portable Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.1.0/PT2VHF-Sat-Tool-v1.1.0-Win11-x64-Portable.exe) |
+| **Windows 7 SP1** (x86; executável de 32 bits também para Win7 x64) | [Instalador Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.1.1/PT2VHF-Sat-Tool-v1.1.1-Win7-x86-Setup.exe) | [Portable Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.1.1/PT2VHF-Sat-Tool-v1.1.1-Win7-x86-Portable.exe) |
+| **Windows 10 (1809+)/11** (x64; arquivo `Win11-x64` para manter atualizador) | [Instalador Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.1.1/PT2VHF-Sat-Tool-v1.1.1-Win11-x64-Setup.exe) | [Portable Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.1.1/PT2VHF-Sat-Tool-v1.1.1-Win11-x64-Portable.exe) |
 
 **Formato dos downloads:** tanto instaladores quanto portáteis são entregues diretamente como arquivos **`.exe`**. O portátil inclui as dependências dentro do mesmo EXE (PyInstaller onefile) e não requer descompactação.
 
 **[Todas as releases](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases)** · **[Acompanhar compilação](https://github.com/alexpmr/PT2VHF-Sat-Tool/actions)**
 
 - **Instalável:** instalação por usuário, atalho e desinstalação, atualização pelo aplicativo usando o Setup de sua edição.
-- **Portátil:** execute diretamente `PT2VHF-Sat-Tool-v1.1.0-*-Portable.exe` (um único arquivo). Configurações ficam em `data/` ao lado do EXE, preservadas após atualizações.
+- **Portátil:** execute diretamente `PT2VHF-Sat-Tool-v1.1.1-*-Portable.exe` (um único arquivo). Configurações ficam em `data/` ao lado do EXE, preservadas após atualizações.
 - **Win7:** Python 3.8 x86 + PySide2/Qt5 + PyInstaller 5.13.2 (legado, precisa ser validado no Windows 7 real).
-- **Win11:** Python 3.11 x64 + PySide6/Qt6 + PyInstaller 6.13.0.
+- **Win10/11 x64:** Windows 10 1809+ ou Windows 11, Python 3.11 x64 + PySide6/Qt6 + PyInstaller 6.13.0.
 - Arquivos SHA256 acompanham cada compilação. A versão Windows 7 é experimental; não confundir sucesso do CI com homologação em campo.
 
 ---
 
-## Novo na v1.1.0 — frequências, Doppler, idiomas e TS-2000
+## Correção v1.1.1 — Windows 10 (13/10/2026)
+
+**Erro corrigido:** a edição x64 da v1.1.0 tinha uma restrição de instalação `MinVersion=10.0.22000` (Windows 11), fazendo a mensagem *“This program does not support the version of Windows your computer is running”* aparecer em Windows 10. O instalador x64 da v1.1.1 aceita agora **Windows 10 versão 1809/build 17763 ou mais recente, ou Windows 11, ambos x64**, de acordo com a plataforma suportada pelo Qt6.
+
+**Atenção ao nome do arquivo:** para manter a atualização automática compatível com a v1.1.0, o nome da edição moderna continua `Win11-x64`, mas o Setup **v1.1.1 Win11-x64 também é para Windows 10 x64 1809+**. O painel do Windows mostra a edição como `Windows 10/11 x64`.
+
+- **Windows 10 x64 versão 1809+**: use o Setup ou Portable **Win11-x64 v1.1.1**. Não instale a versão v1.1.0 x64, pois o instalador foi configurado com mínimo do Windows 11.
+- **Windows 10 x86 (32 bits) ou mais antigo que versão 1809**: use a edição legada **Win7-x86 v1.1.1**, baseada em PySide2/Qt5. O teste real nessa edição permanece necessário.
+- **Windows 11 x64**: continue usando Win11-x64 v1.1.1 normalmente.
+
+Para conferir versão e arquitetura, execute `winver` e abra **Configurações → Sistema → Sobre → Tipo de sistema**. Erros de inicialização depois de instalar são diferentes do bloqueio de versão e devem ser relatados com a versão de Windows e a captura da mensagem.
+
+A v1.1.1 mantém as funções da v1.1.0 sem mudar a interface principal. **Build no Windows Server 2022 não substitui teste de execução no Windows 10 real** nem teste físico CAT com TS-2000.
+
+## Histórico v1.1.0 — frequências, Doppler, idiomas e TS-2000
 
 - **Doppler ao selecionar satélite:** o painel de previsão RX/downlink e TX/uplink atualiza imediatamente ao trocar de satélite ou transponder, mesmo sem rádio conectado. Exibe offsets em Hz e cálculo baseado na estação **salva**; RX-only não recebe TX fictício. Trocar satélite ou canal **suspende ajuste automático CAT anterior** até reativação e consentimento explícitos, sem retunar o rádio inesperadamente.
 - **Formato estilo rádio:** `426.252.12 MHz` (10 Hz), `426.252.120 MHz` (1 Hz) ou `426,252120 MHz`, selecionáveis em **Configurações → Idioma e formato de frequência**. Os valores CAT e de previsão são apenas apresentados no formato escolhido; a precisão interna permanece em Hz. Os campos de entrada aceitam tanto os valores convencionais quanto os segmentados, com validação estrita.
