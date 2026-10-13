@@ -2,7 +2,7 @@ name: PT2VHF Sat Tool - Windows 7 + Windows 11
 
 on:
   push:
-    branches: [main]
+    branches: [main, feature/v0.2.0-single-exe]
     tags: ['v*']
   workflow_dispatch:
 
