@@ -519,6 +519,15 @@ class MainWindow(QMainWindow):
         self.threshold.setValue(float(c['tune_threshold_hz']))
         self.update_minutes.setValue(float(c.get('version_check_minutes',15)))
         self.include_prerelease.setChecked(bool(c.get('include_prereleases', True)))
+        self.trail_period.blockSignals(True)
+        self.trail_direction.blockSignals(True)
+        period=str(c.get("trail_period","2 h"))
+        self.trail_period.setCurrentText(period if period in ["Última passagem","2 h","5 h","10 h","24 h","Personalizado"] else "2 h")
+        self.trail_direction.setCurrentText(str(c.get("trail_direction","Futuro")))
+        self.trail_custom.setValue(float(c.get("trail_custom_hours",3)))
+        self.trail_custom.setVisible(self.trail_period.currentText()=="Personalizado")
+        self.trail_period.blockSignals(False)
+        self.trail_direction.blockSignals(False)
         # Always require an explicit enable on each launch to avoid surprise CAT writes.
         self.doppler_checkbox.setChecked(False)
 
@@ -612,6 +621,8 @@ class MainWindow(QMainWindow):
                   "update_interval_s":int(self.interval.value()),"tune_threshold_hz":int(self.threshold.value())})
         self.config.save()
         self.log(f"Estação salva: {st.callsign} lat={st.lat:.5f} lon={st.lon:.5f}")
+        self.track_cache_key=None
+        self.map_desc.setText("Trajetória prevista por TLE/OMM · mapa offline Natural Earth")
         self.refresh_passes()
         self.update_map()
 
@@ -958,11 +969,13 @@ class MainWindow(QMainWindow):
             for ident,obj in entries:
                 try:
                     sat=make_satellite(obj,self.ts)
-                    passes=predict_passes(sat,station,hours=36,ts=self.ts)
+                    # Include genuine AOS for passes already in progress at startup.
+                    passes=predict_passes(sat,station,now=now_utc()-timedelta(hours=3),hours=39,ts=self.ts)
                     for p in passes:
                         out.append({**p,'id':ident,'name':obj.get('OBJECT_NAME',ident)})
                 except Exception:
                     continue
+            out=[p for p in out if p['los']>now_utc()]
             out.sort(key=lambda p:p['aos'])
             return out[:100]
         self.background('passes',task)
