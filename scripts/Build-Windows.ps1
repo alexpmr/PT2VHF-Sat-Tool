@@ -3,7 +3,7 @@
 param([ValidateSet('Win7-x86','Win11-x64')][string]$Target = 'Win11-x64')
 $ErrorActionPreference = 'Stop'
 Set-Location (Split-Path -Parent $PSScriptRoot)
-$Version = '0.2.0'
+$Version = '0.2.1'
 if ($Target -eq 'Win7-x86') {
   $PythonSelector = '-3.8-32'
   $Deps = 'requirements-win7.txt'
@@ -28,14 +28,15 @@ if (-not (Get-Command py -ErrorAction SilentlyContinue)) { throw 'Python Launche
 $Venv = Join-Path (Get-Location) ('.build-venv-' + $Target)
 Invoke-Checked 'Criando Python virtual' 'py' @($PythonSelector,'-m','venv',$Venv)
 $Exe = Join-Path $Venv 'Scripts\python.exe'
-Invoke-Checked 'Instalando dependencias' $Exe @('-m','pip','install','-r',$Deps,'pyinstaller=='+$PyInstaller,'pytest==7.4.4')
+Invoke-Checked 'Instalando dependencias' $Exe @('-m','pip','install','-r',$Deps,'pyinstaller=='+$PyInstaller,'pytest==7.4.4','Pillow==10.4.0')
 Invoke-Checked 'Auditando dependencias' $Exe @('-m','pip','check')
 Invoke-Checked 'Executando testes unitarios' $Exe @('-m','pytest','-q','tests')
 Invoke-Checked 'Conferindo arquitetura' $Exe @('-c',"import struct; assert str(struct.calcsize('P') * 8) == '$Bits'")
 Invoke-Checked 'Conferindo binding Qt' $Exe @('-c',"from sat_tool.qt_compat import QT_BINDING; print(QT_BINDING)")
+Invoke-Checked 'Gerando icones oficiais' $Exe @('scripts/build_brand_assets.py')
 $AppDir = 'dist/PT2VHF-Sat-Tool'
 if (Test-Path $AppDir) { Remove-Item $AppDir -Recurse -Force }
-Invoke-Checked 'Compilando executavel Windows' $Exe @('-m','PyInstaller','--noconfirm','--clean','--windowed','--onedir','--name','PT2VHF-Sat-Tool','--add-data','sat_tool/map.html;sat_tool','--add-data','scripts/apply-update.ps1;scripts','--collect-all','skyfield','--collect-binaries','numpy','run.py')
+Invoke-Checked 'Compilando executavel Windows' $Exe @('-m','PyInstaller','--noconfirm','--clean','--windowed','--onedir','--name','PT2VHF-Sat-Tool','--icon','assets/branding/app-icon.ico','--add-data','sat_tool/map.html;sat_tool','--add-data','assets/branding/icon-256.png;assets/branding','--add-data','scripts/apply-update.ps1;scripts','--collect-all','skyfield','--collect-binaries','numpy','run.py')
 $Bin = Join-Path $AppDir 'PT2VHF-Sat-Tool.exe'
 if (-not (Test-Path $Bin)) { throw "Arquivo ausente: $Bin" }
 $Report = Join-Path (Resolve-Path 'dist').Path ("sattool-selftest-$Target.json")
@@ -45,10 +46,10 @@ if (-not (Test-Path $Report)) { throw "EXE nao gerou relatorio: $($Result.ExitCo
 $Smoke = Get-Content $Report -Raw | ConvertFrom-Json
 if ($Result.ExitCode -ne 0 -or $Smoke.status -ne 'passed' -or -not $Smoke.frozen) { throw "EXE falhou: $(Get-Content $Report -Raw)" }
 $Portable = "dist/PT2VHF-Sat-Tool-v$Version-$Target-Portable.exe"
-Invoke-Checked 'Compilando portatil onefile EXE' $Exe @('-m','PyInstaller','--noconfirm','--clean','--windowed','--onefile','--name',"PT2VHF-Sat-Tool-v$Version-$Target-Portable",'--add-data','sat_tool/map.html;sat_tool','--add-data','scripts/apply-update.ps1;scripts','--collect-all','skyfield','--collect-binaries','numpy','run.py')
+Invoke-Checked 'Compilando portatil onefile EXE' $Exe @('-m','PyInstaller','--noconfirm','--clean','--windowed','--onefile','--name',"PT2VHF-Sat-Tool-v$Version-$Target-Portable",'--icon','assets/branding/app-icon.ico','--add-data','sat_tool/map.html;sat_tool','--add-data','assets/branding/icon-256.png;assets/branding','--add-data','scripts/apply-update.ps1;scripts','--collect-all','skyfield','--collect-binaries','numpy','run.py')
 if (-not (Test-Path $Portable)) { throw "Portable EXE ausente: $Portable" }
 $PortableReport = Join-Path (Resolve-Path 'dist').Path "portable-selftest-$Target.json"
-$PResult = Start-Process -FilePath (Resolve-Path $Portable).Path -ArgumentList @('--self-test',('"' + $PortableReport + '"'),$ExpectedBinding) -PassThru -Wait
+$PResult = Start-Process -FilePath (Resolve-Path $Portable).Path -ArgumentList @('--self-test',('"' + $PortableReport + '"'),$Expected) -PassThru -Wait
 if (-not (Test-Path $PortableReport)) { throw "Portable EXE nao gerou relatorio (exit $($PResult.ExitCode))" }
 $PData = Get-Content $PortableReport -Raw | ConvertFrom-Json
 if ($PResult.ExitCode -ne 0 -or $PData.status -ne 'passed') { throw "Falha portable: $(Get-Content $PortableReport -Raw)" }
