@@ -25,6 +25,7 @@ from .cat import TS2000, available_ports
 from .catalog import refresh_orbits, load_orbits, refresh_transmitters, load_transmitters, age_hours
 from .config import Config
 from .geolocation import GeoFix, lookup_approximate_ip, read_gps_serial
+from .location_map import parse_coordinate_fields, sanitize_map_pick, valid_coordinates
 from .satellite_info import orbital_characteristics, operational_characteristics, characteristics_text
 from .updater import check_for_update, download_update, install_flavor, launch_staged_update
 from .profile import choose_satellites, capability, render_service
@@ -123,6 +124,8 @@ class MainWindow(QMainWindow):
         self.last_cat_success = None
         self._loading_satellites = False
         self.pos_source = None
+        self.map_pick_active = False
+        self.map_pick_position = None
         self.init_ui()
         self.load_fields()
         self.populate_catalog(load_orbits(self.config.dir))
@@ -154,6 +157,7 @@ class MainWindow(QMainWindow):
 
     def init_ui(self):
         root = QTabWidget()
+        self.tabs = root
         self.setCentralWidget(root)
         operation = QWidget(); op = QVBoxLayout(operation); op.setContentsMargins(12,12,12,10)
         op.setSpacing(9)
@@ -293,7 +297,36 @@ class MainWindow(QMainWindow):
         trail_bar.addWidget(self.trail_period,2)
         trail_bar.addWidget(self.trail_direction,1)
         trail_bar.addWidget(self.trail_custom,1)
+        self.mark_map_button=QPushButton("Marcar estação no mapa")
+        self.mark_map_button.setToolTip("Clique no mapa offline para marcar a posição da antena. Nenhuma alteração será salva até sua confirmação.")
+        self.mark_map_button.clicked.connect(self.begin_station_map)
+        trail_bar.addWidget(self.mark_map_button)
         mv.addLayout(trail_bar)
+        self.map_edit_bar=QWidget()
+        map_edit_layout=QHBoxLayout(self.map_edit_bar)
+        map_edit_layout.setContentsMargins(4,2,4,2)
+        self.map_edit_notice=label("MARCAÇÃO · Clique no mapa ou arraste o marcador · Coordenadas WGS-84")
+        self.map_edit_notice.setStyleSheet("color:#f1dc89;font-weight:700")
+        self.map_edit_lat=QLineEdit()
+        self.map_edit_lon=QLineEdit()
+        for box,placeholder in ((self.map_edit_lat,"Latitude ±90"),(self.map_edit_lon,"Longitude ±180")):
+            box.setPlaceholderText(placeholder)
+            box.setMaximumWidth(120)
+            box.editingFinished.connect(self.update_station_map_numeric)
+        self.map_edit_restore=QPushButton("Restaurar anterior")
+        self.map_edit_restore.clicked.connect(self.restore_station_map)
+        self.map_edit_confirm=QPushButton("Confirmar posição")
+        self.map_edit_confirm.setObjectName("primary")
+        self.map_edit_confirm.clicked.connect(self.confirm_station_map)
+        self.map_edit_cancel=QPushButton("Cancelar")
+        self.map_edit_cancel.clicked.connect(self.cancel_station_map)
+        map_edit_layout.addWidget(self.map_edit_notice,3)
+        map_edit_layout.addWidget(label("Lat:"));map_edit_layout.addWidget(self.map_edit_lat)
+        map_edit_layout.addWidget(label("Lon:"));map_edit_layout.addWidget(self.map_edit_lon)
+        map_edit_layout.addWidget(self.map_edit_restore);map_edit_layout.addWidget(self.map_edit_confirm)
+        map_edit_layout.addWidget(self.map_edit_cancel)
+        self.map_edit_bar.setVisible(False)
+        mv.addWidget(self.map_edit_bar)
         self.trail_period.currentTextChanged.connect(self.trail_changed)
         self.trail_direction.currentTextChanged.connect(self.trail_changed)
         self.trail_custom.valueChanged.connect(self.trail_changed)
@@ -430,7 +463,11 @@ class MainWindow(QMainWindow):
         self.save_station_btn=QPushButton("Salvar estação")
         self.save_station_btn.setObjectName('primary')
         self.save_station_btn.clicked.connect(self.save_station)
-        place.addWidget(self.get_position);place.addWidget(self.save_station_btn)
+        self.station_map_button=QPushButton("Marcar estação no mapa")
+        self.station_map_button.clicked.connect(self.begin_station_map)
+        place.addWidget(self.get_position)
+        place.addWidget(self.station_map_button)
+        place.addWidget(self.save_station_btn)
         sg.addLayout(place)
         self.location_status=label("Sem consulta: escolha a fonte. IP é aproximado, GPS requer receptor, manual não usa rede.")
         self.location_status.setStyleSheet("color:#a6cede;font-size:11px")
@@ -655,6 +692,10 @@ class MainWindow(QMainWindow):
         self.map_desc.setText("Trajetória prevista por TLE/OMM · mapa offline Natural Earth")
         self.refresh_passes()
         self.update_map()
+        self.map.page().runJavaScript("window.finishLocationPick && window.finishLocationPick()")
+        self.map_pick_active=False
+        self.map_edit_bar.setVisible(False)
+        self.mark_map_button.setEnabled(True)
 
     def change_location_source(self,*args):
         source=self.location_source.currentIndex()
