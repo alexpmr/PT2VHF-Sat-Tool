@@ -732,6 +732,8 @@ class MainWindow(QMainWindow):
     def populate_catalog(self, objects):
         old=self.sat_combo.currentData() or self.config.values.get('selected_norad')
         self.omm={str(o['NORAD_CAT_ID']):o for o in objects if o.get('NORAD_CAT_ID')}
+        self.plan_satellites.clear()
+        self.track_cache_key=None
         self.filter_sats(self.search.text())
         if old:
             idx=self.sat_combo.findData(str(old))
@@ -828,6 +830,7 @@ class MainWindow(QMainWindow):
         except Exception as exc:
             self.log(f"Erro OMM {ident}: {exc}")
             self.sat=None;return
+        self.track_cache_key=None
         self.config.values['selected_norad']=ident
         self.config.save()
         age=(now_utc()-self.sat.epoch.utc_datetime().replace(tzinfo=timezone.utc)).total_seconds()/86400
@@ -1095,6 +1098,22 @@ class MainWindow(QMainWindow):
             return out[:100]
         self.background('passes',task)
 
+    def prefetch_upcoming_modes(self):
+        """Download a small, bounded group of transmitter catalogs (not TLE) in background."""
+        count=0
+        for p in self.passes:
+            sid=str(p["id"])
+            if sid in self.tx_prefetch_started:
+                continue
+            # Respect local cache and avoid hammering SatNOGS (3 network queries per session).
+            if age_hours(self.config.dir,f"tx_{sid}.json") is not None and age_hours(self.config.dir,f"tx_{sid}.json")<24:
+                continue
+            if count>=3 or len(self.tx_prefetch_started)>=6:
+                break
+            self.tx_prefetch_started.add(sid)
+            count+=1
+            self.background("tx:"+sid,lambda sid=sid:refresh_transmitters(self.config.dir,int(sid)))
+
     def select_pass_satellite(self,row,col):
         if 0<=row<len(self.passes):
             ident=self.passes[row]['id']
@@ -1221,6 +1240,7 @@ class MainWindow(QMainWindow):
             self.refresh_tracked_table()
             if self.config.values.get("satellite_selection") is None:self.refresh_passes()
             self.log(f'Transponders SatNOGS atualizados para NORAD {ident}: {len(data)}')
+            self.update_next_indicator()
         elif key=='passes':
             self.passes=data[:75]
             self.pass_table.setRowCount(len(self.passes))
