@@ -1,5 +1,18 @@
 # PT2VHF Sat Tool — backlog
 
+## Configurações — marcar a localização da estação diretamente no mapa
+- [ ] Criar recurso **“Marcar estação no mapa”** na aba **Configurações → Estação terrena**, disponível também como atalho no mapa da aba **Operação**. Abrir o mapa-múndi existente (vetorial/offline) em **modo de seleção de localização**, sem interferir na navegação ou seleção normal de satélites.
+- [ ] Permitir **clicar no ponto correspondente à antena/estação**, colocar um marcador temporário PT2VHF (indicativo atual) e converter corretamente a posição do clique para **latitude/longitude decimais assinadas (WGS-84)**, inclusive com zoom, pan, redimensionamento, DPI elevado e telas Windows 7/11.
+- [ ] Permitir **arrastar o marcador**, dar zoom, centralizar no marcador, copiar as coordenadas e ajustá-las numericamente; toda mudança deve atualizar imediatamente a prévia das coordenadas e vice-versa.
+- [ ] Exibir no painel de revisão as **coordenadas anteriores** e as **coordenadas propostas**, com latitude/longitude (precisão adequada), indicação da fonte **“Selecionada manualmente no mapa”**, indicativo e data/hora da seleção. **Altitude não deve ser inferida** da cor do mapa ou fixada em zero; conservar a altitude cadastrada ou solicitar valor explícito.
+- [ ] Incluir ações **Confirmar posição**, **Cancelar**, **Restaurar posição anterior** e **Usar localização atual já cadastrada**. Cancelar ou fechar o modo seleção **não** altera os campos nem a estação persistida.
+- [ ] Após confirmar o marcador, **pré-preencher** latitude e longitude na aba Configurações e solicitar o clique separado em **Salvar estação**, mantendo a proteção já adotada para GPS/IP: sem gravação ou alteração operacional silenciosa.
+- [ ] Após salvar, atualizar o marcador definitivo da estação na aba Operação, recalcular AOS/TCA/LOS, azimute, elevação, distâncias, trajetória e Doppler com a **estação confirmada**; atualizar o contador da próxima passagem e limpar avisos antigos de cadastro. Se não houver TLE/OMM, informar essa pendência sem perder o cadastro.
+- [ ] Manter a opção manual, Windows, IP aproximado e GPS NMEA como **fontes alternativas e independentes**, sem transmissão de coordenadas para provedores externos para marcar o ponto no **mapa offline**.
+- [ ] Diferenciar visualmente **marcador em edição** (prévia) e **marcador salvo/ativo**; não reposicionar automaticamente a estação ao clicar em satélite, trajetória, footprint ou controles de zoom fora do modo de edição.
+- [ ] Integrar o seletor ao mapa HTML/SVG com comunicação segura QtWebEngine ↔ Python, sem executar comandos CAT nem iniciar PTT/TX; limitar eventos aceitos a coordenadas válidas e não confiar em strings arbitrárias da página.
+- [ ] Testar cliques e arraste em zoom/pan, 1366×768, maximizado, escala DPI, proximidades de ±180° de longitude e ±90° de latitude, Windows 7 (Qt5) e 11 (Qt6), modo offline, ausência de estação, posição já cadastrada, cancelamento, recarga de aplicativo e nova previsão após salvar.
+
 ## v1.0.1 — localização manual/Windows/IP/GPS e distribuição
 - [x] Fonte de localização selecionável em Configurações: Windows, IP aproximado (opt-in), GPS serial NMEA e entrada manual.
 - [x] Fallback claro quando `QGeoPositionInfoSource.createDefaultSource` retorna `None`, sem exigir instalação de GPS/driver e sem apagar cadastro anterior.
