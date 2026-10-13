@@ -3,7 +3,7 @@
 param([ValidateSet('Win7-x86','Win11-x64')][string]$Target = 'Win11-x64')
 $ErrorActionPreference = 'Stop'
 Set-Location (Split-Path -Parent $PSScriptRoot)
-$Version = '1.0.0'
+$Version = '1.0.1'
 if ($Target -eq 'Win7-x86') {
   $PythonSelector = '-3.8-32'
   $Deps = 'requirements-win7.txt'
