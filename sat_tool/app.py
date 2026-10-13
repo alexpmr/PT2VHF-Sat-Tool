@@ -602,6 +602,11 @@ class MainWindow(QMainWindow):
             self.connection.setText("Conectar")
             self.radio_label.setText("Desconectado")
             self.map_radio_label.setText("CAT desconectado · RX — MHz · TX — MHz · Modo —")
+            self.cat_status.setText("● Desconectado · CAT inativo")
+            self.cat_status.setStyleSheet("color:#efc17b;font-size:12px")
+            self.cat_rx.setText("RX / DOWNLINK (CAT)\\n— MHz")
+            self.cat_tx.setText("TX / UPLINK (CAT)\\n— MHz")
+            self.cat_details.setText("SAT —  ·  MAIN —  ·  sem leitura atual")
             self.log("CAT desconectado")
             return
         try:
@@ -630,6 +635,11 @@ class MainWindow(QMainWindow):
         self.last_cat_success=now_utc()
         self.map_radio_label.setText(f"CAT · {st.model} · SAT {'ON' if st.sat else 'OFF'} · RX {st.downlink/1e6:.6f} MHz · TX {st.uplink/1e6:.6f} MHz · Modo {st.mode} · {self.last_cat_success.astimezone():%H:%M:%S}")
         self.map_radio_label.setStyleSheet("font-size:13px;color:#69e3bc;font-weight:700")
+        self.cat_status.setText(f"● Conectado · {st.model} · SAT {'ON' if st.sat else 'OFF'}")
+        self.cat_status.setStyleSheet("color:#69e3bc;font-size:12px")
+        self.cat_rx.setText(f"RX / DOWNLINK (CAT)\\n{st.downlink/1e6:.6f} MHz")
+        self.cat_tx.setText(f"TX / UPLINK (CAT)\\n{st.uplink/1e6:.6f} MHz")
+        self.cat_details.setText(f"SAT {'ON' if st.sat else 'OFF'}  ·  MAIN {st.mode}  ·  Última leitura {self.last_cat_success.astimezone():%H:%M:%S} local")
 
     def refresh_catalog(self):
         age=age_hours(self.config.dir,"amateur_omm.json")
@@ -956,6 +966,9 @@ class MainWindow(QMainWindow):
             if age>10:
                 self.map_radio_label.setText(f"CAT sem leitura há {age:.0f}s · valores desatualizados")
                 self.map_radio_label.setStyleSheet("color:#e3ad61;font-weight:700")
+                self.cat_status.setText(f"● CAT desatualizado há {age:.0f}s")
+                self.cat_status.setStyleSheet("color:#efc17b;font-size:12px")
+                self.cat_details.setText("Leitura CAT vencida · conferir cabo e porta COM")
 
     def background_result(self,key,data):
         self.pending_jobs.discard(key)
@@ -1013,6 +1026,11 @@ class MainWindow(QMainWindow):
         if key=="cat-poll":
             self.map_radio_label.setText("CAT erro de leitura · dados desatualizados")
             self.map_radio_label.setStyleSheet("color:#e98b81;font-weight:700")
+            self.cat_status.setText("● Erro de leitura CAT")
+            self.cat_status.setStyleSheet("color:#e98b81;font-size:12px")
+            self.cat_rx.setText("RX / DOWNLINK (CAT)\\n—")
+            self.cat_tx.setText("TX / UPLINK (CAT)\\n—")
+            self.cat_details.setText("Leitura falhou · confira LOGs / CAT")
         if key.startswith('update-'):
             self.version_btn.setText(f'v{__version__} · atualização indisponível')
             if self.update_dialog:
