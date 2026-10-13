@@ -1668,6 +1668,24 @@ class MainWindow(QMainWindow):
             self.map_desc.setText(description+" · Natural Earth offline")
             self.update_map()
             return
+        if key=="tx-batch-item":
+            ident,rows,index,total=data
+            if rows is not None:
+                self.pass_rows[ident]=rows
+                if str(self.sat_combo.currentData())==ident:
+                    self.choose_cached_modes(int(ident))
+            self.catalog_progress.setText(f"SatNOGS: {index}/{total} · {'recebido' if rows is not None else 'falha'} NORAD {ident}")
+            return
+        if key=="tx-batch":
+            self.refresh_catalog_freq.setEnabled(True)
+            self.stop_catalog_freq.setEnabled(False)
+            self.refresh_satellite_table()
+            self.refresh_tracked_table()
+            self.refresh_passes()
+            self.update_next_indicator()
+            self.catalog_progress.setText(f"SatNOGS: {data['ok']}/{data['total']} atualizados · {len(data['failed'])} falhas"+(" · cancelado" if data["cancelled"] else ""))
+            for error in data["failed"][:20]:self.log("SatNOGS: "+error)
+            return
         if key=='cat-poll':
             if self.radio.connected:self.render_radio_state(data)
             return
@@ -1721,6 +1739,11 @@ class MainWindow(QMainWindow):
         self.log(f'Falha {key}: {message}')
         if key in ("geo-ip","geo-gps"):
             self.location_status.setText(f"Localização não obtida: {message}. Coordenadas preservadas.")
+            return
+        if key=="tx-batch":
+            self.refresh_catalog_freq.setEnabled(True)
+            self.stop_catalog_freq.setEnabled(False)
+            self.catalog_progress.setText("SatNOGS: falha, cache anterior preservado")
             return
         if key=="cat-poll":
             self.map_radio_label.setText("CAT erro de leitura · dados desatualizados")
