@@ -1,5 +1,28 @@
 # PT2VHF Sat Tool — backlog
 
+## Mapa principal — janela configurável de visualização da trajetória orbital
+- [ ] Adicionar controle compacto **Período da órbita / Trajetória** à barra do mapa, para escolher a janela temporal representada na tela. **Sugestões** de presets: **Última passagem**, **2 h**, **5 h**, **10 h**, **24 h** e **Personalizado**; os períodos não são limites fixos e poderão ser alterados após testes de usabilidade.
+- [ ] Diferenciar claramente **histórico da trajetória** (trecho já percorrido, linha sólida), **posição atual** (marcador de satélite) e **trajetória futura prevista** (linha tracejada). Oferecer opções separadas `Passado`, `Futuro` ou `Ambos`, com indicação explícita do intervalo, evitando confundir histórico calculado com posições recebidas.
+- [ ] O preset **Última passagem** significa, quando houver posição da estação, a passagem anterior em relação ao horizonte/elevação mínima cadastrada; se não houver estação configurada, indicar indisponibilidade e usar um período de tempo selecionável, sem inventar AOS/LOS.
+- [ ] Em 2/5/10 horas, interpretar o valor conforme `Passado`, `Futuro` ou `Ambos`; para `Ambos`, separar duração de cada direção ou informar claramente como a janela é dividida, sem ambiguidade.
+- [ ] Exibir início/fim em **data e hora local**, com opção UTC; manter indicação de **época TLE/OMM**, validade e se o trecho é previsto ou reconstruído matematicamente. Orbitas anteriores não equivalem a histórico real de telemetria.
+- [ ] Atualizar a linha da órbita e footprint para o satélite atualmente selecionado, preservar a posição de mapa/zoom ao trocar o período e permitir exibir a cobertura opcionalmente. Renderizar corretamente cruzamentos da linha internacional de data (±180°), sem criar saltos retos pelo mapa.
+- [ ] Preservar escolha entre sessões e adicionar botão `Padrão` (sugestão inicial: **2 horas futuras**) sem obrigar o operador a utilizar os presets.
+- [ ] Calcular amostras orbitais localmente a partir do TLE/OMM em cache, em worker com passo temporal adaptativo, simplificação de trilha e limite de pontos para evitar travamentos no Windows 7 e 11; **não disparar requisições TLE** ao mover o controle.
+- [ ] Testar 2/5/10/24 h, janelas customizadas, órbitas múltiplas, virada de dia, passagem pelo antimeridiano, TLE antigo, resize/zoom, ausência de estação e preservação de preferências.
+
+## Operação — frequências da próxima passagem com Doppler baseado em TLE/OMM
+- [ ] No indicador de **Próxima passagem** e **Em passagem**, mostrar satélite, modo operacional escolhido (FM, SSB, CW etc.), transponder/canal, frequência nominal de **RX/downlink** e **TX/uplink**, mais as frequências calculadas com Doppler e offsets assinados em Hz (MHz com 6 casas decimais).
+- [ ] Calcular Doppler a partir do **TLE/OMM válido**, posição/altitude da estação e velocidade radial satélite–estação pelo mesmo modelo SGP4/Skyfield do mapa e das passagens. Calcular separadamente compensação de RX/downlink e TX/uplink; nunca usar uma correção fixa.
+- [ ] **Antes do AOS**, indicar frequências Doppler **previstas para o AOS**, identificadas como previsão futura e não sintonia atual do rádio. Opcionalmente permitir inspeção das frequências previstas em TCA e LOS.
+- [ ] **Durante a passagem**, atualizar as frequências Doppler calculadas em intervalos configuráveis (padrão 1 segundo), com tempo remanescente até LOS; após LOS, selecionar automaticamente o próximo satélite compatível.
+- [ ] Em transponders **SSB/CW lineares**, respeitar banda, ponto escolhido no passband, transponder normal/invertido e pareamento RX/TX. Em FM, usar o canal nominal correto. Para **beacon e recepção apenas**, mostrar TX indisponível; não inventar uplink.
+- [ ] Separar visualmente **frequência publicada pelo provedor**, **frequência prevista calculada** e **frequência realmente lida via CAT do TS-2000**. Sem CAT conectado, exibir somente a previsão; não indicar que VFOs foram alterados.
+- [ ] Exibir **fonte, época (epoch), idade e última obtenção do TLE/OMM**. Se os elementos estiverem vencidos ou ausentes, avisar e bloquear **escrita automática de Doppler ao CAT**; nunca disfarçar dados antigos como atuais.
+- [ ] Atualizar TLE/OMM pelo intervalo configurado e política do provedor, usando cache; **não baixar TLE a cada segundo**. Aplicar filtros de modos/bandas, satélites habilitados e altitude mínima da estação.
+- [ ] A seleção/click da passagem pode preencher o painel de planejamento, **mas não deve conectar, habilitar SAT, transmitir, acionar PTT ou reprogramar VFOs sem autorização explícita**.
+- [ ] Testar FM, SSB, CW, inversão, beacon RX-only, AOS/TCA/LOS, dados orbitais vencidos, ausência de transponder, troca de satélite e comparação entre cálculo e leitura CAT.
+
 ## Operação — indicador de próxima passagem compatível e tempo restante
 - [ ] Adicionar **indicador permanente e destacado no topo da aba Operação**, junto à versão/estado do rádio ou acima do painel "Próximas passagens", mostrando **satélite correspondente (nome + NORAD), modo de operação compatível (FM/SSB/CW e futuros), data/hora local de AOS, TCA e LOS** e **contagem regressiva**.
 - [ ] Usar **somente os satélites habilitados pelo operador** em Configurações → Satélites e o **perfil operacional da estação** em Configurações → Rádio: modos marcados, capacidades RX/TX por banda/VFO, transponder/canal disponível, elevação mínima e localização. Não usar satélites meramente catalogados ou com modo incompatível para o indicador principal.
