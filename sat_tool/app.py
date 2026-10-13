@@ -1004,7 +1004,10 @@ class MainWindow(QMainWindow):
             self.cat_status.setStyleSheet("color:#efc17b;font-size:12px")
             self.cat_rx.setText("RX / DOWNLINK (CAT)\n— MHz")
             self.cat_tx.setText("TX / UPLINK (CAT)\n— MHz")
-            self.cat_details.setText("SAT —  ·  MAIN —  ·  sem leitura atual")
+            self.cat_details.setText("SAT — · MAIN — · sem leitura atual")
+            self.cat_telemetry.setText("Potência: — · Medidor: — · RX/TX: sem leitura CAT")
+            for widget in (self.smeter_main,self.smeter_sub):
+                widget.setValue(0);widget.setFormat("sem leitura")
             self.log("CAT desconectado")
             return
         try:
@@ -1028,16 +1031,22 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self,"CAT",str(exc))
 
     def render_radio_state(self, st):
-        self.radio_label.setText(f"{st.model}  •  SAT {'ON' if st.sat else 'OFF'}  •  FA RX: {st.downlink/1e6:.6f} MHz  |  FB TX: {st.uplink/1e6:.6f} MHz  •  MD: {st.mode}")
+        self.radio_label.setText(f"{st.model} · SAT {'ON' if st.sat else 'OFF'} · RX {self.radio_freq(st.downlink)} | TX {self.radio_freq(st.uplink)} · Modo {st.mode}")
         self.radio_label.setStyleSheet("color:#69e3bc" if st.sat else "color:#f0c186")
         self.last_cat_success=now_utc()
-        self.map_radio_label.setText(f"CAT · {st.model} · SAT {'ON' if st.sat else 'OFF'} · RX {st.downlink/1e6:.6f} MHz · TX {st.uplink/1e6:.6f} MHz · Modo {st.mode} · {self.last_cat_success.astimezone():%H:%M:%S}")
+        self.map_radio_label.setText(f"CAT · {st.model} · SAT {'ON' if st.sat else 'OFF'} · RX {self.radio_freq(st.downlink)} · TX {self.radio_freq(st.uplink)} · Modo {st.mode} · {self.last_cat_success.astimezone():%H:%M:%S}")
         self.map_radio_label.setStyleSheet("font-size:13px;color:#69e3bc;font-weight:700")
         self.cat_status.setText(f"● Conectado · {st.model} · SAT {'ON' if st.sat else 'OFF'}")
         self.cat_status.setStyleSheet("color:#69e3bc;font-size:12px")
-        self.cat_rx.setText(f"RX / DOWNLINK (CAT)\n{st.downlink/1e6:.6f} MHz")
-        self.cat_tx.setText(f"TX / UPLINK (CAT)\n{st.uplink/1e6:.6f} MHz")
-        self.cat_details.setText(f"SAT {'ON' if st.sat else 'OFF'}  ·  MAIN {st.mode}  ·  Última leitura {self.last_cat_success.astimezone():%H:%M:%S} local")
+        self.cat_rx.setText(f"RX / DOWNLINK (CAT)\n{self.radio_freq(st.downlink)}")
+        self.cat_tx.setText(f"TX / UPLINK (CAT)\n{self.radio_freq(st.uplink)}")
+        self.cat_details.setText(f"SAT {'ON' if st.sat else 'OFF'} · MAIN {st.mode} · Última leitura {self.last_cat_success.astimezone():%H:%M:%S} local")
+        for widget,value,scale in ((self.smeter_main,st.signal_main,30),(self.smeter_sub,st.signal_sub,15)):
+            widget.setValue(value if value is not None else 0)
+            widget.setFormat(f"{value:02d}/{scale}" if value is not None else "sem leitura")
+        watts=f"{st.power_set_w} W (ajuste)" if st.power_set_w is not None else "—"
+        meter=f"{st.meter_type} {st.meter_value}/30" if st.meter_value is not None else "—"
+        self.cat_telemetry.setText(f"Potência: {watts} · Medidor {meter} · RX/TX real: não confirmado (CAT)")
 
     def refresh_catalog(self):
         age=age_hours(self.config.dir,"amateur_omm.json")
@@ -1550,6 +1559,9 @@ class MainWindow(QMainWindow):
                 self.cat_status.setText(f"● CAT desatualizado há {age:.0f}s")
                 self.cat_status.setStyleSheet("color:#efc17b;font-size:12px")
                 self.cat_details.setText("Leitura CAT vencida · conferir cabo e porta COM")
+                self.cat_telemetry.setText("Potência/medidores: dados desatualizados")
+                for widget in (self.smeter_main,self.smeter_sub):
+                    widget.setValue(0);widget.setFormat("sem leitura")
 
     def background_result(self,key,data):
         self.pending_jobs.discard(key)
