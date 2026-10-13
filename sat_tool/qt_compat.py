@@ -12,7 +12,7 @@ try:
         QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
         QLabel, QPushButton, QLineEdit, QComboBox, QGroupBox, QTabWidget,
         QPlainTextEdit, QSplitter, QMessageBox, QCheckBox, QTableWidget,
-        QTableWidgetItem, QHeaderView, QDoubleSpinBox, QAbstractItemView, QProgressDialog, QScrollArea,
+        QTableWidgetItem, QHeaderView, QDoubleSpinBox, QAbstractItemView, QProgressDialog, QScrollArea, QProgressBar,
     )
     from PySide6.QtWebEngineWidgets import QWebEngineView
     from PySide6.QtPositioning import QGeoPositionInfoSource
@@ -28,7 +28,7 @@ except ImportError as qt6_error:
         QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
         QLabel, QPushButton, QLineEdit, QComboBox, QGroupBox, QTabWidget,
         QPlainTextEdit, QSplitter, QMessageBox, QCheckBox, QTableWidget,
-        QTableWidgetItem, QHeaderView, QDoubleSpinBox, QAbstractItemView, QProgressDialog, QScrollArea,
+        QTableWidgetItem, QHeaderView, QDoubleSpinBox, QAbstractItemView, QProgressDialog, QScrollArea, QProgressBar,
     )
     from PySide2.QtWebEngineWidgets import QWebEngineView
     from PySide2.QtPositioning import QGeoPositionInfoSource
