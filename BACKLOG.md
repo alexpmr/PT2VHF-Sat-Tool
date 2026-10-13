@@ -1,5 +1,17 @@
 # PT2VHF Sat Tool — backlog
 
+## v1.0.2 — seleção da estação no mapa: implementação e testes
+- [x] Botão **Marcar estação no mapa** na aba Configurações e na barra da aba Operação, com modo de edição explicitamente ativado.
+- [x] Mapa Natural Earth offline: clique para marcar, arraste do marcador, zoom, pan e conversão de pixels/SVG/viewport para latitude/longitude WGS-84.
+- [x] Painel de prévia com campos numéricos, botões **Copiar**, **Restaurar anterior**, **Confirmar posição**, **Cancelar** e marcador distinto do ponto salvo.
+- [x] Prévia não persiste configuração, não conecta o rádio, não executa CAT, Doppler automático ou PTT. Confirmação preenche campos e retorna à aba Configurações; salvar permanece operação separada.
+- [x] Correção de integridade: cálculos orbitais, passagens, telemetria e Doppler usam **somente a estação salva**; edição de latitude/longitude não aplica nova estação antes de Salvar.
+- [x] Validação de coordenadas e respostas JavaScript do mapa, rejeitando parâmetros inválidos/não finitos/fora do WGS-84.
+- [x] Sem consulta a provedores externos de mapas nem necessidade de GPS ou serviço de localização Windows para posicionar marcador.
+- [ ] Homologar visualmente arraste/zoom, atualização após Salvar, alta DPI e diferentes resoluções no Win7 SP1 real e Win11, incluindo HTML/QtWebEngine legado.
+- [ ] Verificar precisão de estações com GPS de referência: Natural Earth é mapa mundial, não substitui mapa de ruas/cadastro GPS preciso.
+- [ ] Homologar no rádio físico os comandos CAT e Doppler, que permanecem protegidos nesta entrega.
+
 ## Configurações — marcar a localização da estação diretamente no mapa
 - [ ] Criar recurso **“Marcar estação no mapa”** na aba **Configurações → Estação terrena**, disponível também como atalho no mapa da aba **Operação**. Abrir o mapa-múndi existente (vetorial/offline) em **modo de seleção de localização**, sem interferir na navegação ou seleção normal de satélites.
 - [ ] Permitir **clicar no ponto correspondente à antena/estação**, colocar um marcador temporário PT2VHF (indicativo atual) e converter corretamente a posição do clique para **latitude/longitude decimais assinadas (WGS-84)**, inclusive com zoom, pan, redimensionamento, DPI elevado e telas Windows 7/11.
