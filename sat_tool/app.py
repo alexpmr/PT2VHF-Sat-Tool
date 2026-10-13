@@ -16,7 +16,7 @@ from .qt_compat import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
     QLabel, QPushButton, QLineEdit, QComboBox, QGroupBox, QTabWidget, QPlainTextEdit,
     QSplitter, QMessageBox, QCheckBox, QTableWidget, QTableWidgetItem, QHeaderView,
-    QDoubleSpinBox, QAbstractItemView, QProgressDialog, QScrollArea,
+    QDoubleSpinBox, QAbstractItemView, QProgressDialog, QScrollArea, QProgressBar,
 )
 from .qt_compat import QWebEngineView, QGeoPositionInfoSource, qt_exec, QT_BINDING
 from skyfield.api import load
@@ -28,8 +28,10 @@ from .satellite_info import orbital_characteristics, operational_characteristics
 from .updater import check_for_update, download_update, install_flavor, launch_staged_update
 from .profile import choose_satellites, capability, render_service
 from .media import find_photo, photo_html
+from .operations import select_next_pass, frequency_prediction, status_at, orbital_age_days
 from .core import (Station, now_utc, make_satellite, position, ground_track, footprint,
-                   predict_passes, transponder_options, doppler_frequencies, paired_linear_uplink)
+                   predict_passes, transponder_options, doppler_frequencies, paired_linear_uplink,
+                   ground_track_between, track_period_bounds)
 
 def branding_asset(name):
     root=Path(getattr(sys,'_MEIPASS',Path(__file__).resolve().parents[1]))
@@ -107,6 +109,12 @@ class MainWindow(QMainWindow):
         self.last_map_time = None
         self.pending_jobs = set()
         self.passes = []
+        self.next_candidate = None
+        self.track_cache_key = None
+        self.track_pending_key = None
+        self.track_cache = {"past": [], "future": []}
+        self.plan_satellites = {}
+        self.tx_prefetch_started = set()
         self.last_freqs = (None, None)
         self.last_radio_poll = 0
         self.last_cat_success = None
@@ -166,6 +174,34 @@ class MainWindow(QMainWindow):
         self.utc = QLabel("UTC")
         header.addWidget(self.utc)
         op.addLayout(header)
+        upcoming,upcoming_layout=group("PRÓXIMA PASSAGEM COMPATÍVEL · CONTAGEM REGRESSIVA")
+        upcoming_row=QHBoxLayout()
+        self.next_event_label=label("Cadastre a estação e selecione FM / SSB / CW")
+        self.next_event_label.setStyleSheet("font-size:14px;font-weight:800;color:#70d8ed")
+        self.next_countdown=label("--:--:--")
+        self.next_countdown.setStyleSheet("font-size:23px;font-weight:800;color:#e5faff")
+        self.next_countdown.setAlignment(Qt.AlignRight)
+        self.next_select=QPushButton("Mostrar no mapa")
+        self.next_select.clicked.connect(self.select_next_candidate)
+        self.next_select.setEnabled(False)
+        upcoming_row.addWidget(self.next_event_label,4)
+        upcoming_row.addWidget(self.next_countdown,1)
+        upcoming_row.addWidget(self.next_select)
+        upcoming_layout.addLayout(upcoming_row)
+        self.next_times=label("AOS — · TCA — · LOS — · Elevação máxima —")
+        self.next_times.setStyleSheet("color:#b5cfde;font-size:11px")
+        upcoming_layout.addWidget(self.next_times)
+        self.next_frequencies=label("RX/TX: aguardando transponder publicado e TLE válido")
+        self.next_frequencies.setStyleSheet("color:#7ee5d4;font-size:12px;font-weight:700")
+        upcoming_layout.addWidget(self.next_frequencies)
+        self.pass_progress=QProgressBar()
+        self.pass_progress.setRange(0,1000)
+        self.pass_progress.setValue(0)
+        self.pass_progress.setMaximumHeight(7)
+        self.pass_progress.setTextVisible(False)
+        self.pass_progress.setStyleSheet("QProgressBar{background:#10243c;border:0;border-radius:3px}QProgressBar::chunk{background:#35d9b6;border-radius:3px}")
+        upcoming_layout.addWidget(self.pass_progress)
+        op.addWidget(upcoming)
         splitter = QSplitter(Qt.Horizontal)
         splitter.setChildrenCollapsible(False)
         left = QWidget()
@@ -240,6 +276,24 @@ class MainWindow(QMainWindow):
         lv.addStretch(1)
         splitter.addWidget(left)
         mid=QWidget();mv=QVBoxLayout(mid);mv.setContentsMargins(0,0,0,0)
+        trail_bar=QHBoxLayout()
+        trail_bar.setContentsMargins(4,1,4,2)
+        trail_bar.addWidget(label("Trajetória:"))
+        self.trail_period=QComboBox()
+        self.trail_period.addItems(["Última passagem","2 h","5 h","10 h","24 h","Personalizado"])
+        self.trail_direction=QComboBox()
+        self.trail_direction.addItems(["Futuro","Passado","Ambos"])
+        self.trail_custom=QDoubleSpinBox()
+        self.trail_custom.setRange(0.5,48);self.trail_custom.setDecimals(1)
+        self.trail_custom.setSuffix(" h")
+        self.trail_custom.setValue(3)
+        trail_bar.addWidget(self.trail_period,2)
+        trail_bar.addWidget(self.trail_direction,1)
+        trail_bar.addWidget(self.trail_custom,1)
+        mv.addLayout(trail_bar)
+        self.trail_period.currentTextChanged.connect(self.trail_changed)
+        self.trail_direction.currentTextChanged.connect(self.trail_changed)
+        self.trail_custom.valueChanged.connect(self.trail_changed)
         self.map=QWebEngineView()
         self.map.setHtml(Path(__file__).with_name("map.html").read_text(encoding="utf-8"),
                          QUrl("about:blank"))
