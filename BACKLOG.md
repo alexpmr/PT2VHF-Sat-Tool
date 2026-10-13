@@ -1,6 +1,19 @@
 # PT2VHF Sat Tool — backlog
 
-## UX / UI — simplificar a tela principal (aba Operação)
+## v1.1.0 — implementações, limites e testes pendentes
+- [x] **Doppler previsto imediato** ao mudar satélite/transponder, RX/TX com offsets separados e RX-only, usando estação salva e TLE/OMM em cache, sem programação CAT sem autorização.
+- [x] **Proteção CAT ao trocar alvo:** suspender ajuste automático anterior e exigir nova ativação consentida; polling e escrita seriados com confirmação de retorno FA/FB.
+- [x] **Formato de frequência configurável:** 426.252.12 (10 Hz), 426.252.120 (1 Hz) ou decimal 426,252120 MHz, sem perda interna de Hz.
+- [x] **Satélites:** Marcar todos/Desmarcar todos diretamente na aba, selecionando catálogo todo ou somente resultados filtrados; atualização de lista e agenda em lote.
+- [x] **Frequências SatNOGS:** consulta individual/selecionados/filtrados em background, progresso, cancelamento, paginação, deduplicação e cache atômico; sem misturar atualização de TLE/OMM.
+- [x] **CAT TS-2000 read-only:** S-meter MAIN/SUB, potência configurada (não potência RF medida) e RM selecionado; intervalos de telemetria opcionais moderados; sem comando PTT ou TX.
+- [x] **i18n inicial:** seletor PT-BR/EN/ES/FR/DE/IT com tradução dos títulos, botões e campos principais, preferência persistente e troca no aplicativo.
+- [x] **Sem reformulação do layout principal:** mantidas as três colunas e barra inferior da v1.0.2, conforme decisão do operador.
+- [ ] **i18n integral:** auditar traduções remanescentes de textos dinâmicos, atualizador, mapa HTML, mensagens CAT e todas as fontes externas nos seis idiomas antes de considerar cobertura 100%.
+- [ ] **Homologação física:** verificar comandos SM0/SM1/PC/RM e FA/FB no TS-2000, RX/TX real e SAT MAIN/SUB; estado de transmissão apenas com leitura confiável confirmada.
+- [ ] **Homologação Windows real:** abrir a v1.1.0 em Win7 SP1 físico (Qt5/portátil e instalador), Win11 x64, diferentes DPI e COM, validando tráfego SatNOGS e painel de frequências.
+
+## UX / UI — simplificar a tela principal (aba Operação) [ADIADO — manter layout atual]
 - [ ] **Objetivo:** reduzir a poluição visual e priorizar a operação de satélites, com **mapa central dominante**, passagem atual/próxima, satélite/transponder selecionado, frequências Doppler RX/TX e estado essencial do TS-2000. Preservar acesso a todas as funções existentes, sem removê-las.
 - [ ] **Redesenhar por hierarquia de informação:** barra superior compacta com nome/versão, estação, fonte/idade TLE, data/hora e estado CAT; em seguida apenas uma faixa discreta para **próxima passagem + contador regressivo + AOS/LOS** (e progresso quando em passagem). Evitar repetição dessa mesma informação em vários painéis.
 - [ ] **Coluna esquerda compacta:** pesquisa e seleção do satélite, modos compatíveis e escolha do transponder; mostrar inicialmente resumo com nome/NORAD/modo e frequências nominais principais. Deixar **ficha técnica extensa, foto, detalhes orbitais, filtros avançados e ações de atualização de catálogos** recolhidos em `Detalhes` / `Mais opções` ou nas abas já existentes. Não manter simultaneamente lista grande, combo redundante e ficha longa na vista básica.
