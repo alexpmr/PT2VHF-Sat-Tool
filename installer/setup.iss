@@ -1,5 +1,5 @@
 #define AppName "PT2VHF Sat Tool"
-#define AppVersion "0.2.0"
+#define AppVersion "0.2.1"
 #ifndef BuildFlavor
   #define BuildFlavor "Win11-x64"
 #endif
@@ -25,6 +25,7 @@ DefaultDirName={localappdata}\Programs\PT2VHF Sat Tool {#BuildFlavor}
 DefaultGroupName=PT2VHF Sat Tool {#BuildFlavor}
 OutputDir=..\dist
 OutputBaseFilename=PT2VHF-Sat-Tool-v{#AppVersion}-{#BuildFlavor}-Setup
+SetupIconFile=..\assets\branding\app-icon.ico
 Compression=lzma2
 SolidCompression=yes
 ArchitecturesAllowed={#TargetArch}
