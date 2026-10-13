@@ -13,6 +13,12 @@
 - [x] Workflow Windows em matriz (Win7 SP1 x86 e Win11 x64): dois ZIP portáteis e dois instaladores Inno Setup, com checksums e release automática em tag.
 - [x] Log CAT RX/TX, eventos e falhas; dados do usuário persistentes.
 
+## Regra de distribuição — instaladores EXE diretos (todas as releases)
+- [x] Os instaladores Windows 7 x86 e Windows 11 x64 devem ser gerados e publicados como arquivos **`*-Setup.exe`**, disponíveis para download direto nos assets da Release e no README.
+- [x] **Nunca compactar o instalador em ZIP** nem exigir que o usuário extraia arquivos para executá-lo.
+- [x] O pacote **portátil permanece `*-Portable.zip`**, pois contém o executável e suas dependências em diretórios.
+- [ ] Nas próximas versões, validar no pipeline a existência dos dois assets `*-Setup.exe` independentes e rejeitar `*-Setup.zip`, `*-Installer.zip` ou equivalentes.
+
 ## Validação obrigatória antes de chamar versão estável
 - [x] Criar repositório remoto GitHub `alexpmr/PT2VHF-Sat-Tool`.
 - [x] Acesso ao GitHub App autorizado e código v0.1.2 publicado.
