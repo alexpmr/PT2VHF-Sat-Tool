@@ -3,7 +3,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <style>
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#061628;font-family:Segoe UI,Arial,sans-serif;color:#d9ecf5}
-#frame{position:absolute;inset:0;border:1px solid #20405b;border-radius:7px;overflow:hidden;background:radial-gradient(ellipse at 42% 36%,#164061 0%,#09253f 60%,#061728 100%)}
+/* Qt5/Win7 Chromium does not understand CSS inset:0; explicit edges fix tiny viewport. */
+#frame{position:absolute;top:0;right:0;bottom:0;left:0;border:1px solid #20405b;border-radius:7px;overflow:hidden;background:radial-gradient(ellipse at 42% 36%,#164061 0%,#09253f 60%,#061728 100%)}
 #world{width:100%;height:100%;display:block;touch-action:none;cursor:grab}
 #world:active{cursor:grabbing}
 .grid line{stroke:#52748a;stroke-opacity:.22;stroke-width:.6;stroke-dasharray:3 6}
@@ -11,6 +12,8 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#061628;fon
 .coast{fill:none;stroke:#70a8ad;stroke-opacity:.16;stroke-width:1.8}
 .waterline{stroke:#31789b;stroke-opacity:.13;stroke-width:2}
 .track{fill:none;stroke:#f6d964;stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round}
+.track-history{fill:none;stroke:#f6d964;stroke-width:1.8;stroke-opacity:.62;stroke-linecap:round}
+.track-forecast{fill:none;stroke:#f6d964;stroke-width:2.4;stroke-dasharray:8 4;stroke-linecap:round}
 .foot{fill:none;stroke:#3caaff;stroke-width:1.7;stroke-opacity:.92;stroke-dasharray:6 3}
 #shade{fill:#0c2f4b;opacity:.13;pointer-events:none}
 .city{font-size:14px;paint-order:stroke;stroke:#072437;stroke-width:2.5px;fill:#d6f7fa;font-weight:700}
@@ -35,7 +38,7 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#061628;fon
 </svg>
 <div id="toolbar"><button onclick="zoom(.74)" title="Aproximar mapa">+</button><button onclick="zoom(1.35)" title="Afastar mapa">−</button><button onclick="reset()" title="Mostrar mundo">⌖</button></div>
 <div id="source">MAPA VETORIAL OFFLINE · NATURAL EARTH</div>
-<div id="legend"><span class="gold">━ Trajetória</span><span class="sky">╌ Cobertura</span><span class="green">● Satélite</span></div>
+<div id="legend"><span class="gold">━ Passado reconstruído</span><span class="gold">╌ Futuro previsto</span><span class="sky">╌ Cobertura</span><span class="green">● Satélite</span></div>
 <div id="label">Aguardando efemérides e estação configurada.</div>
 </div>
 <script>
@@ -52,6 +55,8 @@ window.updateOrbit=function(p){
  while(layer.firstChild)layer.removeChild(layer.firstChild);
  if(p&&p.footprint){p.footprint.forEach(a=>pathLine(a,"foot"));}
  if(p&&p.track){p.track.forEach(a=>pathLine(a,"track"));}
+ if(p&&p.track_past){p.track_past.forEach(a=>pathLine(a,"track-history"));}
+ if(p&&p.track_future){p.track_future.forEach(a=>pathLine(a,"track-forecast"));}
  if(p&&p.station&&Number.isFinite(+p.station.lat)&&Number.isFinite(+p.station.lon)){
  const [x,y]=xy(p.station.lat,p.station.lon);
  add("circle",{cx:x,cy:y,r:8,fill:"#f4d55a",opacity:".26"});
