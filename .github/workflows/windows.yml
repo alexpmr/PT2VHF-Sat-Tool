@@ -80,14 +80,21 @@ jobs:
           if ($result.versions.qt_binding -ne $expected) { throw 'Qt binding incorreto' }
           if ('${{ matrix.target }}' -eq 'Win7-x86' -and $result.architecture_bits -ne 32) { throw 'Arquitetura não é x86' }
           if ('${{ matrix.target }}' -eq 'Win11-x64' -and $result.architecture_bits -ne 64) { throw 'Arquitetura não é x64' }
-      - name: Zip Portable (with local settings flag)
+      - name: Portable ONEFILE EXE (sem ZIP)
         shell: pwsh
         run: |
-          New-Item 'dist/PT2VHF-Sat-Tool/portable.flag' -ItemType File -Force | Out-Null
-          $zip = 'dist/PT2VHF-Sat-Tool-v0.1.3-${{ matrix.target }}-Portable.zip'
-          Compress-Archive -Path 'dist/PT2VHF-Sat-Tool/*' -DestinationPath $zip -CompressionLevel Optimal -Force
-          Remove-Item 'dist/PT2VHF-Sat-Tool/portable.flag'
-          if (-not (Test-Path $zip)) { throw 'Portable ZIP missing' }
+          python -m PyInstaller --noconfirm --clean --windowed --onefile --name 'PT2VHF-Sat-Tool-v0.2.0-${{ matrix.target }}-Portable' `
+            --add-data 'sat_tool/map.html;sat_tool' --add-data 'scripts/apply-update.ps1;scripts' --collect-all skyfield --collect-binaries numpy `
+            run.py
+          $portable = (Resolve-Path 'dist/PT2VHF-Sat-Tool-v0.2.0-${{ matrix.target }}-Portable.exe').Path
+          if (-not (Test-Path $portable)) { throw 'Portable EXE missing' }
+          $report = Join-Path $env:RUNNER_TEMP 'portable-onefile-${{ matrix.target }}.json'
+          $binding = if ('${{ matrix.target }}' -eq 'Win7-x86') { 'PySide2' } else { 'PySide6' }
+          $process = Start-Process -FilePath $portable -ArgumentList @('--self-test', ('"' + $report + '"'), $binding) -Wait -PassThru
+          if (-not (Test-Path $report)) { throw "Portable EXE nao iniciou: $($process.ExitCode)" }
+          $diag = Get-Content $report -Raw | ConvertFrom-Json
+          Get-Content $report
+          if ($process.ExitCode -ne 0 -or $diag.status -ne 'passed' -or -not $diag.frozen) { throw 'Portable ONEFILE falhou no teste nativo. Release bloqueada.' }
       - name: Inno Setup installer (Windows 7 SP1 / Windows 11)
         shell: pwsh
         run: |
@@ -99,21 +106,21 @@ jobs:
           if (-not (Test-Path $iscc)) { throw 'Inno Setup compiler missing' }
           & $iscc '/DBuildFlavor=${{ matrix.target }}' '/DMinTarget=${{ matrix.min_windows }}' '/DTargetArch=${{ matrix.inno_arch }}' installer/setup.iss
           if ($LASTEXITCODE -ne 0) { throw 'Inno Setup build failed' }
-          if (-not (Test-Path 'dist/PT2VHF-Sat-Tool-v0.1.3-${{ matrix.target }}-Setup.exe')) { throw 'Installer missing' }
+          if (-not (Test-Path 'dist/PT2VHF-Sat-Tool-v0.2.0-${{ matrix.target }}-Setup.exe')) { throw 'Installer missing' }
       - name: Checksums
         shell: pwsh
         run: |
-          $items = Get-ChildItem 'dist/PT2VHF-Sat-Tool-v0.1.3-${{ matrix.target }}-*' -File
+          $items = Get-ChildItem 'dist/PT2VHF-Sat-Tool-v0.2.0-${{ matrix.target }}-*' -File
           $lines = foreach ($item in $items) {
             $hash = (Get-FileHash $item.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
             "$hash  $($item.Name)"
           }
-          $lines | Set-Content -Path 'dist/PT2VHF-Sat-Tool-v0.1.3-${{ matrix.target }}-SHA256.txt' -Encoding Ascii
+          $lines | Set-Content -Path 'dist/PT2VHF-Sat-Tool-v0.2.0-${{ matrix.target }}-SHA256.txt' -Encoding Ascii
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: PT2VHF-Sat-Tool-v0.1.3-${{ matrix.target }}
-          path: dist/PT2VHF-Sat-Tool-v0.1.3-${{ matrix.target }}-*
+          name: PT2VHF-Sat-Tool-v0.2.0-${{ matrix.target }}
+          path: dist/PT2VHF-Sat-Tool-v0.2.0-${{ matrix.target }}-*
           if-no-files-found: error
           retention-days: 90
   release:
@@ -125,7 +132,7 @@ jobs:
       - name: Download compiled Windows binaries
         uses: actions/download-artifact@v4
         with:
-          pattern: PT2VHF-Sat-Tool-v0.1.3-*
+          pattern: PT2VHF-Sat-Tool-v0.2.0-*
           merge-multiple: true
           path: release
       - name: Verify 4 deliverables
@@ -133,9 +140,9 @@ jobs:
         run: |
           set -euo pipefail
           for target in Win7-x86 Win11-x64; do
-            test -s "release/PT2VHF-Sat-Tool-v0.1.3-${target}-Setup.exe"
-            test -s "release/PT2VHF-Sat-Tool-v0.1.3-${target}-Portable.zip"
-            test -s "release/PT2VHF-Sat-Tool-v0.1.3-${target}-SHA256.txt"
+            test -s "release/PT2VHF-Sat-Tool-v0.2.0-${target}-Setup.exe"
+            test -s "release/PT2VHF-Sat-Tool-v0.2.0-${target}-Portable.exe"
+            test -s "release/PT2VHF-Sat-Tool-v0.2.0-${target}-SHA256.txt"
           done
       - name: Resolve release tag
         shell: bash
@@ -143,12 +150,12 @@ jobs:
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
             echo "RELEASE_TAG=$GITHUB_REF_NAME" >> "$GITHUB_ENV"
           else
-            echo "RELEASE_TAG=v0.1.3" >> "$GITHUB_ENV"
+            echo "RELEASE_TAG=v0.2.0" >> "$GITHUB_ENV"
           fi
       - name: Resolve release tag
         shell: bash
         run: |
-          if [[ "$GITHUB_REF" == refs/heads/main ]]; then echo 'RELEASE_TAG=v0.1.3' >> "$GITHUB_ENV"; else echo "RELEASE_TAG=$GITHUB_REF_NAME" >> "$GITHUB_ENV"; fi
+          if [[ "$GITHUB_REF" == refs/heads/main ]]; then echo 'RELEASE_TAG=v0.2.0' >> "$GITHUB_ENV"; else echo "RELEASE_TAG=$GITHUB_REF_NAME" >> "$GITHUB_ENV"; fi
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
