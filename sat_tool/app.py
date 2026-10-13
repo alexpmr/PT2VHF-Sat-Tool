@@ -889,6 +889,81 @@ class MainWindow(QMainWindow):
             self.manual_update_requested = False
         if key=='omm':self.summary.setText('Sem atualização: usando cache OMM, se existente')
 
+    def enabled_satellite_ids(self):
+        c=self.config.values
+        rows={ident:load_transmitters(self.config.dir,int(ident)) for ident in self.omm}
+        return choose_satellites(self.omm,rows,c.get("radio_modes",[]),
+                                 c.get("radio_bands",[]),c.get("satellite_selection"))
+
+    def suggested_mode_text(self,ident):
+        c=self.config.values
+        info=capability(ident,load_transmitters(self.config.dir,int(ident)),
+                        c.get("radio_modes",[]),c.get("radio_bands",[]))
+        return render_service(info["modes"])
+
+    def refresh_tracked_table(self):
+        if not hasattr(self,"tracked_table"):return
+        self._loading_satellites=True
+        try:
+            selected=set(self.enabled_satellite_ids())
+            rows=sorted(self.omm.items(),key=lambda p:p[1].get("OBJECT_NAME",""))
+            self.tracked_table.setRowCount(len(rows))
+            for i,(ident,obj) in enumerate(rows):
+                checkbox=QTableWidgetItem("")
+                checkbox.setFlags(checkbox.flags()|Qt.ItemIsUserCheckable)
+                checkbox.setData(Qt.UserRole,ident)
+                checkbox.setCheckState(Qt.Checked if ident in selected else Qt.Unchecked)
+                self.tracked_table.setItem(i,0,checkbox)
+                self.tracked_table.setItem(i,1,QTableWidgetItem(f'{obj.get("OBJECT_NAME",ident)} ({ident})'))
+                info=capability(ident,load_transmitters(self.config.dir,int(ident)),
+                                self.config.values.get("radio_modes",[]),
+                                self.config.values.get("radio_bands",[]))
+                self.tracked_table.setItem(i,2,QTableWidgetItem(f'{render_service(info["modes"])} · {info["notice"]}'))
+        finally:
+            self._loading_satellites=False
+
+    def satellite_checked(self,row,col):
+        if self._loading_satellites or col!=0:return
+        ids=[]
+        for row_index in range(self.tracked_table.rowCount()):
+            entry=self.tracked_table.item(row_index,0)
+            if entry and entry.checkState()==Qt.Checked:ids.append(str(entry.data(Qt.UserRole)))
+        self.config.values["satellite_selection"]=ids
+        self.config.save()
+        self.refresh_passes()
+
+    def bulk_select_satellites(self,select):
+        self.config.values["satellite_selection"]=list(self.omm) if select else []
+        self.config.save();self.refresh_tracked_table();self.refresh_passes()
+
+    def restore_auto_selection(self):
+        self.config.values["satellite_selection"]=None
+        self.config.save();self.refresh_tracked_table();self.refresh_passes()
+
+    def save_profile(self):
+        modes=[name for name,w in self.station_modes.items() if w.isChecked()]
+        bands=[name for name,w in self.station_bands.items() if w.isChecked()]
+        if not modes or not bands:
+            QMessageBox.warning(self,"Perfil inválido","Escolha ao menos um modo e uma banda.");return
+        self.config.values.update({"radio_modes":modes,"radio_bands":bands})
+        self.config.save();self.refresh_tracked_table();self.refresh_passes()
+
+    def connect_from_settings(self):
+        port=self.config_port.currentText().strip()
+        if not port:
+            QMessageBox.warning(self,"Porta CAT","Selecione ou digite a porta COM.");return
+        if self.radio.connected:
+            QMessageBox.information(self,"CAT","Rádio já conectado; desconecte antes de alterar a porta.");return
+        self.config.values.update({"radio_brand":"Kenwood","radio_model":"TS-2000","port":port})
+        self.config.save()
+        if self.ports.findText(port)<0:self.ports.addItem(port)
+        self.ports.setCurrentText(port)
+        self.toggle_connection()
+
+    def save_tle_settings(self):
+        self.config.values["tle_update_hours"]=int(self.tle_hours.value())
+        self.config.save();self.log("Intervalo de atualização orbital salvo.")
+
     def closeEvent(self,event):
         self.doppler_checkbox.setChecked(False)
         self.radio.disconnect()
