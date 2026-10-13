@@ -9,13 +9,17 @@ DEFAULTS = {
     "auto_doppler": False, "selected_norad": "",
     "version_check_minutes": 15, "include_prereleases": True,
     "last_update_notice": "",
+    "radio_brand": "Kenwood", "radio_model": "TS-2000",
+    "radio_modes": ["FM", "SSB", "CW"], "radio_bands": ["VHF", "UHF"],
+    "satellite_selection": None, "tle_update_hours": 4,
+    "poll_interval_s": 1, "tle_source": "CelesTrak",
 }
 
 
 def application_dir() -> Path:
     if getattr(sys, 'frozen', False):
         exe = Path(sys.executable).resolve().parent
-        if (exe / "portable.flag").exists():
+        if (exe / "portable.flag").exists() or exe.stem.casefold().endswith("-portable"):
             return exe / "data"
     base = os.environ.get("APPDATA") if sys.platform == "win32" else os.environ.get("XDG_CONFIG_HOME")
     return Path(base) / "PT2VHF" / "SatTool" if base else Path.home() / ".config" / "PT2VHF" / "SatTool"
