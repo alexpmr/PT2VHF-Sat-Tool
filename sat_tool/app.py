@@ -24,6 +24,7 @@ from . import __version__
 from .cat import TS2000, available_ports
 from .catalog import refresh_orbits, load_orbits, refresh_transmitters, load_transmitters, age_hours
 from .config import Config
+from .geolocation import GeoFix, lookup_approximate_ip, read_gps_serial
 from .satellite_info import orbital_characteristics, operational_characteristics, characteristics_text
 from .updater import check_for_update, download_update, install_flavor, launch_staged_update
 from .profile import choose_satellites, capability, render_service
@@ -404,15 +405,37 @@ class MainWindow(QMainWindow):
         for i,(txt,widget) in enumerate(fields):
             grid.addWidget(label(txt),i,0);grid.addWidget(widget,i,1)
         sg.addLayout(grid)
+        source_row=QHBoxLayout()
+        source_row.addWidget(label("Fonte de localização:"))
+        self.location_source=QComboBox()
+        self.location_source.addItems([
+            "Windows (se houver provedor de posição)",
+            "IP aproximado (cidade/região, com consentimento)",
+            "GPS USB / serial (NMEA)",
+            "Manual (sem consulta externa)",
+        ])
+        self.location_source.currentIndexChanged.connect(self.change_location_source)
+        source_row.addWidget(self.location_source,2)
+        self.gps_port=QComboBox();self.gps_port.setEditable(True)
+        self.gps_port.setToolTip("Porta COM do receptor GPS, diferente da porta CAT do TS-2000")
+        self.gps_port.setMinimumWidth(95)
+        self.gps_baud=QComboBox();self.gps_baud.addItems(["4800","9600","38400","115200"])
+        self.gps_baud.setCurrentText("9600")
+        source_row.addWidget(label("GPS COM:"));source_row.addWidget(self.gps_port)
+        source_row.addWidget(label("Baud:"));source_row.addWidget(self.gps_baud)
+        sg.addLayout(source_row)
         place=QHBoxLayout()
-        self.get_position=QPushButton("Obter coordenadas do computador")
+        self.get_position=QPushButton("Obter localização da fonte selecionada")
         self.get_position.clicked.connect(self.geolocate)
         self.save_station_btn=QPushButton("Salvar estação")
         self.save_station_btn.setObjectName('primary')
         self.save_station_btn.clicked.connect(self.save_station)
         place.addWidget(self.get_position);place.addWidget(self.save_station_btn)
         sg.addLayout(place)
-        sg.addWidget(label("A captura utiliza o serviço de localização do sistema (quando disponível). Não substitui coordenadas GPS precisas para previsão de passagens."))
+        self.location_status=label("Sem consulta: escolha a fonte. IP é aproximado, GPS requer receptor, manual não usa rede.")
+        self.location_status.setStyleSheet("color:#a6cede;font-size:11px")
+        sg.addWidget(self.location_status)
+        sg.addWidget(label("A latitude/longitude obtidas precisam ser conferidas e depois salvas manualmente. Consultar IP envia seu IP público ao provedor; nenhuma consulta é automática."))
         cfg.addWidget(station_group)
         profile_group,pg=group("PERFIL OPERACIONAL — MODOS E BANDAS")
         pg.addWidget(label("Modos selecionados determinam candidatos automáticos; as escolhas manuais permanecem salvas."))
@@ -511,6 +534,9 @@ class MainWindow(QMainWindow):
         self.altitude.setValue(float(c['altitude_m']))
         self.min_el.setValue(float(c['min_elevation']))
         self.baud_combo.setCurrentText(str(c['baud']))
+        self.gps_baud.setCurrentText(str(c.get('gps_baud',9600)))
+        if c.get('gps_port'):self.gps_port.setCurrentText(str(c['gps_port']))
+        self.change_location_source()
         for name,w in self.station_modes.items():
             w.setChecked(name in c.get("radio_modes",["FM","SSB","CW"]))
         for name,w in self.station_bands.items():
@@ -678,6 +704,10 @@ class MainWindow(QMainWindow):
             selected=self.config_port.currentText() or previous
             self.config_port.clear();self.config_port.addItems(ports)
             if selected:self.config_port.setCurrentText(selected)
+        if hasattr(self,"gps_port"):
+            old_gps=self.gps_port.currentText() or self.config.values.get("gps_port","")
+            self.gps_port.clear();self.gps_port.addItems(ports)
+            if old_gps:self.gps_port.setCurrentText(old_gps)
 
     def toggle_connection(self):
         if self.radio.connected:
