@@ -11,7 +11,7 @@ import traceback
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from .qt_compat import Qt, QTimer, QObject, Signal, QUrl
-from .qt_compat import QDoubleValidator, QFont
+from .qt_compat import QDoubleValidator, QFont, QIcon, QPixmap
 from .qt_compat import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
     QLabel, QPushButton, QLineEdit, QComboBox, QGroupBox, QTabWidget, QPlainTextEdit,
@@ -31,6 +31,11 @@ from .media import find_photo, photo_html
 from .core import (Station, now_utc, make_satellite, position, ground_track, footprint,
                    predict_passes, transponder_options, doppler_frequencies, paired_linear_uplink)
 
+def branding_asset(name):
+    root=Path(getattr(sys,'_MEIPASS',Path(__file__).resolve().parents[1]))
+    return root/'assets'/'branding'/name
+
+
 STYLE = """
 QWidget {background:#0b1526; color:#e8edf5;font-family:'Segoe UI';font-size:12px}
 QMainWindow {background:#081323} QGroupBox {border:1px solid #253f58;border-radius:9px;
@@ -46,6 +51,16 @@ QTabBar::tab:selected {background:#145d72;color:white} QLabel#metric {font-size:
 QPlainTextEdit,QTableWidget {background:#0b1b2e;border:1px solid #2b4a65;border-radius:5px}
 QHeaderView::section{background:#18334c;color:#c1d9e4;padding:6px}
 QSplitter::handle {background:#1d354a}
+QTabBar::tab:selected {background:#155b82;border-bottom:2px solid #27d7f1}
+QGroupBox {border-color:#244b6b;background:#0a1c30}
+QGroupBox::title {color:#36d3ed;font-size:11px}
+QTableWidget {gridline-color:#173a55;alternate-background-color:#10283f}
+QTableWidget::item:selected {background:#155b80;color:white}
+QPushButton#primary {background:#087a75;border:1px solid #22cab4}
+QScrollBar:vertical {background:#091b2b;width:9px}
+QScrollBar::handle:vertical {background:#1e5775;border-radius:4px;min-height:24px}
+QHeaderView::section {background:#163750;color:#bbdceb;font-weight:700}
+QStatusBar {background:#08182c;color:#88b7c9;font-size:11px}
 """
 
 class Events(QObject):
@@ -68,9 +83,11 @@ def group(title):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle(f"PT2VHF Sat Tool • {__version__}")
-        self.resize(1550, 890)
-        self.setMinimumSize(1100, 700)
+        self.setWindowTitle(f'PT2VHF Sat Tool  •  v{__version__}')
+        icon_path=branding_asset('icon-256.png')
+        if icon_path.exists():self.setWindowIcon(QIcon(str(icon_path)))
+        self.resize(1650, 930)
+        self.setMinimumSize(1120, 700)
         self.config = Config()
         self.ts = load.timescale(builtin=True)
         self.radio = TS2000(self.log)
@@ -130,12 +147,18 @@ class MainWindow(QMainWindow):
         operation = QWidget(); op = QVBoxLayout(operation); op.setContentsMargins(12,12,12,10)
         op.setSpacing(9)
         header = QHBoxLayout()
-        headline = QLabel("PT2VHF  /  SAT TOOL")
-        headline.setStyleSheet("font-size:21px;font-weight:800;color:#e9fbff")
+        logo_path=branding_asset('icon-256.png')
+        if logo_path.exists():
+            icon=QLabel()
+            icon.setPixmap(QPixmap(str(logo_path)).scaled(37,37,Qt.KeepAspectRatio,Qt.SmoothTransformation))
+            header.addWidget(icon)
+        headline = QLabel('PT2VHF  SAT TOOL')
+        headline.setStyleSheet('font-size:20px;font-weight:800;color:#e9fbff;letter-spacing:1px')
         header.addWidget(headline)
         self.version_btn = QPushButton(f"v{__version__} · verificar atualização")
         self.version_btn.setToolTip("Verificar versões no GitHub; iniciar atualização com autorização")
         self.version_btn.clicked.connect(lambda: self.request_update(manual=True))
+        self.version_btn.setStyleSheet('background:#155a3e;border:1px solid #30a579;color:#e6fff4')
         header.addWidget(self.version_btn)
         self.summary = label("Dados orbitais não carregados")
         self.summary.setStyleSheet('color:#85aaba')
