@@ -16,7 +16,7 @@ from .qt_compat import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
     QLabel, QPushButton, QLineEdit, QComboBox, QGroupBox, QTabWidget, QPlainTextEdit,
     QSplitter, QMessageBox, QCheckBox, QTableWidget, QTableWidgetItem, QHeaderView,
-    QDoubleSpinBox, QAbstractItemView, QProgressDialog,
+    QDoubleSpinBox, QAbstractItemView, QProgressDialog, QScrollArea,
 )
 from .qt_compat import QWebEngineView, QGeoPositionInfoSource, qt_exec, QT_BINDING
 from skyfield.api import load
@@ -26,6 +26,7 @@ from .catalog import refresh_orbits, load_orbits, refresh_transmitters, load_tra
 from .config import Config
 from .satellite_info import orbital_characteristics, operational_characteristics, characteristics_text
 from .updater import check_for_update, download_update, install_flavor, launch_staged_update
+from .profile import choose_satellites, capability, render_service
 from .core import (Station, now_utc, make_satellite, position, ground_track, footprint,
                    predict_passes, transponder_options, doppler_frequencies, paired_linear_uplink)
 
@@ -90,6 +91,8 @@ class MainWindow(QMainWindow):
         self.passes = []
         self.last_freqs = (None, None)
         self.last_radio_poll = 0
+        self.last_cat_success = None
+        self._loading_satellites = False
         self.pos_source = None
         self.init_ui()
         self.load_fields()
@@ -199,6 +202,9 @@ class MainWindow(QMainWindow):
         self.map.setHtml(Path(__file__).with_name("map.html").read_text(encoding="utf-8"),
                          QUrl("https://www.openstreetmap.org/"))
         mv.addWidget(self.map,1)
+        self.map_radio_label=label("CAT desconectado · RX — MHz · TX — MHz · Modo —")
+        self.map_radio_label.setStyleSheet("font-size:13px;color:#f0c186;font-weight:700")
+        mv.addWidget(self.map_radio_label)
         self.map_desc=label("Trajetória orbital · footprint · sua estação · OSM")
         self.map_desc.setStyleSheet('color:#8caec3')
         mv.addWidget(self.map_desc)
@@ -216,8 +222,8 @@ class MainWindow(QMainWindow):
         sv.addWidget(self.visibility)
         rv.addWidget(stat)
         nextpass,np=group("PRÓXIMAS PASSAGENS · 36 H")
-        self.pass_table=QTableWidget(0,4)
-        self.pass_table.setHorizontalHeaderLabels(["Satélite","AOS local","Max °","LOS local"])
+        self.pass_table=QTableWidget(0,6)
+        self.pass_table.setHorizontalHeaderLabels(["Satélite","AOS local","TCA local","LOS local","Max °","Modos"])
         self.pass_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.pass_table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.pass_table.cellDoubleClicked.connect(self.select_pass_satellite)
@@ -269,7 +275,11 @@ class MainWindow(QMainWindow):
         self.catalog_note=label("Dados orbitais: CelesTrak OMM/TLE · Frequências e modos: SatNOGS · Não confundir catálogo com atividade confirmada.")
         catalog_layout.addWidget(self.catalog_note)
         root.addTab(catalog_page,"Satélites")
-        config_page=QWidget();cfg=QVBoxLayout(config_page); cfg.setContentsMargins(20,16,20,16)
+        config_page=QWidget();config_root=QVBoxLayout(config_page)
+        settings_scroll=QScrollArea(config_page);settings_scroll.setWidgetResizable(True)
+        settings_frame=QWidget();cfg=QVBoxLayout(settings_frame)
+        cfg.setContentsMargins(20,16,20,16)
+        settings_scroll.setWidget(settings_frame);config_root.addWidget(settings_scroll)
         station_group,sg=group("ESTAÇÃO TERRENA")
         grid=QGridLayout();grid.setColumnStretch(1,1)
         self.callsign=QLineEdit();self.lat=QLineEdit();self.lon=QLineEdit()
