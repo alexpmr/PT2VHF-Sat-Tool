@@ -15,8 +15,8 @@
 
 ## Validação obrigatória antes de chamar versão estável
 - [x] Criar repositório remoto GitHub `alexpmr/PT2VHF-Sat-Tool`.
-- [ ] Dar acesso GitHub App ao repositório PT2VHF-Sat-Tool (se ainda não aparecer na instalação) e publicar código v0.1.1.
-- [ ] Rodar CI Windows e baixar os **quatro binários** (Win7 e Win11: Setup + Portable).
+- [x] Acesso ao GitHub App autorizado e código v0.1.2 publicado.
+- [x] CI v0.1.2 compilou os quatro binários, porém sem teste real de inicialização; erro NumPy reportado pelo operador.
 - [ ] Homologar Win7 SP1 x86/x64: dependências legadas, Visual C++/Universal CRT e carregamento do QtWebEngine; instalador e portátil.
 - [ ] Homologar instalador e portátil no Windows 11 x64.
 - [ ] Validar CAT TS-2000 físico, inclusive SA, FA, FB e MD nos VFOs apropriados.
@@ -25,7 +25,7 @@
 - [ ] Confirmar dados de cada modo/transponder no SatNOGS e autorizações de TX antes de operar.
 - [ ] Validar geolocalização conforme permissões do Windows.
 
-## Evolução v0.1.2 — Download, versão e catálogo de satélites
+## Evolução v0.1.3 — Download, versão e catálogo de satélites
 - [x] README GitHub: downloads Win7/Win11, Setup/Portable, **antes da descrição**; links de publicação condicionados à release real.
 - [x] Botão de versão na barra superior; comparação semântica com GitHub Releases, changelog e indicação de atualização disponível.
 - [x] Verificação automática (padrão 15 minutos), configurável; notificação única por versão; suporte explícito a pré-lançamentos.
@@ -34,7 +34,7 @@
 - [x] Encerramento do Doppler e conexão CAT antes de disparar atualizador externo; versão portátil preserva `data/`; Setup usa instalador Inno.
 - [x] Aba Satélites: lista dinâmica CelesTrak com nome, NORAD, inclinação, período, modos e frequências de transponders disponíveis no cache SatNOGS.
 - [x] Visão detalhada da seleção com excentricidade, época e informações operacionais, sem confundir órbita catalogada com transmissor ativo.
-- [ ] Publicar código e release v0.1.2 no repositório remoto, executar o CI e verificar quatro entregáveis Windows.
+- [ ] Publicar código e release v0.1.3 no repositório remoto, executar o CI e verificar quatro entregáveis Windows.
 - [ ] Testar atualização de Setup e Portable em Win7 e Win11 reais, inclusive falha de checksum e conexão de rede.
 - [ ] Homologar hardware TS-2000 real, segurança CAT, crash recovery e integridade dos dados portáteis.
 
@@ -48,3 +48,9 @@
 - [ ] Histórico, observações e integração com APRS Client (separada).
 - [ ] Mapa offline com cartografia incluída para não depender de CDN.
 - [x] Relação dos downloads no início do README (links condicionados à release).
+
+## Correção v0.1.3 — NumPy
+- [x] Importação testada dentro do EXE empacotado, com relatório JSON mesmo em versão windowed.
+- [x] Versão do NumPy fixada por alvo (Win7 x86 / Win11 x64).
+- [x] Release bloqueada em caso de falha no smoke test do EXE.
+- [ ] Validar software em Windows 7 SP1 e Windows 11 reais e TS-2000.

@@ -3,7 +3,7 @@
 param([ValidateSet('Win7-x86','Win11-x64')][string]$Target = 'Win11-x64')
 $ErrorActionPreference = 'Stop'
 Set-Location (Split-Path -Parent $PSScriptRoot)
-$Version = '0.1.2'
+$Version = '0.1.3'
 if ($Target -eq 'Win7-x86') {
   $PythonSelector = '-3.8-32'
   $Deps = 'requirements-win7.txt'
@@ -35,9 +35,15 @@ Invoke-Checked 'Conferindo arquitetura' $Exe @('-c',"import struct; assert str(s
 Invoke-Checked 'Conferindo binding Qt' $Exe @('-c',"from sat_tool.qt_compat import QT_BINDING; print(QT_BINDING)")
 $AppDir = 'dist/PT2VHF-Sat-Tool'
 if (Test-Path $AppDir) { Remove-Item $AppDir -Recurse -Force }
-Invoke-Checked 'Compilando executavel Windows' $Exe @('-m','PyInstaller','--noconfirm','--clean','--windowed','--onedir','--name','PT2VHF-Sat-Tool','--add-data','sat_tool/map.html;sat_tool','--add-data','scripts/apply-update.ps1;scripts','--collect-all','skyfield','run.py')
+Invoke-Checked 'Compilando executavel Windows' $Exe @('-m','PyInstaller','--noconfirm','--clean','--windowed','--onedir','--name','PT2VHF-Sat-Tool','--add-data','sat_tool/map.html;sat_tool','--add-data','scripts/apply-update.ps1;scripts','--collect-all','skyfield','--collect-binaries','numpy','run.py')
 $Bin = Join-Path $AppDir 'PT2VHF-Sat-Tool.exe'
 if (-not (Test-Path $Bin)) { throw "Arquivo ausente: $Bin" }
+$Report = Join-Path (Resolve-Path 'dist').Path ("sattool-selftest-$Target.json")
+$Expected = if ($Target -eq 'Win7-x86') { 'PySide2' } else { 'PySide6' }
+$Result = Start-Process -FilePath (Resolve-Path $Bin).Path -ArgumentList @('--self-test',('"' + $Report + '"'),$Expected) -PassThru -Wait
+if (-not (Test-Path $Report)) { throw "EXE nao gerou relatorio: $($Result.ExitCode)" }
+$Smoke = Get-Content $Report -Raw | ConvertFrom-Json
+if ($Result.ExitCode -ne 0 -or $Smoke.status -ne 'passed' -or -not $Smoke.frozen) { throw "EXE falhou: $(Get-Content $Report -Raw)" }
 New-Item -Path (Join-Path $AppDir 'portable.flag') -ItemType File -Force | Out-Null
 $Portable = "dist/PT2VHF-Sat-Tool-v$Version-$Target-Portable.zip"
 if (Test-Path $Portable) { Remove-Item $Portable -Force }

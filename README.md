@@ -2,12 +2,12 @@
 
 ## Downloads — instaladores e portáteis
 
-**Versão v0.1.2 — Windows 7 SP1 e Windows 11.** Os links abaixo apontam para os artefatos *previstos* da release. **Somente funcionarão depois que a tag `v0.1.2` for publicada e os builds Windows concluírem com sucesso no GitHub Actions.** Não são links para EXEs já homologados.
+**Versão v0.1.3 — Windows 7 SP1 e Windows 11.** Os links abaixo estarão ativos após o pipeline de compilação e autoteste concluir. Binários compilados ainda exigem validação nos sistemas Windows reais.
 
 | Windows | Instalável | Portátil |
 | --- | --- | --- |
-| **Windows 7 SP1** (x86; executável de 32 bits também para Win7 x64) | [Instalador Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v0.1.2/PT2VHF-Sat-Tool-v0.1.2-Win7-x86-Setup.exe) | [Portable Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v0.1.2/PT2VHF-Sat-Tool-v0.1.2-Win7-x86-Portable.zip) |
-| **Windows 11** (x64) | [Instalador Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v0.1.2/PT2VHF-Sat-Tool-v0.1.2-Win11-x64-Setup.exe) | [Portable Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v0.1.2/PT2VHF-Sat-Tool-v0.1.2-Win11-x64-Portable.zip) |
+| **Windows 7 SP1** (x86; executável de 32 bits também para Win7 x64) | [Instalador Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v0.1.3/PT2VHF-Sat-Tool-v0.1.3-Win7-x86-Setup.exe) | [Portable Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v0.1.3/PT2VHF-Sat-Tool-v0.1.3-Win7-x86-Portable.zip) |
+| **Windows 11** (x64) | [Instalador Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v0.1.3/PT2VHF-Sat-Tool-v0.1.3-Win11-x64-Setup.exe) | [Portable Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v0.1.3/PT2VHF-Sat-Tool-v0.1.3-Win11-x64-Portable.zip) |
 
 **[Todas as releases](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases)** · **[Acompanhar compilação](https://github.com/alexpmr/PT2VHF-Sat-Tool/actions)**
 
@@ -21,7 +21,7 @@
 
 ## Descrição do aplicativo
 
-Aplicação independente para Windows, voltada ao rastreamento de satélites amadores e ao controle CAT do **Kenwood TS-2000** pela porta serial. **Versão 0.1.2 — MVP ainda sem homologação em TS-2000 físico.**
+Aplicação independente para Windows, voltada ao rastreamento de satélites amadores e ao controle CAT do **Kenwood TS-2000** pela porta serial. **Versão 0.1.3 — MVP ainda sem homologação em TS-2000 físico.**
 
 ## Principais funcionalidades
 
@@ -54,7 +54,7 @@ Aplicação independente para Windows, voltada ao rastreamento de satélites ama
 
 ## Publicação do código e das releases
 
-O repositório `alexpmr/PT2VHF-Sat-Tool` começou com `README.md` e `LICENSE` MIT. Extraia o pacote-fonte e execute `Publicar-no-GitHub.cmd` em um Windows com Git autenticado. O script clona `main`, preserva o `LICENSE`, publica os arquivos e cria a tag `v0.1.2` **sem force push**. Se o pipeline Windows concluir com êxito, a Release disponibiliza os quatro binários e respectivos SHA-256. Não há EXE publicado até essa etapa. Revise o script antes de executar; não armazena nem solicita tokens.
+O repositório `alexpmr/PT2VHF-Sat-Tool` começou com `README.md` e `LICENSE` MIT. A publicação no `main` dispara a compilação e, somente após os autotestes dos EXEs, publica a release v0.1.3 com os quatro arquivos e respectivos checksums.
 
 ## Fontes, créditos e licenças
 
@@ -87,3 +87,17 @@ A aba **Satélites** é gerada a partir do **catálogo atual CelesTrak OMM/TLE**
 - Alguns satélites do grupo amateur não têm transponder amador ativo; entradas do SatNOGS são comunitárias.
 - O roteiro do transponder invertido usa interpolação linear; operador deve validar sinais e offsets.
 
+
+
+## Diagnóstico de inicialização (v0.1.3)
+
+O build anterior apenas verificava a existência do EXE. Agora o GitHub Actions **executa os binários congelados**, verificando importação nativa do NumPy, BLAS, Skyfield, Qt e da aplicação. Se falhar, o pipeline bloqueia a release.
+
+Se persistir erro ao abrir, na pasta do aplicativo execute:
+
+```powershell
+.\PT2VHF-Sat-Tool.exe --self-test "$env:TEMP\PT2VHF-Sat-Tool-diagnostics.json"
+Get-Content "$env:TEMP\PT2VHF-Sat-Tool-diagnostics.json"
+```
+
+O JSON mostra o traceback e as versões usadas. O Win7 SP1 requer atualizações do sistema e runtime Visual C++/UCRT apropriados. Instalar Python ou NumPy no PC não corrige um aplicativo congelado. Não baixe DLLs de sites não oficiais. NumPy travado em 1.23.5 (Win7) e 1.26.4 (Win11); o teste no runner não substitui homologação no Windows real.
