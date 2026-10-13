@@ -22,29 +22,25 @@ try {
         $p = Start-Process -FilePath $Package -ArgumentList '/SILENT','/SUPPRESSMSGBOXES','/NORESTART' -Wait -PassThru
         if ($p.ExitCode -ne 0) { throw "Instalador falhou: $($p.ExitCode)" }
     } else {
-        if (-not (Test-Path -LiteralPath (Join-Path $Package 'PT2VHF-Sat-Tool.exe'))) {throw 'Portable incompleto.'}
-        if (-not (Test-Path -LiteralPath (Join-Path $Destination 'portable.flag'))) {throw 'Destino nao e uma instalacao portable.'}
-        # Stage files were already safely extracted from a verified package.
-        # Do not delete or overwrite data/ (settings and downloaded orbital catalogs).
-        $fullSource = [System.IO.Path]::GetFullPath($Package).TrimEnd('\')
-        Get-ChildItem -LiteralPath $fullSource -Force -Recurse | ForEach-Object {
-            $relative = $_.FullName.Substring($fullSource.Length).TrimStart('\')
-            $parts = $relative -split '\\'
-            if ($parts[0] -ine 'data') {
-                $target = Join-Path $Destination $relative
-                if ($_.PSIsContainer) {
-                    if (-not (Test-Path -LiteralPath $target)) {
-                        New-Item -ItemType Directory -Path $target -Force | Out-Null
-                    }
-                } else {
-                    $parent = Split-Path -Parent $target
-                    if (-not (Test-Path -LiteralPath $parent)) {
-                        New-Item -ItemType Directory -Path $parent -Force | Out-Null
-                    }
-                    Copy-Item -LiteralPath $_.FullName -Destination $target -Force
-                }
-            }
+        if (-not (Test-Path -LiteralPath $Package -PathType Leaf) -or
+            -not $Package.EndsWith('.exe', [System.StringComparison]::OrdinalIgnoreCase)) {
+            throw 'Portable EXE verificado nao encontrado.'
         }
+        if (-not $Executable.EndsWith('-Portable.exe', [System.StringComparison]::OrdinalIgnoreCase)) {
+            throw 'Destino nao e a edicao portable onefile.'
+        }
+        $backup = $Executable + '.previous'
+        if (Test-Path -LiteralPath $backup) { Remove-Item -LiteralPath $backup -Force }
+        if (Test-Path -LiteralPath $Executable) {
+            Copy-Item -LiteralPath $Executable -Destination $backup -Force
+        }
+        try {
+            Copy-Item -LiteralPath $Package -Destination $Executable -Force
+        } catch {
+            if (Test-Path -LiteralPath $backup) { Copy-Item -LiteralPath $backup -Destination $Executable -Force }
+            throw
+        }
+        # data/ is stored beside the executable and deliberately untouched.
     }
     if (Test-Path -LiteralPath $Executable) {
         Start-Process -FilePath $Executable
