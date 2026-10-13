@@ -4,24 +4,39 @@
 
 ## Downloads — instaladores e portáteis
 
-**PT2VHF Sat Tool v1.0.0 — Windows 7 SP1 e Windows 11.** Os quatro downloads são arquivos `.exe` diretos. Links ficam disponíveis após aprovação dos builds Windows. Embora seja o marco 1.0 de funcionalidades, permanece em pré-lançamento até a homologação CAT com TS-2000 físico e Windows 7 real.
+**PT2VHF Sat Tool v1.0.1 — Windows 7 SP1 e Windows 11.** Os quatro downloads são arquivos `.exe` diretos. Links ficam disponíveis após aprovação dos builds Windows. Embora seja o marco 1.0 de funcionalidades, permanece em pré-lançamento até a homologação CAT com TS-2000 físico e Windows 7 real.
 
 | Windows | Instalável | Portátil |
 | --- | --- | --- |
-| **Windows 7 SP1** (x86; executável de 32 bits também para Win7 x64) | [Instalador Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.0.0/PT2VHF-Sat-Tool-v1.0.0-Win7-x86-Setup.exe) | [Portable Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.0.0/PT2VHF-Sat-Tool-v1.0.0-Win7-x86-Portable.exe) |
-| **Windows 11** (x64) | [Instalador Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.0.0/PT2VHF-Sat-Tool-v1.0.0-Win11-x64-Setup.exe) | [Portable Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.0.0/PT2VHF-Sat-Tool-v1.0.0-Win11-x64-Portable.exe) |
+| **Windows 7 SP1** (x86; executável de 32 bits também para Win7 x64) | [Instalador Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.0.1/PT2VHF-Sat-Tool-v1.0.1-Win7-x86-Setup.exe) | [Portable Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.0.1/PT2VHF-Sat-Tool-v1.0.1-Win7-x86-Portable.exe) |
+| **Windows 11** (x64) | [Instalador Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.0.1/PT2VHF-Sat-Tool-v1.0.1-Win11-x64-Setup.exe) | [Portable Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.0.1/PT2VHF-Sat-Tool-v1.0.1-Win11-x64-Portable.exe) |
 
 **Formato dos downloads:** tanto instaladores quanto portáteis são entregues diretamente como arquivos **`.exe`**. O portátil inclui as dependências dentro do mesmo EXE (PyInstaller onefile) e não requer descompactação.
 
 **[Todas as releases](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases)** · **[Acompanhar compilação](https://github.com/alexpmr/PT2VHF-Sat-Tool/actions)**
 
 - **Instalável:** instalação por usuário, atalho e desinstalação, atualização pelo aplicativo usando o Setup de sua edição.
-- **Portátil:** execute diretamente `PT2VHF-Sat-Tool-v1.0.0-*-Portable.exe` (um único arquivo). Configurações ficam em `data/` ao lado do EXE, preservadas após atualizações.
+- **Portátil:** execute diretamente `PT2VHF-Sat-Tool-v1.0.1-*-Portable.exe` (um único arquivo). Configurações ficam em `data/` ao lado do EXE, preservadas após atualizações.
 - **Win7:** Python 3.8 x86 + PySide2/Qt5 + PyInstaller 5.13.2 (legado, precisa ser validado no Windows 7 real).
 - **Win11:** Python 3.11 x64 + PySide6/Qt6 + PyInstaller 6.13.0.
 - Arquivos SHA256 acompanham cada compilação. A versão Windows 7 é experimental; não confundir sucesso do CI com homologação em campo.
 
 ---
+
+## Novo na versão 1.0.1 — localização corrigida (Windows 7/11)
+
+Na aba **Configurações → Estação terrena**, a origem de coordenadas pode ser escolhida explicitamente:
+
+1. **Localização do Windows** (QtPositioning), apenas se o sistema disponibilizar um provedor. Se não houver, a aplicação explica como continuar; não depende desse serviço para funcionar.
+2. **Localização aproximada por IP**, solicitada somente depois de **consentimento explícito**. Serviço externo [ipwho.is](https://ipwho.is/) via HTTPS; recebe IP público e metadados normais da requisição. O resultado pode representar somente cidade/região, nunca a posição real da antena. A consulta não roda no início do aplicativo.
+3. **Receptor GPS por porta COM dedicada**, NMEA RMC/GGA com checksum e indicação de fix válido; escolha porta e baud independentes do CAT. O programa **somente lê** a porta GPS, não transmite nem modifica rádio.
+4. **Entrada manual**, sempre disponível e sem rede; indicada para coordenadas conhecidas da estação.
+
+O resultado da localização é mostrado para conferência, incluindo origem, altitude quando fornecida e indicação de precisão não informada. **Somente após confirmar** os campos são preenchidos; **a estação não muda** até clicar separadamente em **Salvar estação**. Cancelamentos, timeout, ausência de provedor e erros de Internet deixam intactas as coordenadas existentes.
+
+**Recomendação:** para Doppler e previsão precisa de passagens, utilize as coordenadas reais da antena, não uma estimativa pelo IP.
+
+A release também preserva a agenda FM/SSB/CW, as frequências previstas de Doppler por TLE/OMM, o mapa vetorial offline e o CAT do Kenwood TS-2000 com autorização explícita.
 
 ## Novo na versão 1.0.0 — planejamento por passagem e Doppler
 
@@ -36,7 +51,7 @@
 
 *Limitações:* o catálogo de canais pode exigir conexão e atualização do SatNOGS. Se o canal for desconhecido ou incompatível, o aplicativo não inventa um transponder e exibe ausência de previsão operacional compatível. As fontes e a época orbital precisam ser verificadas antes de qualquer transmissão.
 
-## Interface operacional renovada — v1.0.0
+## Interface operacional renovada — v1.0.1
 
 **A versão adota a identidade visual PT2VHF Sat Tool** em tons de azul-marinho, ciano e verde-água. O aplicativo mantém as três colunas:
 - **Esquerda:** lista de satélites habilitados, modos, seleção e detalhes/transponders.
@@ -44,7 +59,7 @@
 - **Direita:** AOS/TCA/LOS e elevação máxima nas passagens, métricas orbitais e painel destacado de **CAT real** com RX FA, TX FB, modo e SAT, incluindo sinalização de desconexão, erro e leitura antiga.
 
 ### Mapa corrigido (HTTP 418)
-A versão v0.2.0 consultava os tiles públicos da OpenStreetMap Foundation por um QtWebEngine sem identidade de requisição apropriada, e mostrou **418 Access blocked** em uso real. A v1.0.0 **remove essas solicitações** e usa geografia 1:110m do [Natural Earth](https://www.naturalearthdata.com/about/terms-of-use/), domínio público, integrada ao aplicativo. A base geográfica funciona sem Internet; a atualização de TLE/OMM e dados SatNOGS continua exigindo rede.
+A versão v0.2.0 consultava os tiles públicos da OpenStreetMap Foundation por um QtWebEngine sem identidade de requisição apropriada, e mostrou **418 Access blocked** em uso real. A v1.0.1 **remove essas solicitações** e usa geografia 1:110m do [Natural Earth](https://www.naturalearthdata.com/about/terms-of-use/), domínio público, integrada ao aplicativo. A base geográfica funciona sem Internet; a atualização de TLE/OMM e dados SatNOGS continua exigindo rede.
 
 O mapa offline tem estilo cartográfico simplificado (não exibe ruas). Orbitas e posições são calculadas a partir dos elementos orbitais ativos; são dados reais, não linhas ilustrativas.
 
@@ -107,7 +122,7 @@ Aplicação independente para Windows, voltada ao rastreamento de satélites ama
 
 ## Publicação do código e das releases
 
-O repositório `alexpmr/PT2VHF-Sat-Tool` começou com `README.md` e `LICENSE` MIT. A publicação no `main` dispara a compilação e, somente após os autotestes dos EXEs, publica a release v1.0.0 com os quatro arquivos e respectivos checksums.
+O repositório `alexpmr/PT2VHF-Sat-Tool` começou com `README.md` e `LICENSE` MIT. A publicação no `main` dispara a compilação e, somente após os autotestes dos EXEs, publica a release v1.0.1 com os quatro arquivos e respectivos checksums.
 
 ## Fontes, créditos e licenças
 
@@ -142,7 +157,7 @@ A aba **Satélites** é gerada a partir do **catálogo atual CelesTrak OMM/TLE**
 
 
 
-## Diagnóstico de inicialização (v1.0.0)
+## Diagnóstico de inicialização (v1.0.1)
 
 O build anterior apenas verificava a existência do EXE. Agora o GitHub Actions **executa os binários congelados**, verificando importação nativa do NumPy, BLAS, Skyfield, Qt e da aplicação. Se falhar, o pipeline bloqueia a release.
 
