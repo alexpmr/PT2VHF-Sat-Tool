@@ -33,6 +33,43 @@
 - [ ] Estado real **RX/TX/PTT** somente se houver comando CAT comprovadamente suportado e validado; caso contrário apresentar **indisponível** e não inferir transmissão a partir da frequência ou operação Doppler.
 - [ ] Painel compacto, legível em Win7/Win11, permitindo expandir detalhes técnicos e mantendo mapa/órbita visíveis. CAT deve continuar exclusivamente sem acionamento PTT pelo aplicativo.
 
+## Configurações — Satélites amadores e favoritos da página principal
+- [ ] Criar a seção **Configurações → Satélites**, com catálogo pesquisável (nome, apelido, NORAD, COSPAR, faixa, modo, tipo e status), seleção individual por checkbox, **Marcar todos / Desmarcar todos** e ação **Mostrar apenas selecionados**.
+- [ ] Persistir em configuração local, pela chave **NORAD_CAT_ID**, a seleção de satélites a acompanhar; não usar o nome como identificador único e tratar renomeações/aliases.
+- [ ] Exibir **somente os satélites selecionados** na página **Operação**: seletor, mapa, trajetórias, previsão/próximas passagens, notificações e demais listagens operacionais. Manter o catálogo completo na aba **Satélites** para descobrir e ativar outros; oferecer a opção separada **Mostrar todos no catálogo**.
+- [ ] Disponibilizar preferências **Favoritos**, **Mostrar apenas operacionais (segundo fontes)** e filtros por VHF/UHF, FM, SSB, CW, digital, telemetria, repetidor FM, linear, APRS e recepção apenas. O status ativo depende de evidência datada; classificação orbital não é prova de operação.
+- [ ] **Ficha de satélite**: foto real (quando licenciada) ou ilustração **identificada como ilustração**, nome, outros nomes, NORAD, COSPAR, missão/operador, tipo de satélite, lançamento, situação conhecida, massa/dimensões quando disponíveis, órbita, inclinação, altitude aproximada, período, excentricidade, epoch dos elementos, visibilidade desde a estação, AOS/TCA/LOS, elevação máxima e azimute.
+- [ ] **Ficha de rádio/transponder**: frequências e intervalos exatos **uplink/downlink**, beacon, modos RX/TX, conversão de banda, sentido de transponder linear (normal/invertido), tom CTCSS quando publicado, largura de banda, polarização (se verificada), disponibilidade de TX e notas operacionais, com fonte, timestamp e sinalização de valores desconhecidos.
+- [ ] Cada frequência deve ser rotulada por tipo: **publicada** (SatNOGS/AMSAT), **confirmada no rádio via CAT** ou **alvo calculado com Doppler**; não misturar bases. Não marcar automaticamente TX como permitido ou transponder como operante porque possui elementos orbitais.
+- [ ] **Fotos**: pesquisar primeiro páginas oficiais dos operadores/AMSAT e acervos Wikimedia Commons; obter foto da espaçonave ou foto de integração real, não imagens de satélites homônimos; registrar URL original, autor, crédito, licença e data. Usar cache e placeholder quando não houver imagem comprovada/licenciada; permitir abrir fonte e substituir manualmente a foto.
+- [ ] **Consolidação de fontes**: SatNOGS DB (satélites/transmissores e modos; CC BY-SA 4.0), AMSAT (guia de frequências e relatos de operação), CelesTrak (OMM/TLE orbital), operadores e documentação de missão, Wikimedia Commons (imagens com metadados/licença). Priorizar NORAD/COSPAR; guardar proveniência e detectar divergências entre frequências e status.
+- [ ] Ordenar os satélites habilitados por **próxima passagem** sobre a estação cadastrada; diferenciar: *operacional confirmado*, *relato recente*, *catálogo sem confirmação*, *inativo/decadente*, *somente beacon* e *dados indisponíveis*. Destacar aqueles com transponder utilizável pelo equipamento/filtros; avisar quando frequência estiver fora da cobertura do TS-2000.
+- [ ] Incluir testes para persistência dos favoritos, filtros, status, cache/offline, troca de satélite, consistência de NORAD, ausência de foto e divergência de dados de frequência.
+
+## Configurações — TLE e efemérides orbitais (OMM principal)
+- [ ] Criar seção **Configurações → TLE / Efemérides** com fontes configuráveis, ordem de prioridade e diagnóstico: **CelesTrak OMM JSON como padrão**, TLE clássico como alternativa apenas para NORAD compatíveis, e possibilidade futura de importar elementos orbitais locais.
+- [ ] Selecionar grupos de dados relevantes (amateur e outros explicitamente habilitados), mostrar URL **HTTPS da consulta**, tamanho, quantidade de objetos, última consulta, última atualização efetiva, **época orbital por satélite**, fonte e saúde do cache; validar integridade/schema/NORAD e evitar resultados vazios ou regressão de idade.
+- [ ] **Atualização automática configurável:** opções 2, 4, 8, 12 e 24 horas, padrão **4 horas**, mínimo técnico obrigatório de **2 horas por conjunto** para respeitar o CelesTrak. O botão manual **Atualizar agora** consulta cache sem repetir download antes do prazo mínimo. Retentativas com backoff, proteção contra 403/429/5xx e falha de rede; nunca disparar loop de requisições.
+- [ ] Diferenciar **intervalo de atualização TLE/OMM** (horas), **frequência de atualização da posição no mapa** (segundos), **polling CAT** (segundos) e **checagem de versão do programa** (minutos). São tarefas independentes; não vincular a atualização da órbita ao refresh visual.
+- [ ] Preservar último conjunto válido offline, com cópias de segurança e escrita atômica; indicar **válido, antigo, indisponível** e **idade da época por satélite**. Nunca descartar cache íntegro porque o download falhou.
+- [ ] **Segurança Doppler:** quando os elementos orbitais ultrapassarem o limite configurado, padrão 7 dias, alertar e bloquear *correção automática*; não usar data do arquivo no lugar da época orbital. Não transmitir e não reconfigurar CAT enquanto fonte orbital estiver inválida.
+- [ ] Permitir **importar TLE/OMM local**, inspecionar e validar conteúdo antes de usar, e exportar metadados da fonte para depuração. Documentar limitações do TLE clássico para catálogos NORAD de seis ou mais dígitos e compatibilidade com OMM JSON.
+- [ ] Registrar logs das consultas (URL, HTTP, duração, tamanho, checksum/validação, contagem de satélites, timestamp e motivo da falha), respeitando privacidade e políticas do provedor; testes de cache/TTL, falha de rede, formato inválido, época vencida e dois conjuntos conflitantes.
+
+## Informações → Sobre (interpretação provisória da solicitação)
+- [ ] Disponibilizar **Sobre o PT2VHF Sat Tool** fora dos parâmetros operacionais: versão do aplicativo, edição Windows 7/11, instalável/portátil, canal de atualizações, licença MIT, repositório GitHub, créditos, bibliotecas de terceiros e links para fontes de dados, uso de imagens e respectivas licenças.
+- [ ] Permitir copiar diagnóstico do ambiente (SO/arquitetura, Qt, Python empacotado, NumPy, banco TLE/OMM, versão do driver CAT), sem expor dados pessoais/portas sensíveis indevidamente; incluir atalhos **Verificar atualizações** e **Abrir changelog**.
+
+### Referências verificadas
+- AMSAT Satellite Database: https://satdb.amsat.org/
+- AMSAT Status: https://amsat.org/status/
+- AMSAT Live Linear Satellites: https://www.amsat.org/live-linear-satellites/
+- SatNOGS DB API: https://librespacefoundation.gitlab.io/satnogs/satnogs-db/api.html
+- SatNOGS DB licença: https://db.satnogs.org/about/
+- CelesTrak OMM/GP: https://celestrak.org/NORAD/documentation/gp-data-formats.php
+- CelesTrak Usage Policy: https://celestrak.org/usage-policy.php
+- Wikimedia Commons metadata: https://www.mediawiki.org/wiki/Extension:CommonsMetadata
+
 ## Regra de distribuição — instaladores EXE diretos (todas as releases)
 - [x] Os instaladores Windows 7 x86 e Windows 11 x64 devem ser gerados e publicados como arquivos **`*-Setup.exe`**, disponíveis para download direto nos assets da Release e no README.
 - [x] **Nunca compactar o instalador em ZIP** nem exigir que o usuário extraia arquivos para executá-lo.
