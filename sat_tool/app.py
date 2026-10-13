@@ -678,6 +678,124 @@ class MainWindow(QMainWindow):
         st.validate()
         return st
 
+    def saved_station(self):
+        """Only the confirmed station coordinates may drive orbit/Doppler/CAT."""
+        c=self.config.values
+        if c.get("lat") in ("",None) or c.get("lon") in ("",None):
+            raise ValueError("Cadastre e salve latitude/longitude da estação")
+        st=Station(str(c.get("callsign","")).strip().upper(),
+                   float(c["lat"]),float(c["lon"]),
+                   float(c.get("altitude_m",0)),float(c.get("min_elevation",10)))
+        st.validate()
+        return st
+
+    def stored_map_position(self):
+        try:
+            st=self.saved_station()
+            return {"lat":st.lat,"lon":st.lon}
+        except (ValueError,TypeError):
+            return None
+
+    def begin_station_map(self):
+        """No change to saved station until explicit confirmation AND Save station."""
+        if self.map_pick_active:
+            self.tabs.setCurrentIndex(0)
+            return
+        self.map_pick_active=True
+        self.map_pick_position=self.stored_map_position()
+        self.map_edit_bar.setVisible(True)
+        self.mark_map_button.setEnabled(False)
+        self.tabs.setCurrentIndex(0)
+        self.show_station_map_preview(self.map_pick_position)
+        payload=json.dumps(self.map_pick_position,ensure_ascii=False)
+        self.map.page().runJavaScript("window.beginLocationPick && window.beginLocationPick("+payload+")")
+        if self.map_pick_position is not None:
+            self.map.page().runJavaScript(
+                "window.focusLocation && window.focusLocation("+
+                str(self.map_pick_position["lat"])+","+
+                str(self.map_pick_position["lon"])+")")
+        self.log("Modo de marcação manual no mapa ativo; CAT e dados salvos permanecem inalterados")
+
+    def show_station_map_preview(self,point):
+        if point is None:
+            self.map_edit_lat.clear();self.map_edit_lon.clear()
+            self.map_edit_notice.setText("Clique no mapa para marcar a antena · coordenadas WGS-84")
+            return
+        lat,lon=valid_coordinates(point["lat"],point["lon"])
+        self.map_edit_lat.setText(f"{lat:.7f}")
+        self.map_edit_lon.setText(f"{lon:.7f}")
+        self.map_edit_notice.setText("PRÉVIA NÃO SALVA · arraste o marcador ou ajuste números")
+
+    def poll_station_map(self):
+        if not self.map_pick_active:return
+        self.map.page().runJavaScript(
+            "window.takeLocationPick && window.takeLocationPick()",
+            self.receive_station_map_pick)
+
+    def receive_station_map_pick(self,pick):
+        if not self.map_pick_active or pick is None:return
+        try:
+            lat,lon=sanitize_map_pick(pick)
+            self.map_pick_position={"lat":lat,"lon":lon}
+            self.show_station_map_preview(self.map_pick_position)
+        except (ValueError,TypeError) as exc:
+            self.log(f"Marcação no mapa ignorada: {exc}")
+
+    def update_station_map_numeric(self):
+        if not self.map_pick_active:return
+        try:
+            lat,lon=parse_coordinate_fields(self.map_edit_lat.text(),self.map_edit_lon.text())
+            self.map_pick_position={"lat":lat,"lon":lon}
+            self.map_edit_notice.setText("PRÉVIA NÃO SALVA · valores ajustados manualmente")
+            self.map.page().runJavaScript(
+                f"window.setLocationPickPreview && window.setLocationPickPreview({lat},{lon})")
+        except ValueError as exc:
+            self.map_edit_notice.setText(str(exc)+" · ajuste os valores antes de confirmar")
+
+    def restore_station_map(self):
+        if not self.map_pick_active:return
+        original=self.stored_map_position()
+        self.map_pick_position=original
+        self.show_station_map_preview(original)
+        self.map.page().runJavaScript(
+            "window.beginLocationPick && window.beginLocationPick("+
+            json.dumps(original)+")")
+        self.log("Posição de edição restaurada à última estação salva")
+
+    def cancel_station_map(self):
+        self.map_pick_active=False
+        self.map_pick_position=None
+        self.map_edit_bar.setVisible(False)
+        self.mark_map_button.setEnabled(True)
+        self.map.page().runJavaScript("window.finishLocationPick && window.finishLocationPick()")
+
+    def confirm_station_map(self):
+        if not self.map_pick_active:return
+        try:
+            lat,lon=parse_coordinate_fields(self.map_edit_lat.text(),self.map_edit_lon.text())
+        except ValueError as exc:
+            QMessageBox.warning(self,"Posição inválida",str(exc));return
+        before=self.stored_map_position()
+        previous=(f"{before['lat']:.7f}, {before['lon']:.7f}" if before else "Nenhuma estação cadastrada")
+        summary=(f"Posição anterior: {previous}\\n"
+                 f"Posição proposta (WGS-84): {lat:.7f}, {lon:.7f}\\n"
+                 f"Origem: marcador no mapa offline\\n"
+                 "A altitude atual será mantida.\\n\\n"
+                 "Preencher os campos para revisão? A estação, as órbitas e o rádio"
+                 " só serão alterados após clicar em Salvar estação.")
+        if QMessageBox.question(self,"Confirmar marcador",summary,
+                                QMessageBox.Yes | QMessageBox.No,QMessageBox.No)!=QMessageBox.Yes:
+            return
+        self.lat.setText(f"{lat:.7f}")
+        self.lon.setText(f"{lon:.7f}")
+        self.location_status.setText(
+            "Posição marcada manualmente no mapa; campos preenchidos, ainda NÃO salvos. "
+            "Confira a altitude e clique em Salvar estação.")
+        self.log("Coordenadas do mapa preenchidas para revisão; estação salva permanece inalterada")
+        self.cancel_station_map()
+        self.tabs.setCurrentIndex(2)
+        self.lat.setFocus()
+
     def save_station(self):
         try: st=self.station()
         except Exception as exc:
@@ -1103,7 +1221,7 @@ class MainWindow(QMainWindow):
     def doppler_state_changed(self):
         if self.doppler_checkbox.isChecked():
             try:
-                self.station();self.corrected()
+                self.saved_station();self.corrected()
                 if not self.radio.connected or not self.radio.state.sat:
                     raise ValueError("Conecte ao TS-2000 e ative SAT antes de habilitar o Doppler")
                 if not self.last_pos['visible']:
@@ -1151,7 +1269,7 @@ class MainWindow(QMainWindow):
         if key==self.track_cache_key or "trail" in self.pending_jobs:return
         self.track_pending_key=key
         sat=self.sat
-        try:site=self.station()
+        try:site=self.saved_station()
         except Exception:return
         def work():
             last_pass=None
@@ -1184,7 +1302,7 @@ class MainWindow(QMainWindow):
 
     def update_next_indicator(self):
         now=now_utc()
-        try:site=self.station()
+        try:site=self.saved_station()
         except Exception:
             self.next_candidate=None
             self.next_select.setEnabled(False)
@@ -1240,7 +1358,7 @@ class MainWindow(QMainWindow):
             self.next_frequencies.setText(f"Doppler indisponível: {exc}")
 
     def refresh_passes(self):
-        try:station=self.station()
+        try:station=self.saved_station()
         except Exception:
             self.pass_table.setRowCount(0)
             return
@@ -1291,7 +1409,7 @@ class MainWindow(QMainWindow):
     def update_map(self):
         if self.sat is None:return
         try:
-            station=self.station()
+            station=self.saved_station()
             pos=position(self.sat,station,ts=self.ts)
             self.last_pos=pos
             self.refresh_track_async()
@@ -1318,9 +1436,10 @@ class MainWindow(QMainWindow):
             self.check_for_updates()
         now=now_utc();self.utc.setText(now.strftime('%d/%m/%Y  %H:%M:%S UTC'))
         self.update_next_indicator()
+        self.poll_station_map()
         if self.sat:
             try:
-                station=self.station()
+                station=self.saved_station()
                 pos=position(self.sat,station,ts=self.ts)
                 self.last_pos=pos
                 formats={'elevation':f"{pos['elevation']:.1f}°",'azimuth':f"{pos['azimuth']:.1f}°",
