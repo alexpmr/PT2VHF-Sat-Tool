@@ -35,6 +35,16 @@ def run_self_test(report_path: str, expected_qt: str = "") -> int:
         result["checks"].append("qt_native")
         import sat_tool.app
         result["checks"].append("app_import")
+        from pathlib import Path
+        root = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parents[1]))
+        mapfile = root / "sat_tool" / "map.html"
+        logo = root / "assets" / "branding" / "icon-256.png"
+        if not mapfile.is_file() or not logo.is_file():
+            raise FileNotFoundError("Mapa offline e identidade visual devem integrar o EXE")
+        html = mapfile.read_text(encoding="utf-8")
+        if "MAPA VETORIAL OFFLINE" not in html or "tile.openstreetmap.org" in html:
+            raise RuntimeError("Mapa offline indisponível ou ainda depende de OSM tiles")
+        result["checks"].append("offline_map_and_brand_embedded")
         result["status"] = "passed"
     except BaseException:
         result["error"] = traceback.format_exc()
