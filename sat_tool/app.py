@@ -114,6 +114,8 @@ class MainWindow(QMainWindow):
         self.track_pending_key = None
         self.track_cache = {"past": [], "future": []}
         self.plan_satellites = {}
+        self.pass_rows = {}
+        self.pass_enabled = set()
         self.tx_prefetch_started = set()
         self.last_freqs = (None, None)
         self.last_radio_poll = 0
@@ -524,7 +526,9 @@ class MainWindow(QMainWindow):
         period=str(c.get("trail_period","2 h"))
         self.trail_period.setCurrentText(period if period in ["Última passagem","2 h","5 h","10 h","24 h","Personalizado"] else "2 h")
         self.trail_direction.setCurrentText(str(c.get("trail_direction","Futuro")))
+        self.trail_custom.blockSignals(True)
         self.trail_custom.setValue(float(c.get("trail_custom_hours",3)))
+        self.trail_custom.blockSignals(False)
         self.trail_custom.setVisible(self.trail_period.currentText()=="Personalizado")
         self.trail_period.blockSignals(False)
         self.trail_direction.blockSignals(False)
@@ -1027,11 +1031,9 @@ class MainWindow(QMainWindow):
             self.next_frequencies.setText("RX/TX: aguardando localização")
             self.pass_progress.setValue(0)
             return
-        rows={sid:load_transmitters(self.config.dir,int(sid))
-              for sid in set(p["id"] for p in self.passes)}
         c=self.config.values
-        event=select_next_pass(self.passes,rows,c.get("radio_modes",[]),c.get("radio_bands",[]),
-                               now,self.enabled_satellite_ids())
+        event=select_next_pass(self.passes,self.pass_rows,c.get("radio_modes",[]),c.get("radio_bands",[]),
+                               now,self.pass_enabled)
         self.next_candidate=event
         self.next_select.setEnabled(event is not None)
         if event is None:
@@ -1080,6 +1082,8 @@ class MainWindow(QMainWindow):
             self.pass_table.setRowCount(0)
             return
         selected=set(self.enabled_satellite_ids())
+        self.pass_enabled=selected
+        self.pass_rows={sid:load_transmitters(self.config.dir,int(sid)) for sid in selected}
         entries=[(ident,obj) for ident,obj in self.omm.items() if ident in selected]
         # Capture immutable snapshot; skyfield object construction in background.
         def task():
@@ -1240,6 +1244,7 @@ class MainWindow(QMainWindow):
             self.refresh_tracked_table()
             if self.config.values.get("satellite_selection") is None:self.refresh_passes()
             self.log(f'Transponders SatNOGS atualizados para NORAD {ident}: {len(data)}')
+            self.pass_rows[ident]=data
             self.update_next_indicator()
         elif key=='passes':
             self.passes=data[:75]
