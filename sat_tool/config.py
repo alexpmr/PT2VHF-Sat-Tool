@@ -13,6 +13,7 @@ DEFAULTS = {
     "radio_modes": ["FM", "SSB", "CW"], "radio_bands": ["VHF", "UHF"],
     "satellite_selection": None, "tle_update_hours": 4,
     "poll_interval_s": 1, "tle_source": "CelesTrak",
+    "language": "pt-BR", "frequency_style": "radio10",
     "gps_port": "", "gps_baud": 9600,
     "trail_period": "2 h", "trail_direction": "Futuro", "trail_custom_hours": 3.0,
 }
