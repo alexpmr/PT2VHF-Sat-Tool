@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 260" role="img" aria-label="PT2VHF SAT TOOL">
+<defs><linearGradient id="gr" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#22D2EE"/><stop offset="1" stop-color="#4696FF"/></linearGradient></defs>
+<g transform="translate(8 6)">
+<circle cx="125" cy="125" r="79" fill="#123350" stroke="#34BBD9" stroke-width="5"/>
+<path d="M52 123c46 30 96 39 144 8M100 61c-15 32-17 91 2 135" fill="none" stroke="#5EE5E0" opacity=".65" stroke-width="6"/>
+<ellipse cx="126" cy="125" rx="111" ry="61" fill="none" stroke="url(#gr)" stroke-width="9" transform="rotate(-27 126 125)"/>
+<g transform="translate(200 52) rotate(26)"><rect x="-15" y="-24" width="30" height="48" rx="4" fill="#E4F8FF"/><rect x="-50" y="-20" width="30" height="40" fill="#1786C1" stroke="#8DE5F6" stroke-width="3"/><rect x="20" y="-20" width="30" height="40" fill="#1786C1" stroke="#8DE5F6" stroke-width="3"/></g>
+<path d="M24 45a58 58 0 0 1 57 55M33 73a29 29 0 0 1 20 25" fill="none" stroke="#2DD1F3" stroke-width="9" stroke-linecap="round"/>
+</g>
+<text x="282" y="121" font-family="Segoe UI,Arial,sans-serif" font-weight="800" font-size="108" letter-spacing="1" fill="#EAF5FF">PT2</text>
+<text x="505" y="121" font-family="Segoe UI,Arial,sans-serif" font-weight="800" font-size="108" letter-spacing="1" fill="url(#gr)">VHF</text>
+<text x="287" y="194" font-family="Segoe UI,Arial,sans-serif" font-weight="650" font-size="64" letter-spacing="12" fill="#DDEEFF">SAT TOOL</text>
+</svg>

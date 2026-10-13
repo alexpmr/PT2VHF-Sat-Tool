@@ -1,5 +1,27 @@
 # PT2VHF Sat Tool — backlog
 
+## Identidade visual oficial — PT2VHF Sat Tool
+- [x] Definir conceito visual e produzir arquivos SVG vetoriais como base de marca em `assets/branding/`, com documentação em `docs/BRANDING.md`.
+- [ ] Padronizar **símbolo de satélite, órbita terrestre e ondas de RF**, logotipo horizontal `PT2VHF SAT TOOL` e assinatura reduzida para áreas compactas. Evitar logotipos de fabricantes/AMSAT/organizações externas.
+- [ ] Integrar ícone oficial na janela principal, barra de título, taskbar/Alt+Tab, bandeja (se implementada), notificações, diálogos, janelas auxiliares, splash de inicialização e tela **Sobre**.
+- [ ] Compilar `.ico` multirresolução (16, 24, 32, 48, 64, 128 e 256 px) e ícones PNG (16/24/32/48/64/128/256/512/1024); testar transparência, legibilidade em tamanhos pequenos e fundos claros/escuros.
+- [ ] Adicionar ícone ao PyInstaller (`--icon`) em **todos os quatro EXEs** (Win7 Setup/Portable, Win11 Setup/Portable), e `SetupIconFile` no Inno Setup. Garantir consistência entre EXE do instalador, EXE instalado, atalho e Desinstalador.
+- [ ] Aplicar tema e tokens de cores nas abas, menus, botões, mapas, tabelas, indicadores CAT/TLE/Doppler e mensagens, sem reduzir contraste de informações operacionais; não usar fundos espaciais complexos atrás de telemetria/frequências.
+- [ ] Atualizar README do GitHub (marca acima dos downloads), banner da release, screenshots, manual, changelog, página Sobre e artefatos de build com a mesma identidade.
+- [ ] Criar variantes para fundo claro, fundo escuro e versão monocromática; prever alto contraste, escalonamento DPI 100–250%, Windows 7/11 e leitura por tecnologias assistivas.
+- [ ] Preservar os nomes **PT2VHF Sat Tool** (aplicativo) e `PT2VHF-Sat-Tool` (repositório); não alterar o identificador de instalação ou diretórios de dados somente por identidade visual.
+- [ ] CI: validar que os quatro EXEs, instaladores e recursos visuais contêm o ícone correto e não recorrem ao ícone padrão do Python/Qt/PyInstaller.
+- [ ] Validação visual real em Windows 7 SP1 e Windows 11, incluindo taskbar, atalhos, instalador, diálogos, ícones pequenos e transparência.
+- [ ] Arte conceitual aprovada pelo operador antes de considerar a identidade final/homologada.
+
+## Erro observado no mapa — tiles HTTP 418 / Access blocked
+- [ ] Tratar o erro exibido na v0.2.0: OpenStreetMap responde **HTTP 418: Access blocked** ao carregamento de tiles no QtWebEngine.
+- [ ] Auditar política de uso do servidor de tiles, identificação da aplicação/headers, comportamento de WebEngine, cache, frequência de solicitações e condição de bloqueio; não implementar bypass ou disfarçar cliente.
+- [ ] Configurar serviço cartográfico permitido, com atribuição e limites observados, ou mapa geográfico local/offline de fallback; diferenciar camada de mapa-base da renderização da órbita.
+- [ ] Deixar órbita, posição do satélite, footprint, estação, previsões e telemetria funcionarem mesmo quando os tiles remotos falharem.
+- [ ] Detectar HTTP 403/418/429/5xx e apresentar estado amigável, logs e opção de troca de mapa, nunca tiles repetindo avisos de erro por toda a tela.
+- [ ] Testar Win7/Win11, rede restrita, bloqueio do provedor, ausência de internet, troca de base cartográfica e atribuição.
+
 ## v0.2.0 — entregas integradas (homologação de campo pendente)
 - [x] Quatro downloads EXE diretos: Win7 x86 Setup e Portable onefile; Win11 x64 Setup e Portable onefile. **Nenhum portátil em ZIP**.
 - [x] Atualizador seleciona `Portable.exe` por variante, verifica SHA-256 e substitui o EXE somente depois do encerramento; os dados locais ficam em `data/`.
