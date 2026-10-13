@@ -93,6 +93,10 @@ def test_cat_writes_only_safe_commands_in_simulation():
                 self.fb=int(cmd[2:-1]);self.answer=b''
             elif cmd=='MD;':self.answer=b'MD4;'
             elif cmd=='ID;':self.answer=b'ID019;'
+            elif cmd=='SM0;':self.answer=b'SM00018;'
+            elif cmd=='SM1;':self.answer=b'SM10008;'
+            elif cmd=='PC;':self.answer=b'PC025;'
+            elif cmd=='RM;':self.answer=b'RM30014;'
             else:raise AssertionError('Unexpected CAT '+cmd)
         def read_until(self, delimiter):return self.answer
     sim=SerialSimulator()
@@ -101,6 +105,8 @@ def test_cat_writes_only_safe_commands_in_simulation():
     rig.state=RadioState(True,'Kenwood TS-2000')
     st=rig.set_frequencies(145902000,435799000)
     assert st.uplink==145902000 and st.downlink==435799000
+    assert st.signal_main==18 and st.signal_sub==8
+    assert st.power_set_w==25 and st.meter_type=='ALC' and st.meter_value==14
     assert 'FA00435799000;' in sim.writes
     assert 'FB00145902000;' in sim.writes
     assert not any(c.startswith(('TX','RX','MO')) for c in sim.writes)
