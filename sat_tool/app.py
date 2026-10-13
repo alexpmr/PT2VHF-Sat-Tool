@@ -390,6 +390,11 @@ class MainWindow(QMainWindow):
         self.altitude.setValue(float(c['altitude_m']))
         self.min_el.setValue(float(c['min_elevation']))
         self.baud_combo.setCurrentText(str(c['baud']))
+        for name,w in self.station_modes.items():
+            w.setChecked(name in c.get("radio_modes",["FM","SSB","CW"]))
+        for name,w in self.station_bands.items():
+            w.setChecked(name in c.get("radio_bands",["VHF","UHF"]))
+        self.tle_hours.setValue(float(c.get("tle_update_hours",4)))
         self.stops_combo.setCurrentText(str(c['stopbits']))
         self.interval.setValue(float(c['update_interval_s']))
         self.threshold.setValue(float(c['tune_threshold_hz']))
@@ -520,6 +525,10 @@ class MainWindow(QMainWindow):
         self.ports.clear()
         self.ports.addItems(ports)
         if previous in ports:self.ports.setCurrentText(previous)
+        if hasattr(self,"config_port"):
+            selected=self.config_port.currentText() or previous
+            self.config_port.clear();self.config_port.addItems(ports)
+            if selected:self.config_port.setCurrentText(selected)
 
     def toggle_connection(self):
         if self.radio.connected:
@@ -527,6 +536,7 @@ class MainWindow(QMainWindow):
             self.radio.disconnect()
             self.connection.setText("Conectar")
             self.radio_label.setText("Desconectado")
+            self.map_radio_label.setText("CAT desconectado · RX — MHz · TX — MHz · Modo —")
             self.log("CAT desconectado")
             return
         try:
@@ -552,6 +562,9 @@ class MainWindow(QMainWindow):
     def render_radio_state(self, st):
         self.radio_label.setText(f"{st.model}  •  SAT {'ON' if st.sat else 'OFF'}  •  FA RX: {st.downlink/1e6:.6f} MHz  |  FB TX: {st.uplink/1e6:.6f} MHz  •  MD: {st.mode}")
         self.radio_label.setStyleSheet("color:#69e3bc" if st.sat else "color:#f0c186")
+        self.last_cat_success=now_utc()
+        self.map_radio_label.setText(f"CAT · {st.model} · SAT {'ON' if st.sat else 'OFF'} · RX {st.downlink/1e6:.6f} MHz · TX {st.uplink/1e6:.6f} MHz · Modo {st.mode} · {self.last_cat_success.astimezone():%H:%M:%S}")
+        self.map_radio_label.setStyleSheet("font-size:13px;color:#69e3bc;font-weight:700")
 
     def refresh_catalog(self):
         self.summary.setText("Atualizando elementos orbitais…")
@@ -566,6 +579,8 @@ class MainWindow(QMainWindow):
             if idx>=0:self.sat_combo.setCurrentIndex(idx)
         self.summary.setText(f"{len(self.omm)} satélites no catálogo amador  •  CelesTrak OMM/TLE")
         self.refresh_satellite_table()
+        self.refresh_tracked_table()
+        self.refresh_passes()
 
     def refresh_satellite_table(self, text=None):
         text=(text if isinstance(text,str) else self.catalog_search.text()).casefold().strip()
@@ -757,7 +772,8 @@ class MainWindow(QMainWindow):
         except Exception:
             self.pass_table.setRowCount(0)
             return
-        entries=list(self.omm.items())
+        selected=set(self.enabled_satellite_ids())
+        entries=[(ident,obj) for ident,obj in self.omm.items() if ident in selected]
         # Capture immutable snapshot; skyfield object construction in background.
         def task():
             out=[]
@@ -839,6 +855,9 @@ class MainWindow(QMainWindow):
 
     def background_result(self,key,data):
         self.pending_jobs.discard(key)
+        if key=='cat-poll':
+            if self.radio.connected:self.render_radio_state(data)
+            return
         if key=='update-check':
             self.manual_update_requested = False
             self.available_update=data
@@ -867,13 +886,15 @@ class MainWindow(QMainWindow):
                 self.choose_cached_modes(int(ident))
             self.log(f'Transponders SatNOGS atualizados para NORAD {ident}: {len(data)}')
         elif key=='passes':
-            self.passes=data
-            self.pass_table.setRowCount(len(data[:45]))
-            for i,p in enumerate(data[:45]):
-                aos=p['aos'].astimezone().strftime('%d %H:%M')
-                los=p['los'].astimezone().strftime('%H:%M')
-                for j,v in enumerate((p['name'],aos,f"{p['max_el']:.0f}",los)):
-                    self.pass_table.setItem(i,j,QTableWidgetItem(v))
+            self.passes=data[:75]
+            self.pass_table.setRowCount(len(self.passes))
+            for i,p in enumerate(self.passes):
+                aos=p['aos'].astimezone().strftime('%d/%m %H:%M')
+                peak=p['tca'].astimezone().strftime('%d/%m %H:%M') if p.get('tca') else '—'
+                los=p['los'].astimezone().strftime('%d/%m %H:%M')
+                modes=self.suggested_mode_text(p['id'])
+                for j,value in enumerate((p['name'],aos,peak,los,f"{p['max_el']:.0f}",modes)):
+                    self.pass_table.setItem(i,j,QTableWidgetItem(value))
             self.log(f'Previsão: {len(data)} passagens nas próximas 36 h (lista limitada a 100)')
 
     def background_error(self,key,message):
