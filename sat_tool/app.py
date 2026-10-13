@@ -274,7 +274,22 @@ class MainWindow(QMainWindow):
         self.refresh_passes_btn=QPushButton("Recalcular passagens")
         self.refresh_passes_btn.clicked.connect(self.refresh_passes)
         np.addWidget(self.refresh_passes_btn)
-        rv.addWidget(nextpass,1)
+        rv.insertWidget(0,nextpass,2)
+        catview,cv=group("RÁDIO / CAT  ·  KENWOOD TS-2000")
+        self.cat_status=label("● Desconectado  ·  porta CAT indisponível")
+        self.cat_status.setStyleSheet("color:#efc17b;font-size:12px")
+        cv.addWidget(self.cat_status)
+        catrow=QHBoxLayout()
+        self.cat_rx=label("RX / DOWNLINK\n— MHz")
+        self.cat_tx=label("TX / UPLINK\n— MHz")
+        for widget,color in ((self.cat_rx,"#74e9c4"),(self.cat_tx,"#fa8e8e")):
+            widget.setStyleSheet("font-size:18px;font-weight:800;color:"+color+";background:#10263b;border:1px solid #284e6e;padding:12px")
+            catrow.addWidget(widget,1)
+        cv.addLayout(catrow)
+        self.cat_details=label("SAT: —  ·  MAIN: —  ·  Leitura CAT: —")
+        self.cat_details.setStyleSheet("color:#a8cee0;font-size:12px")
+        cv.addWidget(self.cat_details)
+        rv.addWidget(catview)
         splitter.addWidget(right)
         splitter.setSizes([340,810,445])
         op.addWidget(splitter,1)
@@ -430,7 +445,7 @@ class MainWindow(QMainWindow):
         btn=QPushButton("Verificar versão");btn.clicked.connect(lambda:self.request_update(manual=True))
         about_layout.addWidget(btn);about_layout.addStretch()
         root.addTab(about,"Sobre")
-        self.statusBar().showMessage("PT2VHF Sat Tool • Monitoramento passivo | TX/PTT não controlado")
+        self.statusBar().showMessage("PT2VHF Sat Tool | Mapa offline Natural Earth | CAT passivo · PTT não controlado | CelesTrak OMM / SatNOGS")
 
     def load_fields(self):
         c=self.config.values
