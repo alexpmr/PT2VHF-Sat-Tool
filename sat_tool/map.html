@@ -1,0 +1,34 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+<style>html,body,#map{margin:0;height:100%;background:#071728;font-family:Segoe UI,Arial;color:#eaf7ff}
+#status{position:absolute;z-index:2000;bottom:10px;left:10px;padding:7px 10px;background:#0b1834e6;border:1px solid #3b5e79;border-radius:8px;font-size:12px}
+.leaflet-container{background:#102d46}.leaflet-control-attribution{font-size:10px!important}
+.dot{border-radius:50%;background:#1ee5cc;border:2px solid white;box-shadow:0 0 12px #20f5e6}
+</style></head><body><div id="map"></div><div id="status">Aguardando efemérides…</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script>
+var map, overlay;
+function prepare(){
+ if(typeof L==='undefined') {document.getElementById('status').textContent='Mapa indisponível: confirme acesso à Internet / Leaflet CDN';return;}
+ map=L.map('map',{worldCopyJump:true,zoomControl:true}).setView([-15,-48],3);
+ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+   attribution:'© OpenStreetMap contributors',maxZoom:15,noWrap:false}).addTo(map);
+ overlay=L.layerGroup().addTo(map);
+ window.updateOrbit = function(payload){
+  overlay.clearLayers();
+  const st=payload.station;
+  if(st){L.circleMarker([st.lat,st.lon],{radius:7,color:'#fff',fillColor:'#3b82f6',fillOpacity:1,weight:2})
+    .bindPopup('Estação '+st.callsign).addTo(overlay);}
+  if(payload.satellite){let sat=payload.satellite;
+    L.circleMarker([sat.lat,sat.lon],{radius:9,color:'#ffffff',fillColor:'#16d9bd',fillOpacity:1,weight:2})
+     .bindPopup(payload.name+'<br>Alt: '+sat.height_km.toFixed(0)+' km').addTo(overlay);
+    if(payload.track){payload.track.forEach(p=>L.polyline(p,{color:'#f4cf63',weight:2.2,opacity:.9,dashArray:'6 3'}).addTo(overlay));}
+    if(payload.footprint){payload.footprint.forEach(p=>L.polyline(p,{color:'#20dab8',weight:1,opacity:.7}).addTo(overlay));}
+  }
+  document.getElementById('status').textContent=payload.label;
+ }
+ window.fitStation=function(lat,lon){map.setView([lat,lon],4)};
+}
+window.addEventListener('load',prepare);
+</script></body></html>

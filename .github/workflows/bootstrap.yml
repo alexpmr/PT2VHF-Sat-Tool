@@ -1,8 +1,0 @@
-name: PT2VHF Sat Tool Bootstrap
-on:
-  workflow_dispatch:
-jobs:
-  verify:
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo 'Bootstrap workflow pending source import'

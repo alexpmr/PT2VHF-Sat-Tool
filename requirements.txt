@@ -1,0 +1,2 @@
+# Modern developer environment; see requirements-win7.txt for the legacy build.
+-r requirements-win11.txt

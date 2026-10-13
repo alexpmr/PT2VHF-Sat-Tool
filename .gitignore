@@ -1,8 +1,12 @@
 __pycache__/
-*.py[cod]
 .pytest_cache/
+*.pyc
 .venv/
 build/
 dist/
 *.spec
 *.log
+data/
+*.tmp
+
+.build-venv-*/

@@ -1,0 +1,57 @@
+# Compila instalador e portatil com as dependencias do alvo na maquina Windows.
+# Executar no Windows 10/11 com Python Launcher, Inno Setup 6 e Internet.
+param([ValidateSet('Win7-x86','Win11-x64')][string]$Target = 'Win11-x64')
+$ErrorActionPreference = 'Stop'
+Set-Location (Split-Path -Parent $PSScriptRoot)
+$Version = '0.1.2'
+if ($Target -eq 'Win7-x86') {
+  $PythonSelector = '-3.8-32'
+  $Deps = 'requirements-win7.txt'
+  $PyInstaller = '5.13.2'
+  $Minimum = '6.1sp1'
+  $Arch = 'x86compatible'
+  $Bits = '32'
+} else {
+  $PythonSelector = '-3.11-64'
+  $Deps = 'requirements-win11.txt'
+  $PyInstaller = '6.13.0'
+  $Minimum = '10.0.22000'
+  $Arch = 'x64compatible'
+  $Bits = '64'
+}
+function Invoke-Checked([string]$Description, [string]$File, [string[]]$Arguments) {
+  Write-Host "[BUILD] $Description" -ForegroundColor Cyan
+  & $File @Arguments
+  if ($LASTEXITCODE -ne 0) { throw "$Description falhou (exit $LASTEXITCODE)" }
+}
+if (-not (Get-Command py -ErrorAction SilentlyContinue)) { throw 'Python Launcher (py.exe) nao instalado.' }
+$Venv = Join-Path (Get-Location) ('.build-venv-' + $Target)
+Invoke-Checked 'Criando Python virtual' 'py' @($PythonSelector,'-m','venv',$Venv)
+$Exe = Join-Path $Venv 'Scripts\python.exe'
+Invoke-Checked 'Instalando dependencias' $Exe @('-m','pip','install','-r',$Deps,'pyinstaller=='+$PyInstaller,'pytest==7.4.4')
+Invoke-Checked 'Auditando dependencias' $Exe @('-m','pip','check')
+Invoke-Checked 'Executando testes unitarios' $Exe @('-m','pytest','-q','tests')
+Invoke-Checked 'Conferindo arquitetura' $Exe @('-c',"import struct; assert str(struct.calcsize('P') * 8) == '$Bits'")
+Invoke-Checked 'Conferindo binding Qt' $Exe @('-c',"from sat_tool.qt_compat import QT_BINDING; print(QT_BINDING)")
+$AppDir = 'dist/PT2VHF-Sat-Tool'
+if (Test-Path $AppDir) { Remove-Item $AppDir -Recurse -Force }
+Invoke-Checked 'Compilando executavel Windows' $Exe @('-m','PyInstaller','--noconfirm','--clean','--windowed','--onedir','--name','PT2VHF-Sat-Tool','--add-data','sat_tool/map.html;sat_tool','--add-data','scripts/apply-update.ps1;scripts','--collect-all','skyfield','run.py')
+$Bin = Join-Path $AppDir 'PT2VHF-Sat-Tool.exe'
+if (-not (Test-Path $Bin)) { throw "Arquivo ausente: $Bin" }
+New-Item -Path (Join-Path $AppDir 'portable.flag') -ItemType File -Force | Out-Null
+$Portable = "dist/PT2VHF-Sat-Tool-v$Version-$Target-Portable.zip"
+if (Test-Path $Portable) { Remove-Item $Portable -Force }
+Compress-Archive -Path "$AppDir/*" -DestinationPath $Portable -CompressionLevel Optimal -Force
+Remove-Item (Join-Path $AppDir 'portable.flag') -Force
+$ISCC = 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe'
+if (-not (Test-Path $ISCC)) { throw 'Inno Setup 6 nao encontrado: https://jrsoftware.org/isinfo.php' }
+Invoke-Checked 'Compilando instalador' $ISCC @("/DBuildFlavor=$Target","/DMinTarget=$Minimum","/DTargetArch=$Arch",'installer/setup.iss')
+$Installer = "dist/PT2VHF-Sat-Tool-v$Version-$Target-Setup.exe"
+if (-not (Test-Path $Installer)) { throw "Instalador ausente: $Installer" }
+$Checks = @($Portable,$Installer) | ForEach-Object {
+  $sum=(Get-FileHash $_ -Algorithm SHA256).Hash.ToLowerInvariant()
+  "$sum  $(Split-Path $_ -Leaf)"
+}
+$Checks | Set-Content "dist/PT2VHF-Sat-Tool-v$Version-$Target-SHA256.txt" -Encoding Ascii
+Write-Host "ENTREGUES: $Portable e $Installer" -ForegroundColor Green
+Write-Host 'A compatibilidade final exige teste no Windows alvo e TS-2000 fisico.' -ForegroundColor Yellow

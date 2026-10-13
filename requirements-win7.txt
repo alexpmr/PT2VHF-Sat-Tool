@@ -1,0 +1,8 @@
+# Legacy Windows 7 SP1 x86; Python 3.8.10 x86 (frozen into the build).
+# Deliberate EOL stack: internet access should be restricted; no embedded secrets.
+PySide2==5.15.2.1
+numpy==1.23.5
+skyfield==1.49
+pyserial==3.5
+requests==2.31.0
+urllib3==1.26.20

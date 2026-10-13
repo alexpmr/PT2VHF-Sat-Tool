@@ -1,0 +1,148 @@
+name: PT2VHF Sat Tool - Windows 7 + Windows 11
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: ${{ matrix.target }} - Portable e Instalador
+    runs-on: windows-2022
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: Win7-x86
+            python: '3.8'
+            architecture: 'x86'
+            dependencies: requirements-win7.txt
+            pyinstaller: '5.13.2'
+            pytest: '7.4.4'
+            min_windows: '6.1sp1'
+            inno_arch: 'x86compatible'
+          - target: Win11-x64
+            python: '3.11'
+            architecture: 'x64'
+            dependencies: requirements-win11.txt
+            pyinstaller: '6.13.0'
+            pytest: '8.3.5'
+            min_windows: '10.0.22000'
+            inno_arch: 'x64compatible'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Python ${{ matrix.python }} - ${{ matrix.architecture }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          architecture: ${{ matrix.architecture }}
+      - name: Install build stack
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade 'pip<25.1'
+          python -m pip install -r '${{ matrix.dependencies }}'
+          python -m pip install 'pyinstaller==${{ matrix.pyinstaller }}' 'pytest==${{ matrix.pytest }}'
+          python -m pip check
+      - name: Unit tests and Qt binding smoke test
+        shell: pwsh
+        run: |
+          python -m pytest -q tests
+          python -c "from sat_tool.qt_compat import QT_BINDING,QWebEngineView,QGeoPositionInfoSource; import sat_tool.app; print('Qt binding:',QT_BINDING)"
+          if ('${{ matrix.target }}' -eq 'Win7-x86') {
+            python -c "import struct; from sat_tool.qt_compat import QT_BINDING; assert 8*struct.calcsize('P')==32 and QT_BINDING=='PySide2'"
+          } else {
+            python -c "import struct; from sat_tool.qt_compat import QT_BINDING; assert 8*struct.calcsize('P')==64 and QT_BINDING=='PySide6'"
+          }
+      - name: PyInstaller (native Windows EXE)
+        shell: pwsh
+        run: |
+          python -m PyInstaller --noconfirm --clean --windowed --onedir --name PT2VHF-Sat-Tool `
+            --add-data 'sat_tool/map.html;sat_tool' --add-data 'scripts/apply-update.ps1;scripts' --collect-all skyfield `
+            run.py
+          if (-not (Test-Path 'dist/PT2VHF-Sat-Tool/PT2VHF-Sat-Tool.exe')) { throw 'Executable missing' }
+          if (-not (Get-ChildItem 'dist/PT2VHF-Sat-Tool' -Recurse -Filter 'apply-update.ps1')) {throw 'Updater not packaged'}
+      - name: Zip Portable (with local settings flag)
+        shell: pwsh
+        run: |
+          New-Item 'dist/PT2VHF-Sat-Tool/portable.flag' -ItemType File -Force | Out-Null
+          $zip = 'dist/PT2VHF-Sat-Tool-v0.1.2-${{ matrix.target }}-Portable.zip'
+          Compress-Archive -Path 'dist/PT2VHF-Sat-Tool/*' -DestinationPath $zip -CompressionLevel Optimal -Force
+          Remove-Item 'dist/PT2VHF-Sat-Tool/portable.flag'
+          if (-not (Test-Path $zip)) { throw 'Portable ZIP missing' }
+      - name: Inno Setup installer (Windows 7 SP1 / Windows 11)
+        shell: pwsh
+        run: |
+          $iscc = 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe'
+          if (-not (Test-Path $iscc)) {
+            choco install innosetup --no-progress -y
+            if ($LASTEXITCODE -ne 0) { throw 'Inno Setup installation failed' }
+          }
+          if (-not (Test-Path $iscc)) { throw 'Inno Setup compiler missing' }
+          & $iscc '/DBuildFlavor=${{ matrix.target }}' '/DMinTarget=${{ matrix.min_windows }}' '/DTargetArch=${{ matrix.inno_arch }}' installer/setup.iss
+          if ($LASTEXITCODE -ne 0) { throw 'Inno Setup build failed' }
+          if (-not (Test-Path 'dist/PT2VHF-Sat-Tool-v0.1.2-${{ matrix.target }}-Setup.exe')) { throw 'Installer missing' }
+      - name: Checksums
+        shell: pwsh
+        run: |
+          $items = Get-ChildItem 'dist/PT2VHF-Sat-Tool-v0.1.2-${{ matrix.target }}-*' -File
+          $lines = foreach ($item in $items) {
+            $hash = (Get-FileHash $item.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            "$hash  $($item.Name)"
+          }
+          $lines | Set-Content -Path 'dist/PT2VHF-Sat-Tool-v0.1.2-${{ matrix.target }}-SHA256.txt' -Encoding Ascii
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: PT2VHF-Sat-Tool-v0.1.2-${{ matrix.target }}
+          path: dist/PT2VHF-Sat-Tool-v0.1.2-${{ matrix.target }}-*
+          if-no-files-found: error
+          retention-days: 90
+  release:
+    name: Publicar instaladores e portáteis na Release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download compiled Windows binaries
+        uses: actions/download-artifact@v4
+        with:
+          pattern: PT2VHF-Sat-Tool-v0.1.2-*
+          merge-multiple: true
+          path: release
+      - name: Verify 4 deliverables
+        shell: bash
+        run: |
+          set -euo pipefail
+          for target in Win7-x86 Win11-x64; do
+            test -s "release/PT2VHF-Sat-Tool-v0.1.2-${target}-Setup.exe"
+            test -s "release/PT2VHF-Sat-Tool-v0.1.2-${target}-Portable.zip"
+            test -s "release/PT2VHF-Sat-Tool-v0.1.2-${target}-SHA256.txt"
+          done
+      - name: Resolve release tag
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            echo "RELEASE_TAG=$GITHUB_REF_NAME" >> "$GITHUB_ENV"
+          else
+            echo "RELEASE_TAG=v0.1.2" >> "$GITHUB_ENV"
+          fi
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF" == refs/heads/main ]] && gh release view "$RELEASE_TAG" --repo '${{ github.repository }}' >/dev/null 2>&1; then
+            echo 'Bootstrap release already exists; future releases require a new tag.'
+            exit 0
+          fi
+          gh release view "$RELEASE_TAG" --repo '${{ github.repository }}' >/dev/null 2>&1 || \
+            gh release create "$RELEASE_TAG" --target '${{ github.sha }}' --repo '${{ github.repository }}' \
+              --title "PT2VHF Sat Tool $RELEASE_TAG - Win7 + Win11" \
+              --notes 'Primeira versão dual: Win7 SP1 x86 (Qt5/Python3.8) e Win11 x64 (Qt6/Python3.11). EXEs compilados automaticamente; CAT em rádio real e execução em Win7 físico ainda exigem homologação.' \
+              --prerelease
+          gh release upload "$RELEASE_TAG" release/* --repo '${{ github.repository }}' --clobber
