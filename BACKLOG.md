@@ -1,5 +1,14 @@
 # PT2VHF Sat Tool — backlog
 
+## BUG v1.1.0 — Instalador x64 rejeita Windows 10 (correção v1.1.1)
+- [x] **Reprodução:** em PC Windows 10 recém-formatado, o Setup da v1.1.0 x64 informa `This program does not support the version of Windows your computer is running`, antes de instalar.
+- [x] **Causa verificada:** alvo `Win11-x64` configura `MinVersion=10.0.22000` no Inno Setup, restringindo explicitamente o instalador ao Windows 11; o nome da distribuição não esclarecia a incompatibilidade.
+- [x] **Correção v1.1.1:** reduzir limite do instalador Qt6 x64 para `10.0.17763` (Windows 10 1809 ou posterior), alinhado à plataforma suportada pelo Qt 6.8/6.9, mantendo Windows 11 x64. Alterar workflow, instalador padrão e script de compilação local, com regressão automatizada.
+- [x] **Preservar atualização OTA:** manter nomes `Win11-x64` para Setup/Portable e `AppId` da família Qt6, embora agora suporte Windows 10 x64, evitando quebrar downloads/update de instalações anteriores. No display do instalador, indicar `Windows 10/11 x64` e explicitar no README.
+- [x] **Fallback:** manter instalador `Win7-x86` para Windows 10 de 32 bits e versões antigas, sem prometer que Qt6 roda nessas máquinas.
+- [ ] **Homologação física:** verificar instalação e execução numa máquina real com Windows 10 1809+/22H2 x64 (Setup e Portable), preferencialmente recém-formatada, sem requisitos pré-instalados; conferir OpenGL/QtWebEngine, mapa, Python DLLs, Windows Defender/SmartScreen, atualizador e desinstalação. Verificar também fallback x86 em Windows 10 de 32 bits. CI Windows Server 2022 não comprova execução em Windows 10 real.
+- [ ] **Se continuar falhando:** coletar `winver`, edição/arquitetura, nome completo do EXE, captura da mensagem e se erro ocorre ao abrir Setup ou Portable. Não recomendar desativar antivírus.
+
 ## v1.1.0 — implementações, limites e testes pendentes
 - [x] **Doppler previsto imediato** ao mudar satélite/transponder, RX/TX com offsets separados e RX-only, usando estação salva e TLE/OMM em cache, sem programação CAT sem autorização.
 - [x] **Proteção CAT ao trocar alvo:** suspender ajuste automático anterior e exigir nova ativação consentida; polling e escrita seriados com confirmação de retorno FA/FB.
