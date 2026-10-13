@@ -2,7 +2,7 @@ name: PT2VHF Sat Tool - Windows 7 + Windows 11
 
 on:
   push:
-    branches: [main, release/v1.0.2-map-station]
+    branches: [main]
     tags: ['v*']
   workflow_dispatch:
 
@@ -175,6 +175,6 @@ jobs:
           gh release view "$RELEASE_TAG" --repo '${{ github.repository }}' >/dev/null 2>&1 || \
             gh release create "$RELEASE_TAG" --target '${{ github.sha }}' --repo '${{ github.repository }}' \
               --title "PT2VHF Sat Tool $RELEASE_TAG - Win7 + Win11" \
-              --notes 'v1.0.2: próxima passagem FM/SSB/CW, contador e Doppler previsto por OMM, órbitas 2/5/10 h, mapa offline. Edições: Win7 SP1 x86 (Qt5/Python3.8) e Win11 x64 (Qt6/Python3.11). EXEs compilados automaticamente; CAT em rádio real e execução em Win7 físico ainda exigem homologação.' \
+              --notes 'v1.0.2: marcar estação diretamente no mapa offline Natural Earth (clique/arraste, edição WGS84, copiar/restaurar/cancelar, confirmação e salvamento separado). Passagens e Doppler passam a usar exclusivamente a estação salva; preservados CAT TS-2000 e agenda FM/SSB/CW. Edições: Win7 SP1 x86 (Qt5/Python3.8) e Win11 x64 (Qt6/Python3.11). EXEs compilados automaticamente; CAT em rádio real e execução em Win7 físico ainda exigem homologação.' \
               --prerelease
           gh release upload "$RELEASE_TAG" release/* --repo '${{ github.repository }}' --clobber
