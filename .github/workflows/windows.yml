@@ -174,7 +174,7 @@ jobs:
           fi
           gh release view "$RELEASE_TAG" --repo '${{ github.repository }}' >/dev/null 2>&1 || \
             gh release create "$RELEASE_TAG" --target '${{ github.sha }}' --repo '${{ github.repository }}' \
-              --title "PT2VHF Sat Tool $RELEASE_TAG - Win7 + Win11" \
-              --notes 'v1.1.1: Doppler imediato em seleção de satélites/transponders, seleção em massa, frequências SatNOGS atualizadas em lote, formatos segmentados, traduções iniciais PT/EN/ES/FR/DE/IT e telemetria CAT TS-2000 read-only (S-meter/potência ajustada/RM). Layout principal preservado. Validação de TS-2000 físico pendente. Edições: Win7 SP1 x86 (Qt5/Python3.8) e Win11 x64 (Qt6/Python3.11). EXEs compilados automaticamente; CAT em rádio real e execução em Win7 físico ainda exigem homologação.' \
+              --title "PT2VHF Sat Tool $RELEASE_TAG - Win7 + Win10/11" \
+              --notes 'v1.1.1: corrigido bloqueio do instalador no Windows 10 x64 (1809/build 17763+), mantendo Windows 11 x64 e Win7 SP1 x86. O executável Qt6 mantém o sufixo Win11-x64 para compatibilidade com o atualizador, mas agora pode ser instalado no Windows 10 compatível. Preservadas funções Doppler, SatNOGS, seis idiomas, CAT e interface da v1.1.0; homologação em Windows 10 real e TS-2000 físico pendente. Edições: Win7 SP1 x86 (Qt5/Python3.8) e Win11 x64 (Qt6/Python3.11). EXEs compilados automaticamente; CAT em rádio real e execução em Win7 físico ainda exigem homologação.' \
               --prerelease
           gh release upload "$RELEASE_TAG" release/* --repo '${{ github.repository }}' --clobber
