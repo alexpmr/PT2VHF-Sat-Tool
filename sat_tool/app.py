@@ -27,6 +27,7 @@ from .config import Config
 from .geolocation import GeoFix, lookup_approximate_ip, read_gps_serial
 from .location_map import parse_coordinate_fields, sanitize_map_pick, valid_coordinates
 from .frequency import format_frequency,parse_mhz_input,frequency_label
+from .i18n import LANGUAGES,translated
 from .satellite_info import orbital_characteristics, operational_characteristics, characteristics_text
 from .updater import check_for_update, download_update, install_flavor, launch_staged_update
 from .profile import choose_satellites, capability, render_service
@@ -131,7 +132,9 @@ class MainWindow(QMainWindow):
         self.map_pick_active = False
         self.map_pick_position = None
         self.init_ui()
+        self.capture_static_language()
         self.load_fields()
+        self.apply_language()
         self.populate_catalog(load_orbits(self.config.dir))
         self.update_ports()
         if age_hours(self.config.dir,"amateur_omm.json") is None or age_hours(self.config.dir,"amateur_omm.json")>self.config.values.get("tle_update_hours",4):
@@ -577,6 +580,24 @@ class MainWindow(QMainWindow):
         adv.addLayout(ag)
         adv.addWidget(label("Proteções: Doppler automático desabilitado por padrão; somente com SAT confirmado, efeméride recente, passagens acima do horizonte configurado e frequências definidas. O programa não envia PTT."))
         cfg.addWidget(advanced)
+        local_group,lg=group("IDIOMA E FORMATO DE FREQUÊNCIA")
+        local_row=QHBoxLayout()
+        local_row.addWidget(label("Idioma da aplicação"))
+        self.language_combo=QComboBox()
+        for code,native in LANGUAGES.items():
+            self.language_combo.addItem(native,code)
+        self.language_combo.currentIndexChanged.connect(self.change_language)
+        local_row.addWidget(self.language_combo,1)
+        local_row.addWidget(label("Formato de frequência"))
+        self.freq_style_combo=QComboBox()
+        for name,code in (("426.252.12 MHz (10 Hz)","radio10"),
+                          ("426.252.120 MHz (1 Hz)","radio1"),
+                          ("426,252120 MHz (decimal)","decimal")):
+            self.freq_style_combo.addItem(name,code)
+        self.freq_style_combo.currentIndexChanged.connect(self.change_frequency_style)
+        local_row.addWidget(self.freq_style_combo,1)
+        lg.addLayout(local_row)
+        cfg.addWidget(local_group)
         update_group, ug=group("ATUALIZAÇÕES DO APLICATIVO")
         self.update_minutes=QDoubleSpinBox();self.update_minutes.setRange(5,1440);self.update_minutes.setDecimals(0)
         self.update_minutes.setSuffix(' min')
@@ -628,6 +649,12 @@ class MainWindow(QMainWindow):
         self.threshold.setValue(float(c['tune_threshold_hz']))
         self.update_minutes.setValue(float(c.get('version_check_minutes',15)))
         self.include_prerelease.setChecked(bool(c.get('include_prereleases', True)))
+        self.language_combo.blockSignals(True)
+        self.language_combo.setCurrentIndex(max(0,self.language_combo.findData(c.get("language","pt-BR"))))
+        self.language_combo.blockSignals(False)
+        self.freq_style_combo.blockSignals(True)
+        self.freq_style_combo.setCurrentIndex(max(0,self.freq_style_combo.findData(c.get("frequency_style","radio10"))))
+        self.freq_style_combo.blockSignals(False)
         self.trail_period.blockSignals(True)
         self.trail_direction.blockSignals(True)
         period=str(c.get("trail_period","2 h"))
@@ -641,6 +668,60 @@ class MainWindow(QMainWindow):
         self.trail_direction.blockSignals(False)
         # Always require an explicit enable on each launch to avoid surprise CAT writes.
         self.doppler_checkbox.setChecked(False)
+
+    def capture_static_language(self):
+        """Snapshot only creation-time UI strings; do not translate live CAT telemetry."""
+        self._language_texts=[]
+        for widget in self.findChildren(QWidget):
+            if isinstance(widget,QGroupBox):
+                original=widget.title()
+                if original:self._language_texts.append((widget,"group",original))
+            elif isinstance(widget,(QPushButton,QCheckBox,QLabel)):
+                original=widget.text()
+                if original:self._language_texts.append((widget,"text",original))
+        self._language_tabs=[self.tabs.tabText(i) for i in range(self.tabs.count())]
+        self._language_tables=[]
+        for widget in self.findChildren(QTableWidget):
+            labels=[]
+            for i in range(widget.columnCount()):
+                item=widget.horizontalHeaderItem(i)
+                labels.append(item.text() if item is not None else "")
+            self._language_tables.append((widget,labels))
+
+    def apply_language(self):
+        locale=self.config.values.get("language","pt-BR")
+        old=getattr(self,"_language_active","pt-BR")
+        for widget,kind,original in self._language_texts:
+            old_value=translated(original,old)
+            new_value=translated(original,locale)
+            current=widget.title() if kind=="group" else widget.text()
+            if current in (old_value,original):
+                if kind=="group":widget.setTitle(new_value)
+                else:widget.setText(new_value)
+        for i,original in enumerate(self._language_tabs):
+            self.tabs.setTabText(i,translated(original,locale))
+        for widget,originals in self._language_tables:
+            for i,original in enumerate(originals):
+                item=widget.horizontalHeaderItem(i)
+                if item:item.setText(translated(original,locale))
+        self._language_active=locale
+
+    def change_language(self,*args):
+        locale=self.language_combo.currentData()
+        if locale not in LANGUAGES:return
+        self.config.values["language"]=locale
+        self.config.save()
+        self.apply_language()
+        self.log(f"Idioma da interface: {LANGUAGES[locale]}")
+
+    def change_frequency_style(self,*args):
+        style=self.freq_style_combo.currentData()
+        if style not in ("radio10","radio1","decimal"):return
+        self.config.values["frequency_style"]=style
+        self.config.save()
+        self.preview_doppler()
+        if self.radio.connected and self.radio.state.downlink is not None:
+            self.render_radio_state(self.radio.state)
 
     def save_update_preferences(self):
         self.config.values['version_check_minutes']=int(self.update_minutes.value())
