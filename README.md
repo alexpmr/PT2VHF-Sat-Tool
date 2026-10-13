@@ -4,24 +4,35 @@
 
 ## Downloads — instaladores e portáteis
 
-**PT2VHF Sat Tool v1.0.2 — Windows 7 SP1 e Windows 11.** Os quatro downloads são arquivos `.exe` diretos. Links ficam disponíveis após aprovação dos builds Windows. Embora seja o marco 1.0 de funcionalidades, permanece em pré-lançamento até a homologação CAT com TS-2000 físico e Windows 7 real.
+**PT2VHF Sat Tool v1.1.0 — Windows 7 SP1 e Windows 11.** Os quatro downloads são arquivos `.exe` diretos. Links ficam disponíveis após aprovação dos builds Windows. Embora seja o marco 1.0 de funcionalidades, permanece em pré-lançamento até a homologação CAT com TS-2000 físico e Windows 7 real.
 
 | Windows | Instalável | Portátil |
 | --- | --- | --- |
-| **Windows 7 SP1** (x86; executável de 32 bits também para Win7 x64) | [Instalador Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.0.2/PT2VHF-Sat-Tool-v1.0.2-Win7-x86-Setup.exe) | [Portable Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.0.2/PT2VHF-Sat-Tool-v1.0.2-Win7-x86-Portable.exe) |
-| **Windows 11** (x64) | [Instalador Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.0.2/PT2VHF-Sat-Tool-v1.0.2-Win11-x64-Setup.exe) | [Portable Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.0.2/PT2VHF-Sat-Tool-v1.0.2-Win11-x64-Portable.exe) |
+| **Windows 7 SP1** (x86; executável de 32 bits também para Win7 x64) | [Instalador Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.1.0/PT2VHF-Sat-Tool-v1.1.0-Win7-x86-Setup.exe) | [Portable Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.1.0/PT2VHF-Sat-Tool-v1.1.0-Win7-x86-Portable.exe) |
+| **Windows 11** (x64) | [Instalador Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.1.0/PT2VHF-Sat-Tool-v1.1.0-Win11-x64-Setup.exe) | [Portable Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.1.0/PT2VHF-Sat-Tool-v1.1.0-Win11-x64-Portable.exe) |
 
 **Formato dos downloads:** tanto instaladores quanto portáteis são entregues diretamente como arquivos **`.exe`**. O portátil inclui as dependências dentro do mesmo EXE (PyInstaller onefile) e não requer descompactação.
 
 **[Todas as releases](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases)** · **[Acompanhar compilação](https://github.com/alexpmr/PT2VHF-Sat-Tool/actions)**
 
 - **Instalável:** instalação por usuário, atalho e desinstalação, atualização pelo aplicativo usando o Setup de sua edição.
-- **Portátil:** execute diretamente `PT2VHF-Sat-Tool-v1.0.2-*-Portable.exe` (um único arquivo). Configurações ficam em `data/` ao lado do EXE, preservadas após atualizações.
+- **Portátil:** execute diretamente `PT2VHF-Sat-Tool-v1.1.0-*-Portable.exe` (um único arquivo). Configurações ficam em `data/` ao lado do EXE, preservadas após atualizações.
 - **Win7:** Python 3.8 x86 + PySide2/Qt5 + PyInstaller 5.13.2 (legado, precisa ser validado no Windows 7 real).
 - **Win11:** Python 3.11 x64 + PySide6/Qt6 + PyInstaller 6.13.0.
 - Arquivos SHA256 acompanham cada compilação. A versão Windows 7 é experimental; não confundir sucesso do CI com homologação em campo.
 
 ---
+
+## Novo na v1.1.0 — frequências, Doppler, idiomas e TS-2000
+
+- **Doppler ao selecionar satélite:** o painel de previsão RX/downlink e TX/uplink atualiza imediatamente ao trocar de satélite ou transponder, mesmo sem rádio conectado. Exibe offsets em Hz e cálculo baseado na estação **salva**; RX-only não recebe TX fictício. Trocar satélite ou canal **suspende ajuste automático CAT anterior** até reativação e consentimento explícitos, sem retunar o rádio inesperadamente.
+- **Formato estilo rádio:** `426.252.12 MHz` (10 Hz), `426.252.120 MHz` (1 Hz) ou `426,252120 MHz`, selecionáveis em **Configurações → Idioma e formato de frequência**. Os valores CAT e de previsão são apenas apresentados no formato escolhido; a precisão interna permanece em Hz. Os campos de entrada aceitam tanto os valores convencionais quanto os segmentados, com validação estrita.
+- **Satélites:** ações **Marcar todos / Desmarcar todos** na própria aba, opcionais para todos ou somente resultados filtrados. A seleção é salva uma única vez e a agenda é recalculada sem comandos CAT.
+- **SatNOGS:** download e atualização das frequências para satélite selecionado, habilitados ou filtrados, com progresso e cancelamento. Tratamento de páginas múltiplas, deduplicação, HTTPS exclusivo e cache atômico para preservar os dados anteriores se uma solicitação falhar. Atualizações são sequenciais para respeitar a API.
+- **Kenwood TS-2000:** telemetria de **S-meter MAIN/SUB** (`SM0/SM1`), **potência configurada** (`PC`) e medidor atualmente selecionado (`RM`: SWR/COMP/ALC). São somente consultas CAT, com amostragem opcional limitada a cada cinco segundos; a leitura de potência configurada não é medida RF. **O estado PTT/TX real não é inferido**: aparece como indisponível até existir leitura CAT validada do hardware.
+- **Idiomas:** seletor com Português (Brasil), English, Español, Français, Deutsch e Italiano. Traduções iniciais dos comandos, abas, títulos e campos operacionais principais, selecionáveis durante a execução com preferência persistente. **A auditoria das mensagens dinâmicas e de todos os textos do mapa/atualizador ainda está pendente**, para não apresentar internacionalização parcial como completa.
+- **Layout:** a organização principal da **v1.0.2 foi preservada**, conforme preferência do operador. A proposta de redesenho está apenas no backlog e não foi aplicada.
+- **Verificação:** testes automatizados em Windows 7 x86 (Python 3.8/Qt5) e Windows 11 x64 (Python 3.11/Qt6), compilação de Setup/Portable em `.exe`, checksums. O hardware TS-2000 real e o mapa no Windows 7 físico ainda exigem homologação.
 
 ## Novo na versão 1.0.2 — marcar estação no mapa offline
 
