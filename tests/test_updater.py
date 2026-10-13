@@ -13,8 +13,8 @@ def sample_release(ver='0.1.3', prerelease=False):
     stem=f'PT2VHF-Sat-Tool-v{ver}-Win7-x86'
     return {'tag_name':f'v{ver}', 'draft':False, 'prerelease':prerelease,
             'body':'Melhorias importantes', 'html_url':f'https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/tag/v{ver}',
-            'assets':[{'name':stem+'-Portable.zip','state':'uploaded',
-                       'browser_download_url':f'https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v{ver}/{stem}-Portable.zip',
+            'assets':[{'name':stem+'-Portable.exe','state':'uploaded',
+                       'browser_download_url':f'https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v{ver}/{stem}-Portable.exe',
                        'digest':'sha256:'+ 'a'*64},
                       {'name':stem+'-SHA256.txt','state':'uploaded',
                        'browser_download_url':f'https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v{ver}/{stem}-SHA256.txt'}]}
