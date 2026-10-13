@@ -1135,8 +1135,7 @@ class MainWindow(QMainWindow):
             self.sat_combo.setCurrentIndex(row)
 
     def choose_satellite(self):
-        if hasattr(self, "doppler_checkbox") and self.doppler_checkbox.isChecked():
-            self.doppler_checkbox.setChecked(False)
+        self.suspend_cat_doppler("satélite selecionado mudou")
         ident=self.sat_combo.currentData()
         if hasattr(self,"sat_list") and self.sat_combo.currentIndex()>=0 and self.sat_list.rowCount():
             self.sat_list.selectRow(self.sat_combo.currentIndex())
@@ -1162,6 +1161,7 @@ class MainWindow(QMainWindow):
         self.choose_cached_modes(int(ident))
         self.refresh_modes(force=False)
         self.update_map()
+        self.preview_doppler()
 
     def refresh_modes(self,force=False):
         ident=self.sat_combo.currentData()
@@ -1183,11 +1183,11 @@ class MainWindow(QMainWindow):
         self.refresh_satellite_table()
 
     def choose_mode(self):
-        if hasattr(self, "doppler_checkbox") and self.doppler_checkbox.isChecked():
-            self.doppler_checkbox.setChecked(False)
+        self.suspend_cat_doppler("transponder/modo mudou")
         i=self.mode_combo.currentData()
         if not isinstance(i,int) or i<0 or i>=len(self.options):
             self.mode_note.setText("Modo manual: confira cada frequência e modo antes de usar.")
+            self.preview_doppler()
             return
         opt=self.options[i]
         low,high=opt['downlink'],opt['downlink_high']
@@ -1202,6 +1202,7 @@ class MainWindow(QMainWindow):
             self.rx_mode.setCurrentText(mode)
             self.tx_mode.setCurrentText('LSB' if mode=='USB' and opt['inverted'] else 'USB' if mode=='LSB' and opt['inverted'] else mode)
         self.mode_note.setText(f"SatNOGS · {'Inversor' if opt['inverted'] else 'Não inversor'} · {'somente recepção (sem TX CAT)' if opt['receive_only'] else 'uplink/downlink'} · confira a situação operacional do satélite")
+        self.preview_doppler()
 
     def pair_linear(self):
         i=self.mode_combo.currentData()
@@ -1212,12 +1213,51 @@ class MainWindow(QMainWindow):
             dl=round(float(self.down_edit.text().replace(',','.'))*1e6)
             ul=paired_linear_uplink(dl,opt['downlink'],opt['downlink_high'],opt['uplink'],opt['uplink_high'],opt['inverted'])
             self.up_edit.setText(f"{ul/1e6:.6f}")
+            self.preview_doppler()
         except ValueError:pass
 
+    def radio_freq(self,hz):
+        return frequency_label(hz,self.config.values.get("frequency_style","radio10"))
+
+    def suspend_cat_doppler(self,reason):
+        """Selection changes may update predictions but never silently retune VFOs."""
+        if self.doppler_checkbox.isChecked():
+            self.doppler_checkbox.blockSignals(True)
+            self.doppler_checkbox.setChecked(False)
+            self.doppler_checkbox.blockSignals(False)
+            self.log("Doppler CAT suspenso: "+reason+"; nova autorização necessária")
+            self.mode_note.setText("CAT Doppler suspenso: "+reason+" · reative após conferir RX/TX")
+
+    def preview_doppler(self):
+        """Always calculate an independent DISPLAY prediction, including RX-only."""
+        try:
+            if not self.sat:
+                raise ValueError("Selecione um satélite")
+            site=self.saved_station()
+            when=now_utc()
+            p=position(self.sat,site,when=when,ts=self.ts)
+            self.last_pos=p
+            ul,dl=self.nominal_hz()
+            from .operations import frequency_prediction
+            calc=frequency_prediction({"downlink_hz":dl,"uplink_hz":ul},p["radial_m_s"])
+            age=abs((when-self.sat.epoch.utc_datetime().replace(tzinfo=timezone.utc)).total_seconds())/86400
+            if age>7:
+                self.corrected_label.setText(f"Previsão indisponível: TLE/OMM antigo ({age:.1f} d)")
+                return
+            tx=(self.radio_freq(calc["tx_hz"])+f" ({calc['tx_offset_hz']:+d} Hz)") if ul is not None else "RX apenas"
+            self.corrected_label.setText(
+                f"PREVISÃO Doppler RX {self.radio_freq(calc['rx_hz'])} ({calc['rx_offset_hz']:+d} Hz)"
+                f" | TX {tx} · {when.astimezone():%H:%M:%S}")
+        except (ValueError,TypeError,KeyError) as exc:
+            self.corrected_label.setText("Previsão Doppler: "+str(exc))
+        except Exception as exc:
+            self.corrected_label.setText("Previsão Doppler indisponível")
+            self.log("Previsão Doppler: "+str(exc))
+
     def nominal_hz(self):
-        try: dl=round(float(self.down_edit.text().replace(',','.'))*1e6)
+        try:dl=parse_mhz_input(self.down_edit.text())
         except ValueError:raise ValueError('Informe a frequência nominal de RX')
-        try:ul=round(float(self.up_edit.text().replace(',','.'))*1e6) if self.up_edit.text().strip() else None
+        try:ul=parse_mhz_input(self.up_edit.text()) if self.up_edit.text().strip() else None
         except ValueError:raise ValueError('Frequência nominal de TX inválida')
         if not (100000<=dl<=1_299_999_999):raise ValueError("Downlink fora do intervalo CAT")
         if ul is not None and not (100000<=ul<=1_299_999_999):raise ValueError("Uplink fora do intervalo CAT")
@@ -1481,10 +1521,7 @@ class MainWindow(QMainWindow):
                 for k,v in formats.items():self.orbit_metrics[k].setText(v)
                 self.visibility.setText('EM PASSAGEM' if pos['visible'] else 'ABAIXO DO HORIZONTE')
                 self.visibility.setStyleSheet('font-size:18px;font-weight:800;color:'+('#5ae1a6' if pos['visible'] else '#e1c27c'))
-                try:
-                    ul,dl=self.corrected()
-                    self.corrected_label.setText(f"Doppler RX {dl/1e6:.6f}  |  TX {ul/1e6:.6f} MHz")
-                except ValueError:self.corrected_label.setText('Doppler RX/TX: —')
+                self.preview_doppler()
                 if (self.last_map_time is None or (now-self.last_map_time).total_seconds()>=12):
                     self.update_map();self.last_map_time=now
                 if self.doppler_checkbox.isChecked():
