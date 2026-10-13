@@ -301,6 +301,57 @@ class MainWindow(QMainWindow):
         sg.addLayout(place)
         sg.addWidget(label("A captura utiliza o serviço de localização do sistema (quando disponível). Não substitui coordenadas GPS precisas para previsão de passagens."))
         cfg.addWidget(station_group)
+        profile_group,pg=group("PERFIL OPERACIONAL — MODOS E BANDAS")
+        pg.addWidget(label("Modos selecionados determinam candidatos automáticos; as escolhas manuais permanecem salvas."))
+        mode_row=QHBoxLayout();self.station_modes={}
+        for name in ("FM","SSB","CW"):
+            w=QCheckBox(name);self.station_modes[name]=w;mode_row.addWidget(w)
+        pg.addLayout(mode_row)
+        band_row=QHBoxLayout();self.station_bands={}
+        for name in ("VHF","UHF","23cm"):
+            w=QCheckBox(name);self.station_bands[name]=w;band_row.addWidget(w)
+        pg.addLayout(band_row)
+        profile_save=QPushButton("Salvar capacidades e recalcular")
+        profile_save.clicked.connect(self.save_profile)
+        pg.addWidget(profile_save);cfg.addWidget(profile_group)
+
+        radio_settings,rs=group("CONEXÃO CAT — RÁDIO")
+        rr=QHBoxLayout()
+        self.radio_brand=QComboBox();self.radio_brand.addItem("Kenwood")
+        self.radio_model=QComboBox();self.radio_model.addItem("TS-2000")
+        self.config_port=QComboBox();self.config_port.setEditable(True)
+        rr.addWidget(label("Fabricante"));rr.addWidget(self.radio_brand)
+        rr.addWidget(label("Modelo"));rr.addWidget(self.radio_model)
+        rr.addWidget(label("Porta COM"));rr.addWidget(self.config_port)
+        rs.addLayout(rr)
+        rs.addWidget(label("Ajustes de baud rate e stop bits ficam na faixa CAT da aba Operação. Somente o TS-2000 tem driver nesta versão."))
+        connect_btn=QPushButton("Conectar pela porta selecionada")
+        connect_btn.clicked.connect(self.connect_from_settings)
+        rs.addWidget(connect_btn);cfg.addWidget(radio_settings)
+
+        sel_group,ss=group("SATÉLITES VISÍVEIS NA PÁGINA PRINCIPAL")
+        ss.addWidget(label("Auto sugere satélites por FM/SSB/CW e banda. A confirmação de funcionamento depende das fontes atuais."))
+        self.tracked_table=QTableWidget(0,3)
+        self.tracked_table.setHorizontalHeaderLabels(["Selecionado","Satélite / NORAD","Compatibilidade"])
+        self.tracked_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.tracked_table.cellChanged.connect(self.satellite_checked)
+        self.tracked_table.setMinimumHeight(200)
+        ss.addWidget(self.tracked_table)
+        action_row=QHBoxLayout()
+        for title,func in (("Sugestões automáticas",self.restore_auto_selection),
+                           ("Marcar tudo",lambda:self.bulk_select_satellites(True)),
+                           ("Desmarcar tudo",lambda:self.bulk_select_satellites(False))):
+            button=QPushButton(title);button.clicked.connect(func);action_row.addWidget(button)
+        ss.addLayout(action_row);cfg.addWidget(sel_group)
+
+        tle_group,tg=group("TLE / EFEMÉRIDES ORBITAIS")
+        tg.addWidget(label("CelesTrak OMM prioritário; TLE de contingência. Intervalo mínimo de 2 h por conjunto."))
+        self.tle_hours=QDoubleSpinBox();self.tle_hours.setRange(2,24)
+        self.tle_hours.setDecimals(0);self.tle_hours.setSuffix(" horas")
+        tg.addWidget(self.tle_hours)
+        button=QPushButton("Salvar intervalo TLE")
+        button.clicked.connect(self.save_tle_settings);tg.addWidget(button)
+        cfg.addWidget(tle_group)
         advanced,adv=group("DOPPLER E SEGURANÇA")
         self.interval=QDoubleSpinBox();self.interval.setRange(1,15);self.interval.setSuffix(' segundos')
         self.threshold=QDoubleSpinBox();self.threshold.setRange(5,1000);self.threshold.setSuffix(' Hz')
