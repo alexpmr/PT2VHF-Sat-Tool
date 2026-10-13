@@ -2,6 +2,7 @@
 from __future__ import annotations
 from dataclasses import dataclass
 import threading
+import time
 
 MODES = {"LSB": "1", "USB": "2", "CW": "3", "FM": "4", "AM": "5", "FSK": "6", "CW-R": "7", "FSK-R": "9"}
 MODES_REV = {v: k for k, v in MODES.items()}
@@ -97,6 +98,7 @@ class TS2000:
         self.logger = logger or (lambda x: None)
         self.lock = threading.RLock()
         self.state = RadioState()
+        self._last_optional_poll = 0.0
 
     @property
     def connected(self):
@@ -145,35 +147,35 @@ class TS2000:
             self.state = RadioState()
 
     def poll(self):
-        sa = self._exchange("SA;", "SA")
-        fa = self._exchange("FA;", "FA")
-        fb = self._exchange("FB;", "FB")
-        md = self._exchange("MD;", "MD")
-        self.state.sat_raw = sa
-        self.state.sat = sa.startswith("SA1")
-        self.state.downlink = parse_frequency(fa, "FA")
-        self.state.uplink = parse_frequency(fb, "FB")
-        self.state.mode = MODES_REV.get(md[2:3], "?")
-        # Optional read-only telemetry. Some firmware/operating modes do not reply.
-        # Do not turn a working CAT session into an error if a meter is unavailable.
-        self.state.signal_main=None
-        self.state.signal_sub=None
-        self.state.power_set_w=None
-        self.state.meter_type=""
-        self.state.meter_value=None
-        for command,expected,parse,attr in (
-            ("SM0;","SM0",lambda raw:parse_smeter(raw,0),"signal_main"),
-            ("SM1;","SM1",lambda raw:parse_smeter(raw,1),"signal_sub"),
-            ("PC;","PC",parse_power_setting,"power_set_w"),
-            ("RM;","RM",parse_meter,"meter")):
-            try:
-                value=parse(self._exchange(command,expected))
-                if attr=="meter":
-                    self.state.meter_type,self.state.meter_value=value
-                else:setattr(self.state,attr,value)
-            except (TimeoutError,ValueError,ConnectionError) as exc:
-                self.logger(f"CAT leitura opcional {command}: {exc}")
-        return self.state
+        with self.lock:
+            sa=self._exchange("SA;","SA")
+            fa=self._exchange("FA;","FA")
+            fb=self._exchange("FB;","FB")
+            md=self._exchange("MD;","MD")
+            self.state.sat_raw=sa
+            self.state.sat=sa.startswith("SA1")
+            self.state.downlink=parse_frequency(fa,"FA")
+            self.state.uplink=parse_frequency(fb,"FB")
+            self.state.mode=MODES_REV.get(md[2:3],"?")
+            # Optional meters run at most once every 5 seconds. Commands are read-only.
+            if time.monotonic()-self._last_optional_poll>=5:
+                self._last_optional_poll=time.monotonic()
+                for command,expected,parse,attr in (
+                    ("SM0;","SM0",lambda raw:parse_smeter(raw,0),"signal_main"),
+                    ("SM1;","SM1",lambda raw:parse_smeter(raw,1),"signal_sub"),
+                    ("PC;","PC",parse_power_setting,"power_set_w"),
+                    ("RM;","RM",parse_meter,"meter")):
+                    try:
+                        value=parse(self._exchange(command,expected))
+                        if attr=="meter":
+                            self.state.meter_type,self.state.meter_value=value
+                        else:setattr(self.state,attr,value)
+                    except (TimeoutError,ValueError,ConnectionError) as exc:
+                        if attr=="meter":
+                            self.state.meter_type="";self.state.meter_value=None
+                        else:setattr(self.state,attr,None)
+                        self.logger(f"CAT leitura opcional {command}: {exc}")
+            return self.state
 
     def enable_satellite_mode(self):
         sa = self._exchange("SA;", "SA")
@@ -184,15 +186,18 @@ class TS2000:
         return state
 
     def set_frequencies(self, uplink_hz: int, downlink_hz: int):
-        sa = self._exchange("SA;", "SA")
-        if not sa.startswith("SA1"):
-            raise RuntimeError("Ative SAT no rádio antes de alterar as frequências")
-        if len(sa) < 5 or sa[4] != "1":
-            raise RuntimeError("A seleção MAIN RX / SUB TX não está configurada")
-        # Radio handles actual RF PTT, never sent here.
-        self._exchange(frequency_command("FA", downlink_hz))
-        self._exchange(frequency_command("FB", uplink_hz))
-        return self.poll()
+        with self.lock:
+            sa=self._exchange("SA;","SA")
+            if not sa.startswith("SA1"):
+                raise RuntimeError("Ative SAT no rádio antes de alterar as frequências")
+            if len(sa)<5 or sa[4]!="1":
+                raise RuntimeError("A seleção MAIN RX / SUB TX não está configurada")
+            self._exchange(frequency_command("FA",downlink_hz))
+            self._exchange(frequency_command("FB",uplink_hz))
+            state=self.poll()
+            if state.downlink!=downlink_hz or state.uplink!=uplink_hz:
+                raise RuntimeError("TS-2000 não confirmou as frequências por CAT")
+            return state
 
     def set_main_mode(self, mode: str):
         if mode not in MODES:
