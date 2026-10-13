@@ -9,6 +9,8 @@
 | **Windows 7 SP1** (x86; executável de 32 bits também para Win7 x64) | [Instalador Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v0.1.3/PT2VHF-Sat-Tool-v0.1.3-Win7-x86-Setup.exe) | [Portable Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v0.1.3/PT2VHF-Sat-Tool-v0.1.3-Win7-x86-Portable.zip) |
 | **Windows 11** (x64) | [Instalador Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v0.1.3/PT2VHF-Sat-Tool-v0.1.3-Win11-x64-Setup.exe) | [Portable Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v0.1.3/PT2VHF-Sat-Tool-v0.1.3-Win11-x64-Portable.zip) |
 
+**Formato dos downloads:** os instaladores são fornecidos **diretamente em `.exe`**, sem ZIP. Somente a edição **portátil** é distribuída em `.zip`, contendo o executável e as bibliotecas necessárias.
+
 **[Todas as releases](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases)** · **[Acompanhar compilação](https://github.com/alexpmr/PT2VHF-Sat-Tool/actions)**
 
 - **Instalável:** instalação por usuário, atalho e desinstalação, atualização pelo aplicativo usando o Setup de sua edição.
