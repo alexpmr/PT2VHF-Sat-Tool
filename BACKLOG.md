@@ -1,5 +1,12 @@
 # PT2VHF Sat Tool — backlog
 
+## Validação de campo — Windows 7 SP1 (13/10/2026)
+- [x] **Instalação e abertura:** usuário apresentou foto da janela do PT2VHF Sat Tool funcionando no Windows 7, com abas, catálogo lateral, painel de passagens e comandos CAT visíveis. Confirma abertura básica; **não** certifica funcionamento integral, CAT, Doppler ou previsões.
+- [ ] **REGRESSÃO VISUAL — MAPA OFFLINE COM TAMANHO INCORRETO NO WINDOWS 7:** captura mostra o mapa e seus controles renderizados como **um retângulo pequeno no canto superior esquerdo** da área central, enquanto quase toda a região prevista para mapa permanece vazia/azul. A base vetorial parece ter sido carregada, porém não se ajusta ao tamanho disponível. Corrigir layout/viewport da página HTML/SVG hospedada em `QWebEngineView`/PySide2/QtWebEngine no Windows 7; testar primeiro renderização em maximizado e após redimensionamento, resolução e DPI. Verificar `setHtml` com base URL, dimensões do viewport, repaint/resize e aceleração gráfica/driver. Considerar fallback robusto compatível com Qt5 para desenhar o mapa, sem reintroduzir tiles bloqueados ou dependência de CDN.
+- [ ] Teste de regressão específico: no Win7, mapa deve preencher toda a coluna central, preservar proporção cartográfica e manter visíveis a órbita, posição da estação/satélite, legenda e os botões de zoom após redimensionar a janela, alternar de abas e alterar DPI.
+- [ ] Verificar cadastro de latitude/longitude (a captura mostra aviso **Cadastrar a estação** e agenda de passagens vazia); não interpretar ausência de passagens como bug antes de cadastrar coordenadas válidas. Após salvar a estação, confirmar previsão AOS/TCA/LOS para satélites habilitados.
+- [ ] Homologar portas COM, leituras CAT, atualização Doppler e atualização automática em hardware real separadamente.
+
 ## v0.2.1 — layout aprovado, identidade visual e mapa offline
 - [x] Adotar tela **Operação** de três colunas: satélites/modos na esquerda, mundo/órbita no centro e agenda/telemetria CAT à direita.
 - [x] Aplicar cabeçalho e paleta do PT2VHF Sat Tool, gerar ícones multirresolução e embuti-los no EXE instalável e portátil de ambos os Windows; `SetupIconFile` no Inno Setup.
