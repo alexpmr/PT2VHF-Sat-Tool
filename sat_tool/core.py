@@ -176,3 +176,46 @@ def transponder_options(rows: list[dict]) -> list[dict]:
             "type": t.get("type") or "",
         })
     return options
+
+def ground_track_between(sat, begin:datetime, end:datetime, *, ts=None, max_samples:int=220):
+    """Ground track between two UTC instants, splitting at the ±180° meridian.
+
+    History here is orbit reconstructed from elements, not received GPS telemetry.
+    """
+    from skyfield.api import load,wgs84
+    if begin.tzinfo is None or end.tzinfo is None:
+        raise ValueError("Orbit track needs timezone-aware datetimes")
+    if end<=begin: return []
+    ts=ts or load.timescale(builtin=True)
+    duration=(end-begin).total_seconds()
+    steps=max(4,min(max_samples,int(duration/120)+1))
+    result=[[]];last_lon=None
+    for i in range(steps+1):
+        when=begin+timedelta(seconds=duration*i/steps)
+        sub=wgs84.subpoint(sat.at(ts.from_datetime(when)))
+        lat,lon=sub.latitude.degrees,sub.longitude.degrees
+        if last_lon is not None and abs(lon-last_lon)>180:
+            result.append([])
+        result[-1].append([lat,lon])
+        last_lon=lon
+    return [p for p in result if len(p)>=2]
+
+
+def track_period_bounds(now:datetime, period_hours:float, direction:str, last_pass:dict|None=None):
+    """Normalize user-visible trail presets into historical/forecast UTC intervals."""
+    if now.tzinfo is None:raise ValueError("Timezone required")
+    if not 0.1<=period_hours<=48:
+        raise ValueError("Orbital period outside 0.1-48h")
+    if direction not in ("Futuro","Passado","Ambos","Última passagem"):
+        raise ValueError("Unknown track direction")
+    period=timedelta(hours=period_hours)
+    if direction=="Última passagem":
+        if last_pass and last_pass.get("aos") and last_pass.get("los") and last_pass["los"]<=now:
+            return (last_pass["aos"],last_pass["los"]),None
+        return (now-timedelta(hours=2),now),None
+    if direction=="Passado":
+        return (now-period,now),None
+    if direction=="Futuro":
+        return None,(now,now+period)
+    half=period/2
+    return (now-half,now),(now,now+half)
