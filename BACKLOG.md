@@ -1,5 +1,17 @@
 # PT2VHF Sat Tool — backlog
 
+## v0.2.1 — layout aprovado, identidade visual e mapa offline
+- [x] Adotar tela **Operação** de três colunas: satélites/modos na esquerda, mundo/órbita no centro e agenda/telemetria CAT à direita.
+- [x] Aplicar cabeçalho e paleta do PT2VHF Sat Tool, gerar ícones multirresolução e embuti-los no EXE instalável e portátil de ambos os Windows; `SetupIconFile` no Inno Setup.
+- [x] Inserir lista de satélites selecionáveis na esquerda, sincronizada com seletor NORAD/modos e filtros, sem eliminar o formulário de frequências manuais.
+- [x] Criar painel de frequências **RX FA e TX FB realmente lidas**, modo MAIN e SAT à direita, com status claro de desconexão, ausência/erro de CAT e leitura antiga.
+- [x] Substituir integralmente os tiles bloqueados por HTTP 418 por **mapa vetorial offline Natural Earth de domínio público**, com zoom e arraste, sem dependência de Leaflet/CDN.
+- [x] Preservar cálculos de órbita, footprint, AOS/TCA/LOS, correção Doppler e CAT existentes.
+- [x] Atualizar README e testes automatizados para exigir marca + mapa offline nos executáveis e quatro arquivos `*.exe` (Win7/Win11, Setup/Portable).
+- [ ] Homologar experiência visual real em Win7/11, tamanhos de tela pequenos, alta DPI e QtWebEngine; verificar ausência do erro HTTP 418 no hardware do operador.
+- [ ] Homologar CAT TS-2000 real e atualização in-place de cada tipo de EXE; não assumir uso de RX/TX sem leitura CAT confirmada.
+- [ ] Confirmar identidade visual como definitiva e validar variantes de ícones/tema claro; próxima etapa possível: thumbnails por satélite à esquerda e mais refinamento da responsividade.
+
 ## Identidade visual oficial — PT2VHF Sat Tool
 - [x] Definir conceito visual e produzir arquivos SVG vetoriais como base de marca em `assets/branding/`, com documentação em `docs/BRANDING.md`.
 - [ ] Padronizar **símbolo de satélite, órbita terrestre e ondas de RF**, logotipo horizontal `PT2VHF SAT TOOL` e assinatura reduzida para áreas compactas. Evitar logotipos de fabricantes/AMSAT/organizações externas.
