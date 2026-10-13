@@ -8,7 +8,7 @@ import requests
 CELESTRAK_OMM = "https://celestrak.org/NORAD/elements/gp.php?GROUP=amateur&FORMAT=json"
 CELESTRAK_TLE = "https://celestrak.org/NORAD/elements/gp.php?GROUP=amateur&FORMAT=tle"
 SATNOGS_TRANSMITTERS = "https://db.satnogs.org/api/transmitters/"
-HEADERS = {"User-Agent": "PT2VHF-Sat-Tool/0.1.2 (radio amateur tracking tool)", "Accept": "application/json"}
+HEADERS = {"User-Agent": "PT2VHF-Sat-Tool/1.1.0 (radio amateur tracking tool)", "Accept": "application/json"}
 
 
 def cache_path(data_dir: Path, name: str) -> Path:
@@ -32,16 +32,44 @@ def load_omm(data_dir: Path):
 
 
 def refresh_transmitters(data_dir: Path, norad: int):
-    response = requests.get(SATNOGS_TRANSMITTERS,
-                            params={"format": "json", "satellite__norad_cat_id": norad},
-                            headers=HEADERS, timeout=25)
-    response.raise_for_status()
-    result = response.json()
-    rows = result if isinstance(result, list) else result.get("results", [])
-    if not isinstance(rows, list):
-        raise ValueError("Resposta de transponders inválida")
-    cache_path(data_dir, f"tx_{norad}.json").write_text(json.dumps(rows, ensure_ascii=False), encoding="utf-8")
-    return rows
+    # Some API deployments paginate results; never persist partial pages.
+    from urllib.parse import urlparse
+    rows=[]
+    url=SATNOGS_TRANSMITTERS
+    params={"format":"json","satellite__norad_cat_id":norad}
+    seen=set()
+    for page in range(25):
+        if url in seen:raise ValueError("Paginação SatNOGS cíclica")
+        seen.add(url)
+        response=requests.get(url,params=params,headers=HEADERS,timeout=25)
+        response.raise_for_status()
+        result=response.json()
+        if isinstance(result,list):
+            current,nxt=result,None
+        elif isinstance(result,dict):
+            current,nxt=result.get("results",[]),result.get("next")
+        else:raise ValueError("Resposta de transponders inválida")
+        if not isinstance(current,list):raise ValueError("Registros de transponder inválidos")
+        rows.extend(current)
+        if not nxt:break
+        from urllib.parse import urljoin
+        url=urljoin(SATNOGS_TRANSMITTERS,nxt)
+        parsed=urlparse(url)
+        if parsed.scheme!="https" or parsed.hostname!="db.satnogs.org":
+            raise ValueError("Paginação SatNOGS encaminhou para domínio não autorizado")
+        params=None
+    else:raise ValueError("Paginação SatNOGS excedeu o limite")
+    unique={}
+    for entry in rows:
+        if not isinstance(entry,dict):raise ValueError("Transponder em formato inválido")
+        key=str(entry.get("uuid") or entry.get("id") or (entry.get("description"),entry.get("downlink_low"),entry.get("uplink_low")))
+        unique[key]=entry
+    result=list(unique.values())
+    target=cache_path(data_dir,f"tx_{norad}.json")
+    temp=target.with_suffix(".tmp")
+    temp.write_text(json.dumps(result,ensure_ascii=False),encoding="utf-8")
+    temp.replace(target)
+    return result
 
 
 def load_transmitters(data_dir: Path, norad: int):
