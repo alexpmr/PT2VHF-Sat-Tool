@@ -704,12 +704,32 @@ class MainWindow(QMainWindow):
             idx=self.sat_combo.findData(str(selected))
             if idx>=0:self.sat_combo.setCurrentIndex(idx)
         self.sat_combo.blockSignals(False)
+        if hasattr(self,"sat_list"):
+            self.sat_list.blockSignals(True)
+            self.sat_list.setRowCount(self.sat_combo.count())
+            for row_index in range(self.sat_combo.count()):
+                ident=str(self.sat_combo.itemData(row_index))
+                sat_obj=self.omm.get(ident,{})
+                name=str(sat_obj.get("OBJECT_NAME",ident))
+                item=QTableWidgetItem(name[:28]+"\nNORAD "+ident)
+                item.setData(Qt.UserRole,ident)
+                mode=self.suggested_mode_text(ident)
+                self.sat_list.setItem(row_index,0,item)
+                self.sat_list.setItem(row_index,1,QTableWidgetItem(mode))
+                self.sat_list.setRowHeight(row_index,46)
+            self.sat_list.blockSignals(False)
         self.choose_satellite()
+
+    def select_list_satellite(self,row,column):
+        if 0 <= row < self.sat_combo.count():
+            self.sat_combo.setCurrentIndex(row)
 
     def choose_satellite(self):
         if hasattr(self, "doppler_checkbox") and self.doppler_checkbox.isChecked():
             self.doppler_checkbox.setChecked(False)
         ident=self.sat_combo.currentData()
+        if hasattr(self,"sat_list") and self.sat_combo.currentIndex()>=0 and self.sat_list.rowCount():
+            self.sat_list.selectRow(self.sat_combo.currentIndex())
         if not ident or ident not in self.omm:
             self.sat=None;self.sat_detail.setText("Nenhum satélite selecionado");return
         item=self.omm[ident]
