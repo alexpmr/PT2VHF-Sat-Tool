@@ -4,24 +4,33 @@
 
 ## Downloads — instaladores e portáteis
 
-**PT2VHF Sat Tool v1.1.2 — Windows 7 SP1, Windows 10 e Windows 11.** Os quatro downloads são arquivos `.exe` diretos. Links ficam disponíveis após aprovação dos builds Windows. Embora seja o marco 1.0 de funcionalidades, permanece em pré-lançamento até a homologação CAT com TS-2000 físico e Windows 7 real.
+**PT2VHF Sat Tool v1.1.3 — Windows 7 SP1, Windows 10 e Windows 11.** Os quatro downloads são arquivos `.exe` diretos. Links ficam disponíveis após aprovação dos builds Windows. Embora seja o marco 1.0 de funcionalidades, permanece em pré-lançamento até a homologação CAT com TS-2000 físico e Windows 7 real.
 
 | Windows | Instalável | Portátil |
 | --- | --- | --- |
-| **Windows 7 SP1** (x86; executável de 32 bits também para Win7 x64) | [Instalador Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.1.2/PT2VHF-Sat-Tool-v1.1.2-Win7-x86-Setup.exe) | [Portable Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.1.2/PT2VHF-Sat-Tool-v1.1.2-Win7-x86-Portable.exe) |
-| **Windows 10 (1809+)/11** (x64; arquivo `Win11-x64` para manter atualizador) | [Instalador Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.1.2/PT2VHF-Sat-Tool-v1.1.2-Win11-x64-Setup.exe) | [Portable Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.1.2/PT2VHF-Sat-Tool-v1.1.2-Win11-x64-Portable.exe) |
+| **Windows 7 SP1** (x86; executável de 32 bits também para Win7 x64) | [Instalador Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.1.3/PT2VHF-Sat-Tool-v1.1.3-Win7-x86-Setup.exe) | [Portable Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.1.3/PT2VHF-Sat-Tool-v1.1.3-Win7-x86-Portable.exe) |
+| **Windows 10 (1809+)/11** (x64; arquivo `Win11-x64` para manter atualizador) | [Instalador Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.1.3/PT2VHF-Sat-Tool-v1.1.3-Win11-x64-Setup.exe) | [Portable Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.1.3/PT2VHF-Sat-Tool-v1.1.3-Win11-x64-Portable.exe) |
 
 **Formato dos downloads:** tanto instaladores quanto portáteis são entregues diretamente como arquivos **`.exe`**. O portátil inclui as dependências dentro do mesmo EXE (PyInstaller onefile) e não requer descompactação.
 
 **[Todas as releases](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases)** · **[Acompanhar compilação](https://github.com/alexpmr/PT2VHF-Sat-Tool/actions)**
 
 - **Instalável:** instalação por usuário, atalho e desinstalação, atualização pelo aplicativo usando o Setup de sua edição.
-- **Portátil:** execute diretamente `PT2VHF-Sat-Tool-v1.1.2-*-Portable.exe` (um único arquivo). Configurações ficam em `data/` ao lado do EXE, preservadas após atualizações.
+- **Portátil:** execute diretamente `PT2VHF-Sat-Tool-v1.1.3-*-Portable.exe` (um único arquivo). Configurações ficam em `data/` ao lado do EXE, preservadas após atualizações.
 - **Win7:** Python 3.8 x86 + PySide2/Qt5 + PyInstaller 5.13.2 (legado, precisa ser validado no Windows 7 real).
 - **Win10/11 x64:** Windows 10 1809+ ou Windows 11, Python 3.11 x64 + PySide6/Qt6 + PyInstaller 6.13.0.
 - Arquivos SHA256 acompanham cada compilação. A versão Windows 7 é experimental; não confundir sucesso do CI com homologação em campo.
 
 ---
+
+## Novidades v1.1.3 — marcação de satélites e Doppler contínuo (14/10/2026)
+
+- Na aba **Satélites**, a seleção agora tem coluna **Selecionado** com checkboxes. **Marcar todos** e **Desmarcar todos** salvam os NORAD IDs, inclusive antes de haver frequências em cache, e atualizam imediatamente as tabelas de rastreamento.
+- **Baixar/atualizar frequências** utiliza, por padrão, o escopo **Habilitados** — assim, após **Marcar todos**, uma única ação dispara a atualização sequencial e cancelável via SatNOGS, com contadores e erros. Para um satélite apenas, altere o escopo para **Selecionado**; não é necessário dar duplo clique.
+- O painel **PREVISÃO Doppler** mostra RX/downlink, TX/uplink e offsets em Hz a cada segundo, também para satélites **fora da visada**. Isso não comprova recepção RF.
+- A sincronização **CAT do TS-2000** permanece restrita a passagens visíveis por padrão. Na seção **Doppler e Segurança**, o operador pode permitir explicitamente CAT fora da visada, mas ainda precisa ativar Doppler CAT e confirmar a autorização; nenhum PTT é enviado.
+- **Segurança:** TLE/OMM vencido, SAT desligado ou CAT desconectado bloqueiam atualização automática do rádio. A prévia é independente de conexão CAT.
+- **Validação:** testes de seleção, escopo, Doppler aproximando/afastando e autorização CAT adicionados ao CI. Compilação e autoteste em Windows não equivalem a validação de campo com Kenwood TS-2000.
 
 ## Correção de estabilidade v1.1.2 — fechamento inesperado / travamento
 
