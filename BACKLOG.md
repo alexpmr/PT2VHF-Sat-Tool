@@ -5,6 +5,21 @@
 - [x] **Testes automatizados criados:** marcação sem frequências prévias, atualização de múltiplos NORADs, Doppler em aproximação/afastamento, persistência da configuração e proteção CAT.
 - [ ] **Homologação física:** reproduzir aba Satélites e CAT/Doppler em Windows 7 e Windows 10/11, inclusive com TS-2000 conectado e satélite fora da visada; verificar temporização, comportamento do rádio e limites da API SatNOGS. Uma passagem de CI não encerra esta pendência.
 
+## [P2] Aba Satélites — progresso central do download de frequências (14/10/2026)
+- [ ] Ao clicar em **Satélites → Baixar/atualizar frequências**, exibir **janela centralizada sobre a aplicação** com barra de progresso horizontal; não depender apenas do status discreto na página.
+- [ ] Mostrar **N de M satélites processados**, percentual, nome e NORAD em processamento e contadores de sucesso, sem dados, falhas e cancelados. O percentual deve medir *itens concluídos / total*, inclusive itens com erro, sem confundir progresso e sucesso.
+- [ ] Permitir **Cancelar** de forma cooperativa: parar antes da próxima requisição, aguardar a atual/timeout e preservar o cache já atualizado. Evitar execuções simultâneas.
+- [ ] No término, apresentar resumo com **Fechar** e erros detalhados no LOG. Atualizar a interface apenas na thread Qt por sinais, sem congelamento (PySide2/Win7 x86 e PySide6/Win10/11 x64).
+- [ ] Testar escopos **Selecionado / Habilitados / Resultados filtrados**, 1 ou muitos satélites, ausência de frequências, timeouts, falhas HTTP e cancelamento; não realizar nenhum comando CAT/PTT.
+
+## [P2] Configurações — pesquisar satélites visíveis na página principal (14/10/2026)
+- [ ] Na seção **Configurações → Satélites visíveis na página principal**, adicionar **campo de pesquisa/filtro** imediatamente acima da tabela de satélites, com placeholder `Pesquisar por nome ou NORAD…` e ação **Limpar**.
+- [ ] Filtrar **instantaneamente enquanto digita**, sem diferenciar maiúsculas/minúsculas nem acentos, por **nome/indicativo do satélite e NORAD ID**. Opcionalmente permitir modo **FM/SSB/CW** quando houver dados no catálogo; o filtro não depende de download prévio das frequências.
+- [ ] O filtro deve **modificar somente as linhas exibidas**, nunca desmarcar, apagar ou mudar a seleção persistida. Ao limpar, todos os satélites reaparecem com seus estados anteriores.
+- [ ] Exibir contador `X resultados de Y satélites · Z habilitados` e mensagem explícita quando não houver correspondências.
+- [ ] Preservar os comandos existentes **Marcar tudo, Desmarcar tudo e Sugestões automáticas**; se houver intenção de aplicá-los apenas aos resultados filtrados, exigir opção de **escopo explícito**, evitando modificar inadvertidamente a seleção global.
+- [ ] Atualização de tabela/filtro não pode desativar Doppler CAT, recalcular operações desnecessariamente ou enviar comandos ao TS-2000. Validar seleção individual, digitação rápida, limpeza do filtro, reinício, Windows 7 e Windows 10/11 e idiomas suportados.
+
 # PT2VHF Sat Tool — backlog
 
 ## BUG crítico — Win7 não responde / Win10 encerra inesperadamente (v1.1.1)
