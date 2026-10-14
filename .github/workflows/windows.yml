@@ -2,7 +2,7 @@ name: PT2VHF Sat Tool - Windows 7 + Windows 10/11
 
 on:
   push:
-    branches: [main]
+    branches: [main, release/v1.1.2-stability]
     tags: ['v*']
   workflow_dispatch:
 
@@ -175,6 +175,6 @@ jobs:
           gh release view "$RELEASE_TAG" --repo '${{ github.repository }}' >/dev/null 2>&1 || \
             gh release create "$RELEASE_TAG" --target '${{ github.sha }}' --repo '${{ github.repository }}' \
               --title "PT2VHF Sat Tool $RELEASE_TAG - Win7 + Win10/11" \
-              --notes 'v1.1.2: corrigido bloqueio do instalador no Windows 10 x64 (1809/build 17763+), mantendo Windows 11 x64 e Win7 SP1 x86. O executável Qt6 mantém o sufixo Win11-x64 para compatibilidade com o atualizador, mas agora pode ser instalado no Windows 10 compatível. Preservadas funções Doppler, SatNOGS, seis idiomas, CAT e interface da v1.1.0; homologação em Windows 10 real e TS-2000 físico pendente. Edições: Win7 SP1 x86 (Qt5/Python3.8) e Win11 x64 (Qt6/Python3.11). EXEs compilados automaticamente; CAT em rádio real e execução em Win7 físico ainda exigem homologação.' \
+              --notes 'v1.1.2: correção de estabilidade Win7/Win10/Win11 com log CAT da thread de fundo entregue à interface por sinais Qt seguros; limite de 4.000 linhas; arquivo de crash e sessões em LOCALAPPDATA; detecção e recarga de falha do renderizador do mapa. Inclui suporte Windows 10 1809+ da v1.1.1. Diagnóstico de causa e homologação com TS-2000 real continuam pendentes. Edições: Win7 SP1 x86 (Qt5/Python3.8) e Win11 x64 (Qt6/Python3.11). EXEs compilados automaticamente; CAT em rádio real e execução em Win7 físico ainda exigem homologação.' \
               --prerelease
           gh release upload "$RELEASE_TAG" release/* --repo '${{ github.repository }}' --clobber
