@@ -7,6 +7,7 @@ DEFAULTS = {
     "min_elevation": 10, "port": "", "baud": 9600, "stopbits": 1,
     "update_interval_s": 2, "tune_threshold_hz": 20,
     "auto_doppler": False, "selected_norad": "",
+    "cat_doppler_out_of_view": False,
     "version_check_minutes": 15, "include_prereleases": True,
     "last_update_notice": "",
     "radio_brand": "Kenwood", "radio_model": "TS-2000",
