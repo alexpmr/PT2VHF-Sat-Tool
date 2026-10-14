@@ -134,6 +134,7 @@ class MainWindow(QMainWindow):
         self._loading_satellites = False
         self._loading_catalog = False
         self._active_satellite_id = None
+        self._passes_refresh_again = False
         self.pos_source = None
         self.map_pick_active = False
         self.map_pick_position = None
@@ -1207,6 +1208,7 @@ class MainWindow(QMainWindow):
         old=self.sat_combo.currentData() or self.config.values.get('selected_norad')
         self.omm={str(o['NORAD_CAT_ID']):o for o in objects if o.get('NORAD_CAT_ID')}
         self.plan_satellites.clear()
+        self._active_satellite_id=None  # Reload orbital elements even for the same NORAD
         self.track_cache_key=None
         self.filter_sats(self.search.text())
         if old:
@@ -1397,6 +1399,8 @@ class MainWindow(QMainWindow):
             self._active_satellite_id=ident
         if hasattr(self,"sat_list") and self.sat_combo.currentIndex()>=0 and self.sat_list.rowCount():
             self.sat_list.selectRow(self.sat_combo.currentIndex())
+        if ident==self._active_satellite_id and self.sat is not None:
+            return  # Filtering/marking does not change satellite or disable ongoing CAT
         if not ident or ident not in self.omm:
             self.sat=None;self.sat_detail.setText("Nenhum satélite selecionado");return
         item=self.omm[ident]
@@ -1695,6 +1699,9 @@ class MainWindow(QMainWindow):
             self.next_frequencies.setText(f"Doppler indisponível: {exc}")
 
     def refresh_passes(self):
+        if "passes" in self.pending_jobs:
+            self._passes_refresh_again=True
+            return
         try:station=self.saved_station()
         except Exception:
             self.pass_table.setRowCount(0)
@@ -1906,6 +1913,9 @@ class MainWindow(QMainWindow):
             self.log(f'Previsão: {len(data)} passagens nas próximas 36 h (lista limitada a 100)')
             self.update_next_indicator()
             self.prefetch_upcoming_modes()
+            if self._passes_refresh_again:
+                self._passes_refresh_again=False
+                self.refresh_passes()
 
     def background_error(self,key,message):
         self.pending_jobs.discard(key)
@@ -1934,6 +1944,9 @@ class MainWindow(QMainWindow):
             if key=='update-download' or self.manual_update_requested:
                 QMessageBox.warning(self,'Falha de atualização',message)
             self.manual_update_requested = False
+        if key=='passes' and self._passes_refresh_again:
+            self._passes_refresh_again=False
+            self.refresh_passes()
         if key=='trail':
             self.map_desc.setText(f"Falha no cálculo da trajetória: {message}")
         if key=='omm':self.summary.setText('Sem atualização: usando cache OMM, se existente')
