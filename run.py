@@ -5,8 +5,16 @@ def main():
     if len(sys.argv) >= 3 and sys.argv[1] == '--self-test':
         from sat_tool.diagnostics import run_self_test
         return run_self_test(sys.argv[2], sys.argv[3] if len(sys.argv) >= 4 else '')
-    from sat_tool.app import main as launch_app
-    launch_app()
+    from sat_tool.crash_diagnostics import (install_diagnostics, report_exception,
+                                             clean_shutdown)
+    install_diagnostics()
+    try:
+        from sat_tool.app import main as launch_app
+        launch_app()
+    except BaseException as exc:
+        report_exception("Application startup/event loop failure",exc)
+        raise
+    clean_shutdown()
     return 0
 
 if __name__ == '__main__':
