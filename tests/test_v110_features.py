@@ -50,7 +50,7 @@ def test_six_languages_have_core_satellite_controls():
 
 def test_source_keeps_cat_write_permission_and_nominal_frequencies():
     app=(ROOT/"sat_tool"/"app.py").read_text(encoding="utf-8")
-    assert "def preview_doppler(self)" in app
+    assert "def preview_doppler(self,pos=None,when=None)" in app
     assert "self.preview_doppler()" in app
     assert "self.suspend_cat_doppler(" in app
     assert "self.saved_station()" in app
