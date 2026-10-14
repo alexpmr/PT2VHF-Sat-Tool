@@ -6,7 +6,7 @@ what the build installed, never on a guessed Windows version string.
 import sys
 
 try:
-    from PySide6.QtCore import Qt, QTimer, QObject, Signal, QUrl
+    from PySide6.QtCore import Qt, QTimer, QObject, Signal, Slot, QUrl
     from PySide6.QtGui import QDoubleValidator, QFont, QIcon, QPixmap
     from PySide6.QtWidgets import (
         QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
@@ -22,7 +22,7 @@ except ImportError as qt6_error:
     # broken Qt6 native DLL loads, which should fail visibly during QA.
     if "No module named 'PySide6'" not in str(qt6_error):
         raise
-    from PySide2.QtCore import Qt, QTimer, QObject, Signal, QUrl
+    from PySide2.QtCore import Qt, QTimer, QObject, Signal, Slot, QUrl
     from PySide2.QtGui import QDoubleValidator, QFont, QIcon, QPixmap
     from PySide2.QtWidgets import (
         QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
