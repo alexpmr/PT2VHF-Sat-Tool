@@ -1,3 +1,10 @@
+## v1.1.3 — correção de seleção em lote e Doppler fora da visada (14/10/2026)
+- [x] **Bug reportado:** na aba Satélites, Marcar todos não apresentava seleção visível e Baixar/atualizar frequências utilizava escopo inicial Selecionado, restringindo indevidamente a atualização a um único satélite; a ação parecia exigir duplo clique no satélite.
+- [x] **Correção em código:** seleção explícita e persistente, checkboxes por satélite, marcação/desmarcação global ou filtrada, e download SatNOGS sequencial/cancelável para os Habilitados por padrão, sem acoplamento ao duplo clique.
+- [x] **Doppler:** atualização visual RX/TX e offsets em Hz a cada segundo mesmo abaixo do horizonte; CAT autorizado separadamente, bloqueado por padrão fora da visada; opção explícita com confirmação operacional.
+- [x] **Testes automatizados criados:** marcação sem frequências prévias, atualização de múltiplos NORADs, Doppler em aproximação/afastamento, persistência da configuração e proteção CAT.
+- [ ] **Homologação física:** reproduzir aba Satélites e CAT/Doppler em Windows 7 e Windows 10/11, inclusive com TS-2000 conectado e satélite fora da visada; verificar temporização, comportamento do rádio e limites da API SatNOGS. Uma passagem de CI não encerra esta pendência.
+
 # PT2VHF Sat Tool — backlog
 
 ## BUG crítico — Win7 não responde / Win10 encerra inesperadamente (v1.1.1)
