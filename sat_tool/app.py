@@ -374,6 +374,9 @@ class MainWindow(QMainWindow):
         self.trail_direction.currentTextChanged.connect(self.trail_changed)
         self.trail_custom.valueChanged.connect(self.trail_changed)
         self.map=QWebEngineView()
+        # A Chromium renderer crash may leave the GUI running, so record it.
+        try:self.map.page().renderProcessTerminated.connect(self.web_renderer_terminated)
+        except AttributeError:pass
         self.map.setHtml(Path(__file__).with_name("map.html").read_text(encoding="utf-8"),
                          QUrl("about:blank"))
         mv.addWidget(self.map,1)
@@ -642,6 +645,8 @@ class MainWindow(QMainWindow):
         root.addTab(config_page,"Configurações")
         logs=QWidget();ll=QVBoxLayout(logs)
         self.log_view=QPlainTextEdit();self.log_view.setReadOnly(True)
+        self.log_view.document().setMaximumBlockCount(4000)
+        self.log_view.setToolTip("Exibe as últimas 4.000 linhas; relatórios de falha ficam em %LOCALAPPDATA%/PT2VHF/SatTool/diagnostics")
         ll.addWidget(self.log_view)
         clear=QPushButton("Limpar logs da tela");clear.clicked.connect(self.log_view.clear)
         ll.addWidget(clear)
@@ -1685,6 +1690,13 @@ class MainWindow(QMainWindow):
             self.search.clear()
             index=self.sat_combo.findData(ident)
             if index>=0:self.sat_combo.setCurrentIndex(index)
+
+    @Slot(object,int)
+    def web_renderer_terminated(self,status,exit_code):
+        report_event(f"QtWebEngine renderer terminated: status={status}, code={exit_code}")
+        self.log("Falha no processo do mapa (QtWebEngine); a página será recarregada")
+        try:self.map.reload()
+        except Exception as exc:report_exception("QtWebEngine reload",exc)
 
     def update_map(self):
         if self.sat is None:return
