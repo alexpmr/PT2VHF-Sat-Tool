@@ -20,6 +20,14 @@
 - [ ] Preservar os comandos existentes **Marcar tudo, Desmarcar tudo e Sugestões automáticas**; se houver intenção de aplicá-los apenas aos resultados filtrados, exigir opção de **escopo explícito**, evitando modificar inadvertidamente a seleção global.
 - [ ] Atualização de tabela/filtro não pode desativar Doppler CAT, recalcular operações desnecessariamente ou enviar comandos ao TS-2000. Validar seleção individual, digitação rápida, limpeza do filtro, reinício, Windows 7 e Windows 10/11 e idiomas suportados.
 
+## [P1] Interface — frequências CAT RX/TX cortadas em janelas menores (14/10/2026)
+- [ ] **Reprodução visual:** no painel **RÁDIO / CAT · KENWOOD TS-2000** da página principal, os cartões **RX / DOWNLINK** e **TX / UPLINK** ficam com a linha da frequência ("— MHz" quando desconectado ou frequência real quando conectado) parcialmente ou totalmente **cortada na vertical** em certos tamanhos de janela/resoluções/escalas de DPI. Evidência: captura do operador em 14/10/2026, com os números/placeholder visivelmente encobertos pela borda inferior do cartão.
+- [ ] **Ponto de investigação:** `sat_tool/app.py`, cartões `self.cat_rx`/`self.cat_tx`, construídos como `QLabel` com texto em duas linhas, `QHBoxLayout`, `font-size:18px`, `padding:12px` e `wordWrap(True)`; verificar cálculo de `sizeHint`, `minimumSizeHint`, compressão pelo layout e competição por espaço vertical com mapa/painéis vizinhos.
+- [ ] **Correção responsiva:** garantir altura mínima real para **rótulo + valor + padding/borda** nos dois cartões, com políticas de tamanho Qt adequadas; impedir clipping vertical e horizontal. Permitir adaptação de fonte/espaçamento ou empilhamento dos cartões quando faltar largura, preservando o **valor completo** (frequência e unidade MHz). Não mascarar o problema apenas escondendo o texto por elipse.
+- [ ] **Prioridade de informação:** mostrar primeiro e sempre a frequência CAT de RX e TX. Telemetria secundária pode reduzir espaço/ser recolhida ou entrar em área rolável; o painel central também deve permitir rolagem vertical se a altura disponível for insuficiente, sem encobrir frequências nem comandos de operação.
+- [ ] **Critérios de aceite:** testar conectado/desconectado, leituras completas (ex.: `145.825.00 MHz`, `435.000.00 MHz` e faixas 1.296 MHz), janela maximizada/restaurada, dimensões mínimas permitidas, telas 1366×768/1920×1080, DPI 100/125/150/200%, fontes do Windows e Win7/PySide2 vs Win10/11/PySide6. Rótulos, valores e unidades sempre inteiramente legíveis, sem sobreposição ou cortes.
+- [ ] **Não alterar** o cálculo Doppler, mapeamento MAIN/SUB, estado CAT ou comandos ao rádio: correção deve ser apenas de layout/apresentação.
+
 # PT2VHF Sat Tool — backlog
 
 ## BUG crítico — Win7 não responde / Win10 encerra inesperadamente (v1.1.1)
