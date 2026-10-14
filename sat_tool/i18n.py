@@ -393,5 +393,42 @@ TRANSLATIONS={
     },
 }
 
+
+# New v1.1.3 labels, maintained across all six supported locales.
+_V113_LABELS={
+    "en":{
+        "Habilitados":"Enabled",
+        "Resultados filtrados":"Filtered results",
+        "Permitir CAT Doppler fora da visada (opcional)":"Allow CAT Doppler outside visibility (optional)",
+        "Doppler calculado a cada segundo, inclusive fora da visada. CAT exige SAT, efeméride recente e autorização. Fora da visada, CAT bloqueado por padrão. Sem comandos PTT.":"Doppler is calculated every second, even below the horizon. CAT requires SAT mode, fresh elements and operator permission. CAT below the horizon is blocked by default. No PTT commands.",
+    },
+    "es":{
+        "Habilitados":"Habilitados",
+        "Resultados filtrados":"Resultados filtrados",
+        "Permitir CAT Doppler fora da visada (opcional)":"Permitir CAT Doppler fuera de visibilidad (opcional)",
+        "Doppler calculado a cada segundo, inclusive fora da visada. CAT exige SAT, efeméride recente e autorização. Fora da visada, CAT bloqueado por padrão. Sem comandos PTT.":"El Doppler se calcula cada segundo, incluso fuera de visibilidad. CAT requiere modo SAT, efemérides recientes y autorización. CAT fuera de visibilidad está bloqueado por defecto. Sin comandos PTT.",
+    },
+    "fr":{
+        "Habilitados":"Activés",
+        "Resultados filtrados":"Résultats filtrés",
+        "Permitir CAT Doppler fora da visada (opcional)":"Autoriser le Doppler CAT hors visibilité (optionnel)",
+        "Doppler calculado a cada segundo, inclusive fora da visada. CAT exige SAT, efeméride recente e autorização. Fora da visada, CAT bloqueado por padrão. Sem comandos PTT.":"Le Doppler est calculé chaque seconde, même sous l'horizon. CAT exige le mode SAT, des éphémérides récentes et une autorisation. CAT hors visibilité est bloqué par défaut. Aucune commande PTT.",
+    },
+    "de":{
+        "Habilitados":"Aktiviert",
+        "Resultados filtrados":"Gefilterte Ergebnisse",
+        "Permitir CAT Doppler fora da visada (opcional)":"CAT-Doppler außerhalb der Sichtbarkeit erlauben (optional)",
+        "Doppler calculado a cada segundo, inclusive fora da visada. CAT exige SAT, efeméride recente e autorização. Fora da visada, CAT bloqueado por padrão. Sem comandos PTT.":"Doppler wird jede Sekunde auch unter dem Horizont berechnet. CAT erfordert SAT-Modus, aktuelle Bahndaten und Freigabe. CAT unter dem Horizont ist standardmäßig gesperrt. Keine PTT-Befehle.",
+    },
+    "it":{
+        "Habilitados":"Abilitati",
+        "Resultados filtrados":"Risultati filtrati",
+        "Permitir CAT Doppler fora da visada (opcional)":"Consenti Doppler CAT fuori visibilità (opzionale)",
+        "Doppler calculado a cada segundo, inclusive fora da visada. CAT exige SAT, efeméride recente e autorização. Fora da visada, CAT bloqueado por padrão. Sem comandos PTT.":"Il Doppler viene calcolato ogni secondo, anche sotto l'orizzonte. CAT richiede modalità SAT, effemeridi recenti e autorizzazione. CAT fuori visibilità è bloccato per impostazione predefinita. Nessun comando PTT.",
+    },
+}
+for _locale,_labels in _V113_LABELS.items():
+    TRANSLATIONS[_locale].update(_labels)
+
 def translated(original,locale):
     return TRANSLATIONS.get(locale,{}).get(original,original)
