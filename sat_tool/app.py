@@ -32,6 +32,7 @@ from .i18n import LANGUAGES,translated
 from .satellite_info import orbital_characteristics, operational_characteristics, characteristics_text
 from .updater import check_for_update, download_update, install_flavor, launch_staged_update
 from .profile import choose_satellites, capability, render_service
+from .selection import change_selection, transmitter_batch_ids, cat_doppler_allowed
 from .media import find_photo, photo_html
 from .operations import select_next_pass, frequency_prediction, status_at, orbital_age_days
 from .core import (Station, now_utc, make_satellite, position, ground_track, footprint,
@@ -131,6 +132,8 @@ class MainWindow(QMainWindow):
         self.freq_update_cancel = False
         self.freq_update_stats = None
         self._loading_satellites = False
+        self._loading_catalog = False
+        self._active_satellite_id = None
         self.pos_source = None
         self.map_pick_active = False
         self.map_pick_position = None
@@ -479,6 +482,7 @@ class MainWindow(QMainWindow):
         self.mark_catalog_none.clicked.connect(lambda:self.bulk_catalog_selection(False))
         self.catalog_refresh_scope=QComboBox()
         self.catalog_refresh_scope.addItems(["Selecionado","Habilitados","Resultados filtrados"])
+        self.catalog_refresh_scope.setCurrentIndex(1)  # Batch follows marked satellites by default
         self.refresh_catalog_freq=QPushButton("Baixar/atualizar frequências")
         self.refresh_catalog_freq.clicked.connect(self.refresh_catalog_transmitters)
         self.stop_catalog_freq=QPushButton("Cancelar download")
@@ -490,12 +494,13 @@ class MainWindow(QMainWindow):
         catalog_layout.addLayout(catalog_actions)
         self.catalog_progress=label("SatNOGS: frequências em cache; atualização sob demanda.")
         catalog_layout.addWidget(self.catalog_progress)
-        self.catalog_table=QTableWidget(0, 7)
-        self.catalog_table.setHorizontalHeaderLabels(["Satélite", "NORAD", "Inclinação", "Período", "Modos", "Downlink MHz", "Situação"])
+        self.catalog_table=QTableWidget(0, 8)
+        self.catalog_table.setHorizontalHeaderLabels(["Satélite", "NORAD", "Inclinação", "Período", "Modos", "Downlink MHz", "Situação", "Selecionado"])
         self.catalog_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.catalog_table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.catalog_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.catalog_table.cellDoubleClicked.connect(self.select_catalog_satellite)
+        self.catalog_table.itemChanged.connect(self.catalog_satellite_checked)
         catalog_layout.addWidget(self.catalog_table)
         self.catalog_note=label("Dados orbitais: CelesTrak OMM/TLE · Frequências e modos: SatNOGS · Não confundir catálogo com atividade confirmada.")
         catalog_layout.addWidget(self.catalog_note)
@@ -609,7 +614,10 @@ class MainWindow(QMainWindow):
         ag=QGridLayout();ag.addWidget(label("Intervalo de ajuste automático"),0,0);ag.addWidget(self.interval,0,1)
         ag.addWidget(label("Mínima variação para reprogramar CAT"),1,0);ag.addWidget(self.threshold,1,1)
         adv.addLayout(ag)
-        adv.addWidget(label("Proteções: Doppler automático desabilitado por padrão; somente com SAT confirmado, efeméride recente, passagens acima do horizonte configurado e frequências definidas. O programa não envia PTT."))
+        self.cat_outside=QCheckBox("Permitir CAT Doppler fora da visada (opcional)")
+        self.cat_outside.toggled.connect(self.change_cat_outside)
+        adv.addWidget(self.cat_outside)
+        adv.addWidget(label("Doppler calculado a cada segundo, inclusive fora da visada. CAT exige SAT, efeméride recente e autorização. Fora da visada, CAT bloqueado por padrão. Sem comandos PTT."))
         cfg.addWidget(advanced)
         local_group,lg=group("IDIOMA E FORMATO DE FREQUÊNCIA")
         local_row=QHBoxLayout()
@@ -680,6 +688,9 @@ class MainWindow(QMainWindow):
         self.stops_combo.setCurrentText(str(c['stopbits']))
         self.interval.setValue(float(c['update_interval_s']))
         self.threshold.setValue(float(c['tune_threshold_hz']))
+        self.cat_outside.blockSignals(True)
+        self.cat_outside.setChecked(bool(c.get('cat_doppler_out_of_view',False)))
+        self.cat_outside.blockSignals(False)
         self.update_minutes.setValue(float(c.get('version_check_minutes',15)))
         self.include_prerelease.setChecked(bool(c.get('include_prereleases', True)))
         self.language_combo.blockSignals(True)
@@ -1212,33 +1223,30 @@ class MainWindow(QMainWindow):
         return ids
 
     def bulk_catalog_selection(self,select):
-        """One config save and one passes recompute, even for hundreds of satellites."""
-        all_ids=set(self.omm)
-        ids=set(self.catalog_filtered_ids()) if self.scope_filtered.isChecked() else all_ids
-        if not ids:
+        """Explicit marked NORAD IDs work even before their frequency data exists."""
+        updated,affected=change_selection(self.omm,self.catalog_filtered_ids(),
+            self.enabled_satellite_ids(),select,self.scope_filtered.isChecked())
+        if not affected:
             self.catalog_progress.setText("Nenhum satélite corresponde à pesquisa")
             return
-        current=set(self.enabled_satellite_ids())
-        new=(current|ids) if select else (current-ids)
-        self.config.values["satellite_selection"]=sorted(new)
+        self.config.values["satellite_selection"]=updated
         self.config.save()
+        self.refresh_satellite_table()
         self.refresh_tracked_table()
         self.filter_sats(self.search.text())
         self.refresh_passes()
-        self.catalog_progress.setText(f"Seleção salva: {len(new)} de {len(self.omm)} satélites · ação em {len(ids)} registros")
-        self.log(f"Seleção: {'marcados' if select else 'desmarcados'} {len(ids)} satélites (sem CAT)")
+        self.catalog_progress.setText(f"Seleção salva: {len(updated)} de {len(self.omm)} satélites · ação em {len(affected)} registros")
+        self.log(f"Seleção: {'marcados' if select else 'desmarcados'} {len(affected)} satélites (sem CAT)")
 
     def refresh_catalog_transmitters(self):
-        choice=self.catalog_refresh_scope.currentText()
-        if choice=="Selecionado":
-            selected=self.catalog_table.selectedItems()
-            ids=[str(selected[0].data(Qt.UserRole))] if selected else [str(self.sat_combo.currentData())] if self.sat_combo.currentData() else []
-        elif choice=="Habilitados":
-            ids=self.enabled_satellite_ids()
-        else:ids=self.catalog_filtered_ids()
-        ids=list(dict.fromkeys(ident for ident in ids if ident in self.omm))
+        """Execute download without requiring a double-click on an individual satellite."""
+        row=self.catalog_table.currentRow()
+        item=self.catalog_table.item(row,0) if row>=0 else None
+        chosen=str(item.data(Qt.UserRole)) if item is not None else self.sat_combo.currentData()
+        ids=transmitter_batch_ids(self.catalog_refresh_scope.currentIndex(),chosen,
+            self.enabled_satellite_ids(),self.catalog_filtered_ids(),self.omm)
         if not ids:
-            self.catalog_progress.setText("Selecione pelo menos um satélite")
+            self.catalog_progress.setText("Selecione pelo menos um satélite ou clique em Marcar todos")
             return
         if "tx-batch" in self.pending_jobs:
             self.catalog_progress.setText("Já existe atualização em execução")
@@ -1252,6 +1260,7 @@ class MainWindow(QMainWindow):
         self.refresh_catalog_freq.setEnabled(False)
         self.stop_catalog_freq.setEnabled(True)
         self.catalog_progress.setText(f"SatNOGS: iniciando 0/{len(ids)}")
+        data_dir=self.config.dir
         def work():
             import time
             stats={"total":len(ids),"ok":0,"failed":[],"cancelled":False}
@@ -1259,7 +1268,7 @@ class MainWindow(QMainWindow):
                 if self.freq_update_cancel:
                     stats["cancelled"]=True;break
                 try:
-                    rows=refresh_transmitters(self.config.dir,int(ident))
+                    rows=refresh_transmitters(data_dir,int(ident))
                     stats["ok"]+=1
                     self.events.result.emit("tx-batch-item",(ident,rows,i,len(ids)))
                 except Exception as exc:
@@ -1275,6 +1284,10 @@ class MainWindow(QMainWindow):
 
     def refresh_satellite_table(self, text=None):
         text=(text if isinstance(text,str) else self.catalog_search.text()).casefold().strip()
+        old_row=self.catalog_table.currentRow()
+        previous=self.catalog_table.item(old_row,0) if old_row>=0 else None
+        selected_id=str(previous.data(Qt.UserRole)) if previous is not None else None
+        checked=set(self.enabled_satellite_ids())
         rows=[]
         for ident,item in self.omm.items():
             orb=orbital_characteristics(item)
@@ -1288,15 +1301,44 @@ class MainWindow(QMainWindow):
             if text in ' '.join(fields).casefold():
                 rows.append((orb['name'].casefold(),ident,fields))
         rows.sort()
-        self.catalog_table.setSortingEnabled(False)
-        self.catalog_table.setRowCount(len(rows))
-        for r,(_,ident,fields) in enumerate(rows):
-            for c,value in enumerate(fields):
-                cell=QTableWidgetItem(value)
-                cell.setData(Qt.UserRole,ident)
-                self.catalog_table.setItem(r,c,cell)
-        self.catalog_table.setSortingEnabled(True)
-        self.catalog_note.setText(f'{len(rows)} satélites (CelesTrak) · modo/frequência apenas quando recuperados do SatNOGS')
+        self._loading_catalog=True
+        try:
+            self.catalog_table.setSortingEnabled(False)
+            self.catalog_table.setRowCount(len(rows))
+            for r,(_,ident,fields) in enumerate(rows):
+                for col,value in enumerate(fields):
+                    cell=QTableWidgetItem(value)
+                    cell.setData(Qt.UserRole,ident)
+                    self.catalog_table.setItem(r,col,cell)
+                marker=QTableWidgetItem("")
+                marker.setFlags((marker.flags()|Qt.ItemIsUserCheckable)&~Qt.ItemIsEditable)
+                marker.setData(Qt.UserRole,ident)
+                marker.setCheckState(Qt.Checked if ident in checked else Qt.Unchecked)
+                self.catalog_table.setItem(r,7,marker)
+            self.catalog_table.setSortingEnabled(True)
+            if selected_id is not None:
+                for r in range(self.catalog_table.rowCount()):
+                    item=self.catalog_table.item(r,0)
+                    if item is not None and str(item.data(Qt.UserRole))==selected_id:
+                        self.catalog_table.selectRow(r)
+                        break
+        finally:
+            self._loading_catalog=False
+        self.catalog_note.setText(f'{len(rows)} satélites (CelesTrak) · {len(checked)} marcados · modo/frequência quando recuperados do SatNOGS')
+
+    def catalog_satellite_checked(self,item):
+        """Individual checkbox persists the same explicit selection as bulk actions."""
+        if self._loading_catalog or item.column()!=7:return
+        ident=str(item.data(Qt.UserRole))
+        if ident not in self.omm:return
+        updated,_=change_selection(self.omm,[ident],self.enabled_satellite_ids(),
+                                   item.checkState()==Qt.Checked,True)
+        self.config.values["satellite_selection"]=updated
+        self.config.save()
+        self.refresh_tracked_table()
+        self.filter_sats(self.search.text())
+        self.refresh_passes()
+        self.catalog_progress.setText(f"Seleção salva: {len(updated)} de {len(self.omm)} satélites")
 
     def select_catalog_satellite(self,row,col):
         cell=self.catalog_table.item(row,0)
@@ -1347,8 +1389,10 @@ class MainWindow(QMainWindow):
             self.sat_combo.setCurrentIndex(row)
 
     def choose_satellite(self):
-        self.suspend_cat_doppler("satélite selecionado mudou")
         ident=self.sat_combo.currentData()
+        if ident!=self._active_satellite_id:
+            self.suspend_cat_doppler("satélite selecionado mudou")
+            self._active_satellite_id=ident
         if hasattr(self,"sat_list") and self.sat_combo.currentIndex()>=0 and self.sat_list.rowCount():
             self.sat_list.selectRow(self.sat_combo.currentIndex())
         if not ident or ident not in self.omm:
@@ -1440,14 +1484,13 @@ class MainWindow(QMainWindow):
             self.log("Doppler CAT suspenso: "+reason+"; nova autorização necessária")
             self.mode_note.setText("CAT Doppler suspenso: "+reason+" · reative após conferir RX/TX")
 
-    def preview_doppler(self):
-        """Always calculate an independent DISPLAY prediction, including RX-only."""
+    def preview_doppler(self,pos=None,when=None):
+        """Continuous RX/TX prediction, including below horizon, never writes CAT."""
         try:
             if not self.sat:
                 raise ValueError("Selecione um satélite")
-            site=self.saved_station()
-            when=now_utc()
-            p=position(self.sat,site,when=when,ts=self.ts)
+            when=when or now_utc()
+            p=pos if pos is not None else position(self.sat,self.saved_station(),when=when,ts=self.ts)
             self.last_pos=p
             ul,dl=self.nominal_hz()
             from .operations import frequency_prediction
@@ -1459,7 +1502,7 @@ class MainWindow(QMainWindow):
             tx=(self.radio_freq(calc["tx_hz"])+f" ({calc['tx_offset_hz']:+d} Hz)") if ul is not None else "RX apenas"
             self.corrected_label.setText(
                 f"PREVISÃO Doppler RX {self.radio_freq(calc['rx_hz'])} ({calc['rx_offset_hz']:+d} Hz)"
-                f" | TX {tx} · {when.astimezone():%H:%M:%S}")
+                f" | TX {tx} · {'EM PASSAGEM' if p['visible'] else 'FORA DA VISADA'} · {when.astimezone():%H:%M:%S}")
         except (ValueError,TypeError,KeyError) as exc:
             self.corrected_label.setText("Previsão Doppler: "+str(exc))
         except Exception as exc:
@@ -1503,17 +1546,24 @@ class MainWindow(QMainWindow):
             self.render_radio_state(self.radio.set_main_mode(self.rx_mode.currentText()))
         except Exception as exc:QMessageBox.warning(self,'CAT modo',str(exc))
 
+    def change_cat_outside(self,enabled):
+        self.config.values["cat_doppler_out_of_view"]=bool(enabled)
+        self.config.save()
+        if not enabled and self.doppler_checkbox.isChecked() and self.last_pos and not self.last_pos["visible"]:
+            self.suspend_cat_doppler("permissão fora da visada desativada")
+
     def doppler_state_changed(self):
         if self.doppler_checkbox.isChecked():
             try:
                 self.saved_station();self.corrected()
                 if not self.radio.connected or not self.radio.state.sat:
                     raise ValueError("Conecte ao TS-2000 e ative SAT antes de habilitar o Doppler")
-                if not self.last_pos['visible']:
-                    raise ValueError('O satélite está abaixo da elevação mínima configurada')
+                if not cat_doppler_allowed(self.last_pos['visible'],self.config.values.get('cat_doppler_out_of_view',False)):
+                    raise ValueError('Satélite fora da visada; habilite CAT fora da visada em Configurações')
                 if not self.omm_fresh():
                     raise ValueError('OMM antigo: atualize antes de controlar o rádio automaticamente')
-                if QMessageBox.question(self,'Ativar Doppler','Permitir que o aplicativo altere periodicamente FA/FB durante esta passagem?') != QMessageBox.Yes:
+                scope='inclusive fora da visada' if self.config.values.get('cat_doppler_out_of_view',False) else 'durante a passagem visível'
+                if QMessageBox.question(self,'Ativar Doppler',f'Permitir alterar periodicamente FA/FB {scope}?') != QMessageBox.Yes:
                     raise ValueError('Operação cancelada')
                 self.log('Doppler automático habilitado pelo operador')
             except Exception as exc:
@@ -1740,13 +1790,13 @@ class MainWindow(QMainWindow):
                 for k,v in formats.items():self.orbit_metrics[k].setText(v)
                 self.visibility.setText('EM PASSAGEM' if pos['visible'] else 'ABAIXO DO HORIZONTE')
                 self.visibility.setStyleSheet('font-size:18px;font-weight:800;color:'+('#5ae1a6' if pos['visible'] else '#e1c27c'))
-                self.preview_doppler()
+                self.preview_doppler(pos=pos,when=now)
                 if (self.last_map_time is None or (now-self.last_map_time).total_seconds()>=12):
                     self.update_map();self.last_map_time=now
                 if self.doppler_checkbox.isChecked():
-                    if not pos['visible'] or not self.omm_fresh() or not self.radio.connected:
+                    if not cat_doppler_allowed(pos['visible'],self.config.values.get('cat_doppler_out_of_view',False)) or not self.omm_fresh() or not self.radio.connected or not self.radio.state.sat:
                         self.doppler_checkbox.setChecked(False)
-                        self.log('Doppler parado: horizonte, dados antigos ou CAT desconectado')
+                        self.log('Doppler CAT parado: visada, OMM antigo, SAT desligado ou CAT desconectado')
                     else:
                         interval=int(self.interval.value())
                         if int(now.timestamp())%interval == 0:
