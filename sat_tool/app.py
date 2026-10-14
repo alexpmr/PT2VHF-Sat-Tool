@@ -748,6 +748,8 @@ class MainWindow(QMainWindow):
             for i,original in enumerate(originals):
                 item=widget.horizontalHeaderItem(i)
                 if item:item.setText(translated(original,locale))
+        for i,original in enumerate(("Selecionado","Habilitados","Resultados filtrados")):
+            self.catalog_refresh_scope.setItemText(i,translated(original,locale))
         self._language_active=locale
 
     def change_language(self,*args):
