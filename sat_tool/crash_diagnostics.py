@@ -47,6 +47,7 @@ def _append_event(message):
     if _DIAG is None:return
     try:
         with _LOCK:
+            _rotate(_DIAG / "events.log",max_size=2*1024*1024)
             with (_DIAG / "events.log").open("a", encoding="utf-8") as file:
                 file.write(utc_time() + "  " + str(message).rstrip() + "\n")
     except OSError:
