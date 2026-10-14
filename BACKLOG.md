@@ -1,5 +1,16 @@
 # PT2VHF Sat Tool — backlog
 
+## BUG crítico — Win7 não responde / Win10 encerra inesperadamente (v1.1.1)
+- [x] Relato de campo em 13/10/2026: Windows 7 apresentava travamentos; depois de reinstalar o computador com Windows 10, o instalador v1.1.1 funciona, mas o aplicativo às vezes encerra repentinamente. Não há dump da falha para confirmar a causa exata.
+- [x] **Defeito objetivo identificado:** `TS2000` chama o callback `MainWindow.log` no contexto de `background("cat-poll",self.radio.poll)`, e o callback escrevia diretamente em `QPlainTextEdit` fora da thread Qt GUI. Corrigido em **v1.1.2**, com sinal `Events.record` e `@Slot(str)` executado na thread principal.
+- [x] **Prevenir vazamento de memória:** impor limite de 4.000 linhas no painel de LOGs CAT; os eventos persistidos têm rotação de arquivo de 2 MB.
+- [x] **Diagnóstico de fechamento:** ativar `faulthandler` antes de carregar GUI, captar exceções Python do processo e das threads, gravar `%LOCALAPPDATA%\\PT2VHF\\SatTool\\diagnostics\\{events.log,native-crash.log,session.json}` e batimento a cada 30 s. Registrar sessão anterior não encerrada normalmente sem atribuir automaticamente a crash.
+- [x] **QtWebEngine:** observar `renderProcessTerminated`, registrar evento e tentar recarregar mapa; manter operação principal quando o renderizador secundário falhar.
+- [ ] **Confirmar causa real:** testar após v1.1.2 durante várias horas, com e sem TS-2000 CAT, com/sem Internet, com mapa ativo e com aba LOGs aberta; verificar arquivo de diagnóstico e eventos Windows na hora da falha.
+- [ ] **Performance de Windows 7/10:** medir duração de `tick()` de 1 s, `update_next_indicator`, `refresh_passes`, processamento de TLE, QtWebEngine GPU e uso de memória; mover operações CAT **síncronas ainda executadas pela GUI** para fila/worker serial dedicado com segurança e confirmações antes de alterar VFOs. Validar ausência de deadlocks/concorrência e vazamento de threads.
+- [ ] **Reproduzir em Win10 físico:** coletar `winver`, CPU/RAM, se rádio está conectado no instante do fechamento, porta serial, screenshot de logs, Visualizador de Eventos (eventos 1000/1001; módulo e código de exceção), sem pedir dados sensíveis desnecessários.
+- [ ] **Critérios de aceite para estabilidade:** zero encerramentos inesperados e interface responsiva em sessões prolongadas (sugestão: 8–24 h) no Windows 10 e Windows 7, repetidas com CAT desconectado e conectado. Build em Windows Server não prova homologação de hardware.
+
 ## BUG v1.1.0 — Instalador x64 rejeita Windows 10 (correção v1.1.1)
 - [x] **Reprodução:** em PC Windows 10 recém-formatado, o Setup da v1.1.0 x64 informa `This program does not support the version of Windows your computer is running`, antes de instalar.
 - [x] **Causa verificada:** alvo `Win11-x64` configura `MinVersion=10.0.22000` no Inno Setup, restringindo explicitamente o instalador ao Windows 11; o nome da distribuição não esclarecia a incompatibilidade.
