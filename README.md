@@ -4,26 +4,37 @@
 
 ## Downloads — instaladores e portáteis
 
-**PT2VHF Sat Tool v1.1.1 — Windows 7 SP1, Windows 10 e Windows 11.** Os quatro downloads são arquivos `.exe` diretos. Links ficam disponíveis após aprovação dos builds Windows. Embora seja o marco 1.0 de funcionalidades, permanece em pré-lançamento até a homologação CAT com TS-2000 físico e Windows 7 real.
+**PT2VHF Sat Tool v1.1.2 — Windows 7 SP1, Windows 10 e Windows 11.** Os quatro downloads são arquivos `.exe` diretos. Links ficam disponíveis após aprovação dos builds Windows. Embora seja o marco 1.0 de funcionalidades, permanece em pré-lançamento até a homologação CAT com TS-2000 físico e Windows 7 real.
 
 | Windows | Instalável | Portátil |
 | --- | --- | --- |
-| **Windows 7 SP1** (x86; executável de 32 bits também para Win7 x64) | [Instalador Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.1.1/PT2VHF-Sat-Tool-v1.1.1-Win7-x86-Setup.exe) | [Portable Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.1.1/PT2VHF-Sat-Tool-v1.1.1-Win7-x86-Portable.exe) |
-| **Windows 10 (1809+)/11** (x64; arquivo `Win11-x64` para manter atualizador) | [Instalador Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.1.1/PT2VHF-Sat-Tool-v1.1.1-Win11-x64-Setup.exe) | [Portable Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.1.1/PT2VHF-Sat-Tool-v1.1.1-Win11-x64-Portable.exe) |
+| **Windows 7 SP1** (x86; executável de 32 bits também para Win7 x64) | [Instalador Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.1.2/PT2VHF-Sat-Tool-v1.1.2-Win7-x86-Setup.exe) | [Portable Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.1.2/PT2VHF-Sat-Tool-v1.1.2-Win7-x86-Portable.exe) |
+| **Windows 10 (1809+)/11** (x64; arquivo `Win11-x64` para manter atualizador) | [Instalador Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.1.2/PT2VHF-Sat-Tool-v1.1.2-Win11-x64-Setup.exe) | [Portable Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.1.2/PT2VHF-Sat-Tool-v1.1.2-Win11-x64-Portable.exe) |
 
 **Formato dos downloads:** tanto instaladores quanto portáteis são entregues diretamente como arquivos **`.exe`**. O portátil inclui as dependências dentro do mesmo EXE (PyInstaller onefile) e não requer descompactação.
 
 **[Todas as releases](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases)** · **[Acompanhar compilação](https://github.com/alexpmr/PT2VHF-Sat-Tool/actions)**
 
 - **Instalável:** instalação por usuário, atalho e desinstalação, atualização pelo aplicativo usando o Setup de sua edição.
-- **Portátil:** execute diretamente `PT2VHF-Sat-Tool-v1.1.1-*-Portable.exe` (um único arquivo). Configurações ficam em `data/` ao lado do EXE, preservadas após atualizações.
+- **Portátil:** execute diretamente `PT2VHF-Sat-Tool-v1.1.2-*-Portable.exe` (um único arquivo). Configurações ficam em `data/` ao lado do EXE, preservadas após atualizações.
 - **Win7:** Python 3.8 x86 + PySide2/Qt5 + PyInstaller 5.13.2 (legado, precisa ser validado no Windows 7 real).
 - **Win10/11 x64:** Windows 10 1809+ ou Windows 11, Python 3.11 x64 + PySide6/Qt6 + PyInstaller 6.13.0.
 - Arquivos SHA256 acompanham cada compilação. A versão Windows 7 é experimental; não confundir sucesso do CI com homologação em campo.
 
 ---
 
-## Correção v1.1.1 — Windows 10 (13/10/2026)
+## Correção de estabilidade v1.1.2 — fechamento inesperado / travamento
+
+- **Thread-safety Qt:** mensagens do CAT produzidas em threads de segundo plano são entregues à interface via `Signal(str)` e `@Slot(str)`, em vez de chamar `QPlainTextEdit` diretamente fora da thread principal. Essa violação anterior era uma causa plausível de encerramentos imprevistos.
+- O painel **LOGs/CAT** retém as últimas **4.000 linhas**, impedindo crescimento ilimitado da memória.
+- Nova pasta de diagnóstico persistente: `%LOCALAPPDATA%\\PT2VHF\\SatTool\\diagnostics`. Contém `events.log` (últimos eventos e exceções, sem tráfego CAT bruto), `events.log.previous` quando houver rotação, `native-crash.log` (pilhas Python em falhas nativas detectáveis) e `session.json` (último batimento da sessão e indicação de fechamento normal).
+- Exceções em workers, na inicialização e no evento principal passam a ser registradas em arquivo. Encerramento inesperado do renderizador QtWebEngine do mapa também é registrado; o aplicativo tenta recarregar a página.
+- Permanecem as versões **Windows 7 SP1 x86 (Qt5)** e **Windows 10 1809+/Windows 11 x64 (Qt6)**, com instaladores e portáteis .exe diretos.
+- **Pendente:** identificar por logs e teste físico se a falha foi resolvida integralmente. Um travamento pode ter causas adicionais, como processamento orbital, drivers de vídeo/QtWebEngine ou comandos CAT síncronos. O CI Windows Server não substitui ensaio prolongado no computador afetado.
+
+**Se encerrar novamente:** abra a pasta de diagnóstico acima e guarde `events.log`, `native-crash.log`, `session.json`. Consulte também o **Visualizador de Eventos → Logs do Windows → Aplicativo** e anote evento 1000/1001, módulo com falha e código de exceção (quando existirem). Não é necessário enviar configurações da estação ou seus dados pessoais.
+
+## Histórico v1.1.1 — Windows 10 (13/10/2026)
 
 **Erro corrigido:** a edição x64 da v1.1.0 tinha uma restrição de instalação `MinVersion=10.0.22000` (Windows 11), fazendo a mensagem *“This program does not support the version of Windows your computer is running”* aparecer em Windows 10. O instalador x64 da v1.1.1 aceita agora **Windows 10 versão 1809/build 17763 ou mais recente, ou Windows 11, ambos x64**, de acordo com a plataforma suportada pelo Qt6.
 
