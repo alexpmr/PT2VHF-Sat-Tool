@@ -10,7 +10,8 @@ import threading
 import traceback
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
-from .qt_compat import Qt, QTimer, QObject, Signal, QUrl
+from .qt_compat import Qt, QTimer, QObject, Signal, Slot, QUrl
+from .crash_diagnostics import heartbeat,report_event,report_exception
 from .qt_compat import QDoubleValidator, QFont, QIcon, QPixmap
 from .qt_compat import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
@@ -73,6 +74,7 @@ class Events(QObject):
     result = Signal(str, object)
     failure = Signal(str, str)
     progress = Signal(int, int)
+    record = Signal(str)
 
 
 def label(t):
@@ -101,6 +103,7 @@ class MainWindow(QMainWindow):
         self.events.result.connect(self.background_result)
         self.events.failure.connect(self.background_error)
         self.events.progress.connect(self.download_progress)
+        self.events.record.connect(self._append_log)
         self.available_update = None
         self.update_dialog = None
         self.update_last_checked = 0
@@ -143,12 +146,35 @@ class MainWindow(QMainWindow):
         self.tick_timer.timeout.connect(self.tick)
         self.tick_timer.start(1000)
         self.tick()
+        self.diagnostic_timer=QTimer(self)
+        self.diagnostic_timer.timeout.connect(heartbeat)
+        self.diagnostic_timer.start(30000)
         # Delay startup network I/O until the UI is visible.
         QTimer.singleShot(12000, self.check_for_updates)
 
-    def log(self, message):
-        if hasattr(self, 'log_view'):
-            self.log_view.appendPlainText(f"{datetime.now().astimezone():%H:%M:%S}  {message}")
+    def log(self,message):
+        """Qt widgets may only be modified from the GUI thread.
+
+        CAT polling and transmitter downloads run in Python background threads.
+        Posting their messages directly to QPlainTextEdit can crash PySide/Qt.
+        """
+        msg=str(message)
+        if not msg.startswith(("RX ","TX ")):
+            report_event(msg)
+        if threading.current_thread() is threading.main_thread():
+            self._append_log(msg)
+        else:
+            try:
+                self.events.record.emit(msg)
+            except RuntimeError:
+                # Application already closing; late worker result is discarded.
+                pass
+
+    @Slot(str)
+    def _append_log(self,message):
+        if hasattr(self,"log_view"):
+            self.log_view.appendPlainText(
+                f"{datetime.now().astimezone():%H:%M:%S}  {message}")
 
     def background(self, key, fn):
         if key in self.pending_jobs:
@@ -159,7 +185,9 @@ class MainWindow(QMainWindow):
                 value = fn()
                 self.events.result.emit(key, value)
             except Exception as exc:
-                self.events.failure.emit(key, str(exc))
+                report_exception("Worker "+key,exc)
+                try:self.events.failure.emit(key,str(exc))
+                except RuntimeError:pass
         threading.Thread(target=run, name='sat-'+key, daemon=True).start()
 
     def init_ui(self):
