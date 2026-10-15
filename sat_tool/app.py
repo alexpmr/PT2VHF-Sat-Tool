@@ -1302,7 +1302,8 @@ class MainWindow(QMainWindow):
     def refresh_catalog(self,force=False):
         groups=self.config.values.get("orbit_groups",list(DEFAULT_GROUPS))
         age=age_hours(self.config.dir,"amateur_omm.json")
-        if age is not None and age<2 and not force:
+        missing=any(age_hours(self.config.dir,"group_"+g+".json") is None for g in groups)
+        if age is not None and age<2 and not force and not missing:
             self.summary.setText(f"OMM em cache há {age:.1f} h; aguarde o intervalo de 2 h")
             return
         if "omm" in self.pending_jobs:return
@@ -1912,6 +1913,9 @@ class MainWindow(QMainWindow):
         self.pass_enabled=selected
         self.pass_rows={sid:load_transmitters(self.config.dir,int(sid)) for sid in selected}
         entries=[(ident,obj) for ident,obj in self.omm.items() if ident in selected]
+        if len(entries)>150:
+            self.log("Agenda: limite de 150 satélites simultâneos; refine a seleção para preservar a responsividade.")
+            entries=entries[:150]
         # Capture immutable snapshot; skyfield object construction in background.
         def task():
             out=[]
