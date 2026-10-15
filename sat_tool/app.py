@@ -2014,6 +2014,25 @@ class MainWindow(QMainWindow):
                         c.get("radio_modes",[]),c.get("radio_bands",[]))
         return render_service(info["modes"])
 
+    def filter_tracked_satellites(self,*args):
+        """Hide only nonmatching rows; never modify stored checked NORAD IDs."""
+        if not hasattr(self,"tracked_table"):return
+        text=self.tracked_search.text() if hasattr(self,"tracked_search") else ""
+        normalize=lambda value: "".join(c for c in unicodedata.normalize("NFKD",str(value).casefold())
+                                         if not unicodedata.combining(c))
+        query=normalize(text).strip()
+        count=0
+        for index in range(self.tracked_table.rowCount()):
+            name=self.tracked_table.item(index,1)
+            row_text=name.text() if name is not None else ""
+            show=query in normalize(row_text)
+            self.tracked_table.setRowHidden(index,not show)
+            count+=int(show)
+        enabled=len(self.enabled_satellite_ids()) if self.omm else 0
+        if hasattr(self,"tracked_search_summary"):
+            self.tracked_search_summary.setText(
+                f"{count} resultados de {self.tracked_table.rowCount()} satélites · {enabled} habilitados")
+
     def refresh_tracked_table(self):
         if not hasattr(self,"tracked_table"):return
         self._loading_satellites=True
@@ -2034,6 +2053,7 @@ class MainWindow(QMainWindow):
                 self.tracked_table.setItem(i,2,QTableWidgetItem(f'{render_service(info["modes"])} · {info["notice"]}'))
         finally:
             self._loading_satellites=False
+        self.filter_tracked_satellites()
 
     def satellite_checked(self,row,col):
         if self._loading_satellites or col!=0:return
@@ -2045,6 +2065,7 @@ class MainWindow(QMainWindow):
         self.config.save()
         self.filter_sats(self.search.text())
         self.refresh_passes()
+        self.filter_tracked_satellites()
 
     def bulk_select_satellites(self,select):
         self.config.values["satellite_selection"]=list(self.omm) if select else []
