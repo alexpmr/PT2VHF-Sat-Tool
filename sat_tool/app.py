@@ -1952,12 +1952,53 @@ class MainWindow(QMainWindow):
             self.map_desc.setText(f"Erro ao atualizar a órbita: {exc}")
             self.log(f"Mapa/órbita: {exc}")
 
+    def check_selected_aos_alarm(self,now):
+        """Alert for selected NORAD only; never write to the radio."""
+        if not self.config.values.get("aos_alarm_enabled",True):
+            return
+        selected=self.sat_combo.currentData()
+        seen=set(self.config.values.get("aos_alarm_fired",[]))
+        found=selected_aos_alarm(self.passes,selected,now,seen,30)
+        if not found:
+            if self.aos_alarm_dialog is not None and self.aos_alarm_target is not None:
+                _,row,_=self.aos_alarm_target
+                remaining=max(0,int((row["aos"]-now).total_seconds()))
+                self.aos_alarm_dialog.setInformativeText(
+                    f"AOS em {format_duration(remaining)} · "
+                    f"horário local {row['aos'].astimezone():%H:%M:%S} · "
+                    f"UTC {row['aos']:%H:%M:%S} · "
+                    f"elevação máxima {row.get('max_el',0):.0f}°")
+            return
+        key,row,remaining=found
+        self.config.values["aos_alarm_fired"]=(list(seen)+[key])[-160:]
+        self.config.save()
+        self.aos_alarm_target=found
+        dialog=QMessageBox(self)
+        dialog.setWindowTitle("Alerta de aproximação — AOS")
+        dialog.setIcon(QMessageBox.Information)
+        dialog.setText(f"Satélite {row.get('name',selected)} · NORAD {selected}\n"
+                       f"Entrará no horizonte em {format_duration(remaining)}!")
+        dialog.setInformativeText(f"AOS {row['aos'].astimezone():%d/%m %H:%M:%S} local · "
+                                  f"{row['aos']:%H:%M:%S} UTC · "
+                                  f"elevação máxima {row.get('max_el',0):.0f}°")
+        go=dialog.addButton("Ir para Operação",QMessageBox.ActionRole)
+        dialog.addButton("Silenciar / Fechar",QMessageBox.RejectRole)
+        go.clicked.connect(lambda:self.tabs.setCurrentIndex(0))
+        dialog.finished.connect(lambda *_:setattr(self,"aos_alarm_dialog",None))
+        dialog.setWindowFlag(Qt.WindowStaysOnTopHint,True)
+        self.aos_alarm_dialog=dialog
+        dialog.show()
+        if self.config.values.get("aos_alarm_sound",True):
+            QApplication.beep()
+        self.log(f"Alarme AOS: NORAD {selected} em {remaining:.0f} s")
+
     def tick(self):
         # No network calls in the GUI tick; asynchronous check respects the configured period.
         if int(now_utc().timestamp()) % 60 == 0:
             self.check_for_updates()
         now=now_utc();self.utc.setText(now.strftime('%d/%m/%Y  %H:%M:%S UTC'))
         self.update_next_indicator()
+        self.check_selected_aos_alarm(now)
         self.poll_station_map()
         if self.sat:
             try:
