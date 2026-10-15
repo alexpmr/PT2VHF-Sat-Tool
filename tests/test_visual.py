@@ -26,7 +26,7 @@ def test_branded_all_windows_build_flavors():
     assert "Generate and verify Windows brand icons" in script
     assert "Portable ONEFILE EXE" in script
     assert "Win7-x86" in script and "Win11-x64" in script
-    assert "v1.2.0" in script
+    assert "v1.3.0" in script
 
 
 def test_installation_icon_and_brand_assets_exist():
