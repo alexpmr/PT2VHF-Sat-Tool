@@ -5,6 +5,7 @@ UI is intentionally non-transmitting: no CAT TX/PTT commands exist.
 from __future__ import annotations
 import json
 import math
+import unicodedata
 import sys
 import threading
 import traceback
@@ -131,6 +132,7 @@ class MainWindow(QMainWindow):
         self.selected_cat_target = None
         self.freq_update_cancel = False
         self.freq_update_stats = None
+        self.frequency_progress_dialog = None
         self._loading_satellites = False
         self._loading_catalog = False
         self._active_satellite_id = None
@@ -264,14 +266,14 @@ class MainWindow(QMainWindow):
         self.sat_list.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.sat_list.verticalHeader().setVisible(False)
         self.sat_list.setShowGrid(False)
-        self.sat_list.setMinimumHeight(185);self.sat_list.setMaximumHeight(260)
+        self.sat_list.setMinimumHeight(115);self.sat_list.setMaximumHeight(165)
         self.sat_list.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.sat_list.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.sat_list.cellClicked.connect(self.select_list_satellite)
         pv.addWidget(self.sat_list)
         self.sat_combo = QComboBox()
+        self.sat_combo.setMinimumWidth(190)
         self.sat_combo.currentIndexChanged.connect(self.choose_satellite)
-        pv.addWidget(self.sat_combo)
         self.sat_detail = label("Atualize o catálogo OMM")
         self.sat_detail.setStyleSheet("color:#a9c5d9")
         pv.addWidget(self.sat_detail)
@@ -284,7 +286,7 @@ class MainWindow(QMainWindow):
         pv.addWidget(self.refresh_omm_btn)
         self.mode_combo=QComboBox()
         self.mode_combo.currentIndexChanged.connect(self.choose_mode)
-        pv.addWidget(label("Transponder / canal / modo operacional"));pv.addWidget(self.mode_combo)
+        self.mode_combo.setMinimumWidth(220)
         self.refresh_tx_btn=QPushButton("Atualizar frequências / modos")
         self.refresh_tx_btn.clicked.connect(lambda:self.refresh_modes(force=True))
         pv.addWidget(self.refresh_tx_btn)
@@ -320,6 +322,29 @@ class MainWindow(QMainWindow):
         lv.addWidget(freqs)
         lv.addStretch(1)
         splitter.addWidget(left)
+        # Predicted RX/TX operates without CAT or satellite visibility.
+        operator_panel,ov=group("SATÉLITE · FREQUÊNCIAS DOPPLER CALCULADAS")
+        selectors=QHBoxLayout()
+        selectors.addWidget(label("Satélite"))
+        selectors.addWidget(self.sat_combo,2)
+        selectors.addWidget(label("Serviço / modo"))
+        selectors.addWidget(self.mode_combo,3)
+        ov.addLayout(selectors)
+        frequency_cards=QHBoxLayout()
+        self.pred_rx=label("RX / DOWNLINK\nAguardando satélite")
+        self.pred_tx=label("TX / UPLINK\nAguardando satélite")
+        for card,color in ((self.pred_rx,"#68ebcd"),(self.pred_tx,"#8fd8ff")):
+            card.setAlignment(Qt.AlignCenter)
+            card.setMinimumHeight(96)
+            card.setMinimumWidth(210)
+            card.setStyleSheet("font-size:17px;font-weight:800;color:"+color+
+                               ";background:#10263b;border:1px solid #326080;border-radius:7px;padding:5px")
+            frequency_cards.addWidget(card,1)
+        ov.addLayout(frequency_cards)
+        self.corrected_label=label("Previsão orbital sem CAT e sem transmissão")
+        self.corrected_label.setStyleSheet("color:#a4d5df;font-size:11px")
+        ov.addWidget(self.corrected_label)
+        op.insertWidget(1,operator_panel)
         mid=QWidget();mv=QVBoxLayout(mid);mv.setContentsMargins(0,0,0,0)
         trail_bar=QHBoxLayout()
         trail_bar.setContentsMargins(4,1,4,2)
@@ -335,11 +360,6 @@ class MainWindow(QMainWindow):
         trail_bar.addWidget(self.trail_period,2)
         trail_bar.addWidget(self.trail_direction,1)
         trail_bar.addWidget(self.trail_custom,1)
-        self.mark_map_button=QPushButton("Marcar estação no mapa")
-        self.mark_map_button.setToolTip("Clique no mapa offline para marcar a posição da antena. Nenhuma alteração será salva até sua confirmação.")
-        self.mark_map_button.clicked.connect(self.begin_station_map)
-        trail_bar.addWidget(self.mark_map_button)
-        mv.addLayout(trail_bar)
         self.map_edit_bar=QWidget()
         map_edit_layout=QVBoxLayout(self.map_edit_bar)
         map_edit_layout.setContentsMargins(4,2,4,2)
@@ -423,7 +443,9 @@ class MainWindow(QMainWindow):
         self.cat_rx=label("RX / DOWNLINK\n— MHz")
         self.cat_tx=label("TX / UPLINK\n— MHz")
         for widget,color in ((self.cat_rx,"#74e9c4"),(self.cat_tx,"#fa8e8e")):
-            widget.setStyleSheet("font-size:18px;font-weight:800;color:"+color+";background:#10263b;border:1px solid #284e6e;padding:12px")
+            widget.setMinimumHeight(95)
+            widget.setWordWrap(False)
+            widget.setStyleSheet("font-size:15px;font-weight:800;color:"+color+";background:#10263b;border:1px solid #284e6e;padding:6px")
             catrow.addWidget(widget,1)
         cv.addLayout(catrow)
         self.cat_details=label("SAT: —  ·  MAIN: —  ·  Leitura CAT: —")
@@ -440,7 +462,6 @@ class MainWindow(QMainWindow):
         self.cat_telemetry=label("Potência ajustada: — W · Medidor: — · RX/TX: indisponível via CAT")
         self.cat_telemetry.setToolTip("Potência PC é um ajuste, não medição de potência RF. RM mostra medidor selecionado; PTT não é comandado.")
         cv.addWidget(self.cat_telemetry)
-        rv.addWidget(catview)
         splitter.addWidget(right)
         splitter.setSizes([340,810,445])
         op.addWidget(splitter,1)
