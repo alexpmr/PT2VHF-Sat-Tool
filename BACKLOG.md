@@ -1,3 +1,11 @@
+## v1.3.0 — escopo implementado e pendências de campo (15/10/2026)
+- [x] **Catálogo:** CelesTrak por oito categorias, cache de 2 h por categoria, deduplicação NORAD e aliases principais (SO-50, FO-29, RS-44, ISS), filtro por categoria, seleção em primeira coluna e limite de 350 linhas renderizadas.
+- [x] **Interface:** editor grande fora da página principal e dentro de Configurações; painéis RX/TX num único grupo sem texto de desvio Doppler; atualização a cada segundo permanece; versão junto ao título, relógio UTC em destaque, botão de atualização por status e indicador CAT verde/vermelho/âmbar.
+- [x] **CAT:** sintonia de frequências e modo MAIN automaticamente após seleção, apenas se habilitada explicitamente em Configurações e rádio realmente conectado/em SAT; worker serializa acesso e leitura CAT confirma resultado. Sem PTT. Modo SUB/TX ainda exige conferência manual no TS-2000.
+- [x] **Alarme AOS:** aviso popup+beep 30 s antes da passagem do satélite selecionado, uma vez por AOS, opções de habilitar/som; elevação mínima da estação rege o horizonte.
+- [x] **Progresso:** janela TLE/OMM por categorias e SatNOGS com percentual, quantidades, ETA e tempo decorrido.
+- [ ] **Homologação ainda pendente:** TS-2000 físico (incluindo transponder linear, modos MAIN/SUB e off-horizon), Windows 7 SP1 real, notificação com janela minimizada e falhas reais de rede; fonte AMSAT/SatNOGS orbital/Space-Track, integração de rotor, Google Earth/KML e demais itens futuros não implementados nesta release.
+
 ## v1.2.0 — interface operacional simplificada e download com progresso (15/10/2026)
 - [x] **Implementado em código:** menu suspenso de seleção satélite e serviço no topo da Operação; cartões destacados de frequências RX/TX Doppler com atualização a cada segundo mesmo sem rádio/conexão CAT e abaixo do horizonte, indicando canal RX-only quando aplicável.
 - [x] **Implementado em código:** conexão rápida Conectar/Desconectar na página principal, com porta COM/baud/stop bits/SAT-TRACE e telemetria real CAT em Configurações; separação entre previsões orbitais e leituras físicas do rádio.
