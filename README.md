@@ -4,24 +4,35 @@
 
 ## Downloads — instaladores e portáteis
 
-**PT2VHF Sat Tool v1.1.3 — Windows 7 SP1, Windows 10 e Windows 11.** Os quatro downloads são arquivos `.exe` diretos. Links ficam disponíveis após aprovação dos builds Windows. Embora seja o marco 1.0 de funcionalidades, permanece em pré-lançamento até a homologação CAT com TS-2000 físico e Windows 7 real.
+**PT2VHF Sat Tool v1.2.0 — Windows 7 SP1, Windows 10 e Windows 11.** Os quatro downloads são arquivos `.exe` diretos. Links ficam disponíveis após aprovação dos builds Windows. Embora seja o marco 1.0 de funcionalidades, permanece em pré-lançamento até a homologação CAT com TS-2000 físico e Windows 7 real.
 
 | Windows | Instalável | Portátil |
 | --- | --- | --- |
-| **Windows 7 SP1** (x86; executável de 32 bits também para Win7 x64) | [Instalador Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.1.3/PT2VHF-Sat-Tool-v1.1.3-Win7-x86-Setup.exe) | [Portable Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.1.3/PT2VHF-Sat-Tool-v1.1.3-Win7-x86-Portable.exe) |
-| **Windows 10 (1809+)/11** (x64; arquivo `Win11-x64` para manter atualizador) | [Instalador Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.1.3/PT2VHF-Sat-Tool-v1.1.3-Win11-x64-Setup.exe) | [Portable Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.1.3/PT2VHF-Sat-Tool-v1.1.3-Win11-x64-Portable.exe) |
+| **Windows 7 SP1** (x86; executável de 32 bits também para Win7 x64) | [Instalador Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.2.0/PT2VHF-Sat-Tool-v1.2.0-Win7-x86-Setup.exe) | [Portable Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.2.0/PT2VHF-Sat-Tool-v1.2.0-Win7-x86-Portable.exe) |
+| **Windows 10 (1809+)/11** (x64; arquivo `Win11-x64` para manter atualizador) | [Instalador Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.2.0/PT2VHF-Sat-Tool-v1.2.0-Win11-x64-Setup.exe) | [Portable Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.2.0/PT2VHF-Sat-Tool-v1.2.0-Win11-x64-Portable.exe) |
 
 **Formato dos downloads:** tanto instaladores quanto portáteis são entregues diretamente como arquivos **`.exe`**. O portátil inclui as dependências dentro do mesmo EXE (PyInstaller onefile) e não requer descompactação.
 
 **[Todas as releases](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases)** · **[Acompanhar compilação](https://github.com/alexpmr/PT2VHF-Sat-Tool/actions)**
 
 - **Instalável:** instalação por usuário, atalho e desinstalação, atualização pelo aplicativo usando o Setup de sua edição.
-- **Portátil:** execute diretamente `PT2VHF-Sat-Tool-v1.1.3-*-Portable.exe` (um único arquivo). Configurações ficam em `data/` ao lado do EXE, preservadas após atualizações.
+- **Portátil:** execute diretamente `PT2VHF-Sat-Tool-v1.2.0-*-Portable.exe` (um único arquivo). Configurações ficam em `data/` ao lado do EXE, preservadas após atualizações.
 - **Win7:** Python 3.8 x86 + PySide2/Qt5 + PyInstaller 5.13.2 (legado, precisa ser validado no Windows 7 real).
 - **Win10/11 x64:** Windows 10 1809+ ou Windows 11, Python 3.11 x64 + PySide6/Qt6 + PyInstaller 6.13.0.
 - Arquivos SHA256 acompanham cada compilação. A versão Windows 7 é experimental; não confundir sucesso do CI com homologação em campo.
 
 ---
+
+## Novidades v1.2.0 — interface de operação de satélites (15/10/2026)
+
+- **Operação em dois passos:** satélite e serviço/transponder selecionáveis na área superior da tela principal, com modos evidentes.
+- **Frequências RX e TX corrigidas por Doppler em cartões permanentes:** atualização de 1 em 1 segundo mesmo sem CAT ou com satélite fora da visada. Exibe modo e desvio em Hz; canais somente RX não inventam uplink. Frequências nominais na linha de detalhes e no tooltip.
+- **CAT sem poluição visual:** apenas botão Conectar/Desconectar e status compacto na página principal; porta COM, baud, stop bits, SAT/TRACE e leituras físicas do rádio em **Configurações → Conexão CAT**.
+- **Mapa mais limpo:** duração/direção da trajetória em **Configurações → Mapa e Trajetória**. Marcação de posição permanece em Estação Terrena; a previsão futura e o mapa offline continuam operando.
+- **Catálogo:** **Satélites → Baixar/atualizar frequências** mostra barra de progresso central, com NORAD em processamento, N/M, percentual, falhas, cancelamento cooperativo e resumo. **Configurações → Satélites visíveis** agora tem filtro por nome/NORAD sem alterar a seleção persistida.
+- **Estabilidade:** correção de uma condição que impedia a troca real de satélite quando já havia uma seleção ativa. Controles de sintonia CAT continuam exigindo autorização; nenhum PTT é enviado.
+- **Próximas etapas (backlog):** curva de elevação por passagem, controle opcional de rotor e integração opcional por KML/KMZ com Google Earth. **Esses recursos NÃO fazem parte da v1.2.0.**
+- **Validação:** CI compilando Win7 SP1 x86 e Win10 1809+/Win11 x64; é preciso testar layout/DPI e CAT com equipamento físico.
 
 ## Novidades v1.1.3 — marcação de satélites e Doppler contínuo (14/10/2026)
 

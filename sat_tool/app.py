@@ -5,6 +5,7 @@ UI is intentionally non-transmitting: no CAT TX/PTT commands exist.
 from __future__ import annotations
 import json
 import math
+import unicodedata
 import sys
 import threading
 import traceback
@@ -131,6 +132,7 @@ class MainWindow(QMainWindow):
         self.selected_cat_target = None
         self.freq_update_cancel = False
         self.freq_update_stats = None
+        self.frequency_progress_dialog = None
         self._loading_satellites = False
         self._loading_catalog = False
         self._active_satellite_id = None
@@ -264,14 +266,14 @@ class MainWindow(QMainWindow):
         self.sat_list.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.sat_list.verticalHeader().setVisible(False)
         self.sat_list.setShowGrid(False)
-        self.sat_list.setMinimumHeight(185);self.sat_list.setMaximumHeight(260)
+        self.sat_list.setMinimumHeight(115);self.sat_list.setMaximumHeight(165)
         self.sat_list.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.sat_list.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.sat_list.cellClicked.connect(self.select_list_satellite)
         pv.addWidget(self.sat_list)
         self.sat_combo = QComboBox()
+        self.sat_combo.setMinimumWidth(190)
         self.sat_combo.currentIndexChanged.connect(self.choose_satellite)
-        pv.addWidget(self.sat_combo)
         self.sat_detail = label("Atualize o catálogo OMM")
         self.sat_detail.setStyleSheet("color:#a9c5d9")
         pv.addWidget(self.sat_detail)
@@ -284,7 +286,7 @@ class MainWindow(QMainWindow):
         pv.addWidget(self.refresh_omm_btn)
         self.mode_combo=QComboBox()
         self.mode_combo.currentIndexChanged.connect(self.choose_mode)
-        pv.addWidget(label("Transponder / canal / modo operacional"));pv.addWidget(self.mode_combo)
+        self.mode_combo.setMinimumWidth(220)
         self.refresh_tx_btn=QPushButton("Atualizar frequências / modos")
         self.refresh_tx_btn.clicked.connect(lambda:self.refresh_modes(force=True))
         pv.addWidget(self.refresh_tx_btn)
@@ -320,6 +322,29 @@ class MainWindow(QMainWindow):
         lv.addWidget(freqs)
         lv.addStretch(1)
         splitter.addWidget(left)
+        # Predicted RX/TX operates without CAT or satellite visibility.
+        operator_panel,ov=group("SATÉLITE · FREQUÊNCIAS DOPPLER CALCULADAS")
+        selectors=QHBoxLayout()
+        selectors.addWidget(label("Satélite"))
+        selectors.addWidget(self.sat_combo,2)
+        selectors.addWidget(label("Serviço / modo"))
+        selectors.addWidget(self.mode_combo,3)
+        ov.addLayout(selectors)
+        frequency_cards=QHBoxLayout()
+        self.pred_rx=label("RX / DOWNLINK\nAguardando satélite")
+        self.pred_tx=label("TX / UPLINK\nAguardando satélite")
+        for card,color in ((self.pred_rx,"#68ebcd"),(self.pred_tx,"#8fd8ff")):
+            card.setAlignment(Qt.AlignCenter)
+            card.setMinimumHeight(106)
+            card.setMinimumWidth(210)
+            card.setStyleSheet("font-size:15px;font-weight:800;color:"+color+
+                               ";background:#10263b;border:1px solid #326080;border-radius:7px;padding:5px")
+            frequency_cards.addWidget(card,1)
+        ov.addLayout(frequency_cards)
+        self.corrected_label=label("Previsão orbital sem CAT e sem transmissão")
+        self.corrected_label.setStyleSheet("color:#a4d5df;font-size:11px")
+        ov.addWidget(self.corrected_label)
+        op.insertWidget(1,operator_panel)
         mid=QWidget();mv=QVBoxLayout(mid);mv.setContentsMargins(0,0,0,0)
         trail_bar=QHBoxLayout()
         trail_bar.setContentsMargins(4,1,4,2)
@@ -335,11 +360,6 @@ class MainWindow(QMainWindow):
         trail_bar.addWidget(self.trail_period,2)
         trail_bar.addWidget(self.trail_direction,1)
         trail_bar.addWidget(self.trail_custom,1)
-        self.mark_map_button=QPushButton("Marcar estação no mapa")
-        self.mark_map_button.setToolTip("Clique no mapa offline para marcar a posição da antena. Nenhuma alteração será salva até sua confirmação.")
-        self.mark_map_button.clicked.connect(self.begin_station_map)
-        trail_bar.addWidget(self.mark_map_button)
-        mv.addLayout(trail_bar)
         self.map_edit_bar=QWidget()
         map_edit_layout=QVBoxLayout(self.map_edit_bar)
         map_edit_layout.setContentsMargins(4,2,4,2)
@@ -423,7 +443,9 @@ class MainWindow(QMainWindow):
         self.cat_rx=label("RX / DOWNLINK\n— MHz")
         self.cat_tx=label("TX / UPLINK\n— MHz")
         for widget,color in ((self.cat_rx,"#74e9c4"),(self.cat_tx,"#fa8e8e")):
-            widget.setStyleSheet("font-size:18px;font-weight:800;color:"+color+";background:#10263b;border:1px solid #284e6e;padding:12px")
+            widget.setMinimumHeight(95)
+            widget.setWordWrap(False)
+            widget.setStyleSheet("font-size:15px;font-weight:800;color:"+color+";background:#10263b;border:1px solid #284e6e;padding:6px")
             catrow.addWidget(widget,1)
         cv.addLayout(catrow)
         self.cat_details=label("SAT: —  ·  MAIN: —  ·  Leitura CAT: —")
@@ -440,13 +462,12 @@ class MainWindow(QMainWindow):
         self.cat_telemetry=label("Potência ajustada: — W · Medidor: — · RX/TX: indisponível via CAT")
         self.cat_telemetry.setToolTip("Potência PC é um ajuste, não medição de potência RF. RM mostra medidor selecionado; PTT não é comandado.")
         cv.addWidget(self.cat_telemetry)
-        rv.addWidget(catview)
         splitter.addWidget(right)
         splitter.setSizes([340,810,445])
         op.addWidget(splitter,1)
-        radio_box,rb=group("KENWOOD TS-2000  •  CAT SERIAL")
-        row=QHBoxLayout()
-        self.ports=QComboBox();self.refresh_ports=QPushButton("↻ Portas")
+        # Settings owns the COM port, baud, stop bits, SAT/TRACE and CAT telemetry.
+        self.ports=QComboBox();self.ports.setEditable(True)
+        self.refresh_ports=QPushButton("↻ Portas")
         self.refresh_ports.clicked.connect(self.update_ports)
         self.baud_combo=QComboBox();self.baud_combo.addItems(["4800","9600","19200","38400","57600"])
         self.stops_combo=QComboBox();self.stops_combo.addItems(["1","2"])
@@ -454,19 +475,12 @@ class MainWindow(QMainWindow):
         self.connection.clicked.connect(self.toggle_connection)
         self.enable_sat=QPushButton("Ativar SAT / desativar TRACE")
         self.enable_sat.clicked.connect(self.enable_satellite)
-        row.addWidget(label("Porta:"));row.addWidget(self.ports,2)
-        row.addWidget(self.refresh_ports);row.addWidget(label("Baud:"));row.addWidget(self.baud_combo)
-        row.addWidget(label("Stop:"));row.addWidget(self.stops_combo);row.addWidget(self.connection)
-        row.addWidget(self.enable_sat)
-        rb.addLayout(row)
-        row2=QHBoxLayout()
-        self.radio_label=label("Desconectado · CAT inativo · transmissão nunca acionada pelo aplicativo")
-        self.radio_label.setStyleSheet('color:#ecc48f')
-        self.corrected_label=label("Doppler calculado RX: — | TX: —")
-        self.corrected_label.setToolTip("Previsão SGP4 da estação salva. Não é leitura CAT.")
-        row2.addWidget(self.radio_label,2);row2.addWidget(self.corrected_label,1)
-        rb.addLayout(row2)
-        op.addWidget(radio_box)
+        quick_cat=QHBoxLayout()
+        self.radio_label=label("CAT desconectado · configure a porta em Configurações")
+        self.radio_label.setStyleSheet("color:#ecc48f;font-size:12px")
+        quick_cat.addWidget(self.radio_label,1)
+        quick_cat.addWidget(self.connection)
+        op.addLayout(quick_cat)
         root.addTab(operation,"Operação")
         catalog_page=QWidget(); catalog_layout=QVBoxLayout(catalog_page)
         catalog_layout.addWidget(label("Satélites atuais no catálogo orbital CelesTrak. 'Canal publicado' não comprova serviço ativo nem autoriza TX. Clique duas vezes para selecionar."))
@@ -576,18 +590,34 @@ class MainWindow(QMainWindow):
         rr=QHBoxLayout()
         self.radio_brand=QComboBox();self.radio_brand.addItem("Kenwood")
         self.radio_model=QComboBox();self.radio_model.addItem("TS-2000")
-        self.config_port=QComboBox();self.config_port.setEditable(True)
         rr.addWidget(label("Fabricante"));rr.addWidget(self.radio_brand)
         rr.addWidget(label("Modelo"));rr.addWidget(self.radio_model)
-        rr.addWidget(label("Porta COM"));rr.addWidget(self.config_port)
+        rr.addWidget(label("Porta COM"));rr.addWidget(self.ports,1)
+        rr.addWidget(self.refresh_ports)
         rs.addLayout(rr)
-        rs.addWidget(label("Ajustes de baud rate e stop bits ficam na faixa CAT da aba Operação. Somente o TS-2000 tem driver nesta versão."))
+        cat_options=QHBoxLayout()
+        cat_options.addWidget(label("Baud"));cat_options.addWidget(self.baud_combo)
+        cat_options.addWidget(label("Stop bits"));cat_options.addWidget(self.stops_combo)
+        cat_options.addWidget(self.enable_sat,1)
+        rs.addLayout(cat_options)
+        rs.addWidget(label("Somente TS-2000; conectar não habilita SAT nem transmite."))
+        rs.addWidget(catview)
         connect_btn=QPushButton("Conectar pela porta selecionada")
         connect_btn.clicked.connect(self.connect_from_settings)
         rs.addWidget(connect_btn);cfg.addWidget(radio_settings)
+        track_settings,tsv=group("MAPA E TRAJETÓRIA")
+        tsv.addLayout(trail_bar)
+        tsv.addWidget(label("O mapa respeita as preferências salvas. Para marcar a estação, use Estação Terrena."))
+        cfg.addWidget(track_settings)
 
         sel_group,ss=group("SATÉLITES VISÍVEIS NA PÁGINA PRINCIPAL")
         ss.addWidget(label("Auto sugere satélites por FM/SSB/CW e banda. A confirmação de funcionamento depende das fontes atuais."))
+        self.tracked_search=QLineEdit()
+        self.tracked_search.setPlaceholderText("Pesquisar por nome ou NORAD…")
+        self.tracked_search.textChanged.connect(self.filter_tracked_satellites)
+        ss.addWidget(self.tracked_search)
+        self.tracked_search_summary=label("Nenhum satélite carregado")
+        ss.addWidget(self.tracked_search_summary)
         self.tracked_table=QTableWidget(0,3)
         self.tracked_table.setHorizontalHeaderLabels(["Selecionado","Satélite / NORAD","Compatibilidade"])
         self.tracked_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
@@ -751,6 +781,8 @@ class MainWindow(QMainWindow):
                 if item:item.setText(translated(original,locale))
         for i,original in enumerate(("Selecionado","Habilitados","Resultados filtrados")):
             self.catalog_refresh_scope.setItemText(i,translated(original,locale))
+        if hasattr(self,"tracked_search"):
+            self.tracked_search.setPlaceholderText(translated("Pesquisar por nome ou NORAD…",locale))
         self._language_active=locale
 
     def change_language(self,*args):
@@ -876,7 +908,7 @@ class MainWindow(QMainWindow):
         self.map_pick_active=True
         self.map_pick_position=self.stored_map_position()
         self.map_edit_bar.setVisible(True)
-        self.mark_map_button.setEnabled(False)
+        self.station_map_button.setEnabled(False)
         self.tabs.setCurrentIndex(0)
         self.show_station_map_preview(self.map_pick_position)
         payload=json.dumps(self.map_pick_position,ensure_ascii=False)
@@ -947,7 +979,7 @@ class MainWindow(QMainWindow):
         self.map_pick_active=False
         self.map_pick_position=None
         self.map_edit_bar.setVisible(False)
-        self.mark_map_button.setEnabled(True)
+        self.station_map_button.setEnabled(True)
         self.map.page().runJavaScript("window.finishLocationPick && window.finishLocationPick()")
 
     def confirm_station_map(self):
@@ -994,7 +1026,7 @@ class MainWindow(QMainWindow):
         self.map.page().runJavaScript("window.finishLocationPick && window.finishLocationPick()")
         self.map_pick_active=False
         self.map_edit_bar.setVisible(False)
-        self.mark_map_button.setEnabled(True)
+        self.station_map_button.setEnabled(True)
 
     def change_location_source(self,*args):
         source=self.location_source.currentIndex()
@@ -1131,11 +1163,7 @@ class MainWindow(QMainWindow):
         ports=available_ports()
         self.ports.clear()
         self.ports.addItems(ports)
-        if previous in ports:self.ports.setCurrentText(previous)
-        if hasattr(self,"config_port"):
-            selected=self.config_port.currentText() or previous
-            self.config_port.clear();self.config_port.addItems(ports)
-            if selected:self.config_port.setCurrentText(selected)
+        if previous:self.ports.setCurrentText(previous)
         if hasattr(self,"gps_port"):
             old_gps=self.gps_port.currentText() or self.config.values.get("gps_port","")
             self.gps_port.clear();self.gps_port.addItems(ports)
@@ -1158,15 +1186,22 @@ class MainWindow(QMainWindow):
                 widget.setValue(0);widget.setFormat("sem leitura")
             self.log("CAT desconectado")
             return
+        port=self.ports.currentText().strip()
+        if not port:
+            QMessageBox.warning(self,"CAT não configurado",
+                "Selecione uma porta COM em Configurações → Conexão CAT antes de conectar.")
+            self.tabs.setCurrentIndex(2)
+            return
         try:
-            st=self.radio.connect(self.ports.currentText(), int(self.baud_combo.currentText()), int(self.stops_combo.currentText()))
+            st=self.radio.connect(port, int(self.baud_combo.currentText()), int(self.stops_combo.currentText()))
             self.config.values.update({"port":self.ports.currentText(),"baud":int(self.baud_combo.currentText()),
                                        "stopbits":int(self.stops_combo.currentText())})
             self.config.save()
             self.connection.setText("Desconectar")
             self.render_radio_state(st)
         except Exception as exc:
-            QMessageBox.critical(self,"Erro de conexão CAT",str(exc))
+            QMessageBox.warning(self,"Erro de conexão CAT",
+                f"{exc}\n\nVerifique porta COM, baud e stop bits em Configurações → Conexão CAT.")
             self.log(f"ERRO CAT: {exc}")
 
     def enable_satellite(self):
@@ -1264,16 +1299,30 @@ class MainWindow(QMainWindow):
         self.refresh_catalog_freq.setEnabled(False)
         self.stop_catalog_freq.setEnabled(True)
         self.catalog_progress.setText(f"SatNOGS: iniciando 0/{len(ids)}")
+        self.frequency_progress_dialog=QProgressDialog(
+            f"Consultando frequências SatNOGS…\n0 de {len(ids)} satélites", "Cancelar",0,len(ids),self)
+        self.frequency_progress_dialog.setWindowTitle("Atualizar frequências dos satélites")
+        self.frequency_progress_dialog.setMinimumDuration(0)
+        self.frequency_progress_dialog.setAutoClose(False)
+        self.frequency_progress_dialog.setAutoReset(False)
+        self.frequency_progress_dialog.setWindowModality(Qt.WindowModal)
+        self.frequency_progress_dialog.resize(520,142)
+        center=self.frameGeometry().center()
+        self.frequency_progress_dialog.move(center-self.frequency_progress_dialog.rect().center())
+        self.frequency_progress_dialog.canceled.connect(self.cancel_catalog_transmitters)
+        self.frequency_progress_dialog.setValue(0)
+        self.frequency_progress_dialog.show()
         data_dir=self.config.dir
         def work():
             import time
-            stats={"total":len(ids),"ok":0,"failed":[],"cancelled":False}
+            stats={"total":len(ids),"ok":0,"no_data":0,"failed":[],"cancelled":False}
             for i,ident in enumerate(ids,1):
                 if self.freq_update_cancel:
                     stats["cancelled"]=True;break
                 try:
                     rows=refresh_transmitters(data_dir,int(ident))
-                    stats["ok"]+=1
+                    if rows:stats["ok"]+=1
+                    else:stats["no_data"]+=1
                     self.events.result.emit("tx-batch-item",(ident,rows,i,len(ids)))
                 except Exception as exc:
                     stats["failed"].append(f"{ident}: {exc}")
@@ -1283,8 +1332,12 @@ class MainWindow(QMainWindow):
         self.background("tx-batch",work)
 
     def cancel_catalog_transmitters(self):
+        if "tx-batch" not in self.pending_jobs:return
         self.freq_update_cancel=True
         self.catalog_progress.setText("Cancelamento solicitado; aguardando consulta atual")
+        if self.frequency_progress_dialog:
+            self.frequency_progress_dialog.setLabelText(
+                "Cancelamento solicitado; aguardando a consulta SatNOGS atual…")
 
     def refresh_satellite_table(self, text=None):
         text=(text if isinstance(text,str) else self.catalog_search.text()).casefold().strip()
@@ -1394,13 +1447,12 @@ class MainWindow(QMainWindow):
 
     def choose_satellite(self):
         ident=self.sat_combo.currentData()
-        if ident!=self._active_satellite_id:
-            self.suspend_cat_doppler("satélite selecionado mudou")
-            self._active_satellite_id=ident
+        if ident==self._active_satellite_id and self.sat is not None:
+            return  # The same satellite must not interrupt CAT.
+        self.suspend_cat_doppler("satélite selecionado mudou")
+        self._active_satellite_id=ident
         if hasattr(self,"sat_list") and self.sat_combo.currentIndex()>=0 and self.sat_list.rowCount():
             self.sat_list.selectRow(self.sat_combo.currentIndex())
-        if ident==self._active_satellite_id and self.sat is not None:
-            return  # Filtering/marking does not change satellite or disable ongoing CAT
         if not ident or ident not in self.omm:
             self.sat=None;self.sat_detail.setText("Nenhum satélite selecionado");return
         item=self.omm[ident]
@@ -1503,15 +1555,32 @@ class MainWindow(QMainWindow):
             calc=frequency_prediction({"downlink_hz":dl,"uplink_hz":ul},p["radial_m_s"])
             age=abs((when-self.sat.epoch.utc_datetime().replace(tzinfo=timezone.utc)).total_seconds())/86400
             if age>7:
-                self.corrected_label.setText(f"Previsão indisponível: TLE/OMM antigo ({age:.1f} d)")
+                self.pred_rx.setText("RX / DOWNLINK\nTLE/OMM antigo\nAtualize órbitas")
+                self.pred_tx.setText("TX / UPLINK\nTLE/OMM antigo\nAtualize órbitas")
+                self.corrected_label.setText(f"Previsão indisponível: efeméride antiga ({age:.1f} dias)")
                 return
-            tx=(self.radio_freq(calc["tx_hz"])+f" ({calc['tx_offset_hz']:+d} Hz)") if ul is not None else "RX apenas"
+            rx_mode=self.rx_mode.currentText()
+            tx_mode=self.tx_mode.currentText()
+            self.pred_rx.setText(
+                f"RX / DOWNLINK · {rx_mode}\n{self.radio_freq(calc['rx_hz'])}\nDoppler {calc['rx_offset_hz']:+d} Hz")
+            self.pred_tx.setText(
+                f"TX / UPLINK · {tx_mode}\n{self.radio_freq(calc['tx_hz'])}\nDoppler {calc['tx_offset_hz']:+d} Hz"
+                if ul is not None else "TX / UPLINK\nSOMENTE RECEPÇÃO\nSem frequência TX")
+            self.pred_rx.setToolTip("Frequência nominal: "+self.radio_freq(dl))
+            self.pred_tx.setToolTip("Frequência nominal: "+self.radio_freq(ul) if ul is not None else "Canal somente recepção")
+            tx=("TX "+self.radio_freq(calc["tx_hz"])+f" ({calc['tx_offset_hz']:+d} Hz)") if ul is not None else "RX apenas"
             self.corrected_label.setText(
-                f"PREVISÃO Doppler RX {self.radio_freq(calc['rx_hz'])} ({calc['rx_offset_hz']:+d} Hz)"
-                f" | TX {tx} · {'EM PASSAGEM' if p['visible'] else 'FORA DA VISADA'} · {when.astimezone():%H:%M:%S}")
+                f"PREVISÃO · RX nominal {self.radio_freq(dl)} | "
+                f"{'TX nominal '+self.radio_freq(ul) if ul is not None else 'sem uplink'} · "
+                f"{'EM PASSAGEM' if p['visible'] else 'FORA DA VISADA'} · "
+                f"{when.astimezone():%H:%M:%S} · CAT independente")
         except (ValueError,TypeError,KeyError) as exc:
+            self.pred_rx.setText("RX / DOWNLINK\nAguardando frequência")
+            self.pred_tx.setText("TX / UPLINK\nAguardando frequência")
             self.corrected_label.setText("Previsão Doppler: "+str(exc))
         except Exception as exc:
+            self.pred_rx.setText("RX / DOWNLINK\nPrevisão indisponível")
+            self.pred_tx.setText("TX / UPLINK\nPrevisão indisponível")
             self.corrected_label.setText("Previsão Doppler indisponível")
             self.log("Previsão Doppler: "+str(exc))
 
@@ -1854,17 +1923,31 @@ class MainWindow(QMainWindow):
                 self.pass_rows[ident]=rows
                 if str(self.sat_combo.currentData())==ident:
                     self.choose_cached_modes(int(ident))
-            self.catalog_progress.setText(f"SatNOGS: {index}/{total} · {'recebido' if rows is not None else 'falha'} NORAD {ident}")
+            status="falha" if rows is None else "sem dados" if not rows else "recebido"
+            self.catalog_progress.setText(f"SatNOGS: {index}/{total} · {status} NORAD {ident}")
+            if self.frequency_progress_dialog:
+                self.frequency_progress_dialog.setLabelText(
+                    f"SatNOGS: {index} de {total} satélites · {round(100*index/total)}%\n"
+                    f"NORAD {ident} · {status}")
+                self.frequency_progress_dialog.setValue(index)
             return
         if key=="tx-batch":
             self.refresh_catalog_freq.setEnabled(True)
             self.stop_catalog_freq.setEnabled(False)
+            if self.frequency_progress_dialog:
+                self.frequency_progress_dialog.close()
+                self.frequency_progress_dialog=None
             self.refresh_satellite_table()
             self.refresh_tracked_table()
             self.refresh_passes()
             self.update_next_indicator()
-            self.catalog_progress.setText(f"SatNOGS: {data['ok']}/{data['total']} atualizados · {len(data['failed'])} falhas"+(" · cancelado" if data["cancelled"] else ""))
+            self.catalog_progress.setText(
+                f"SatNOGS: {data['ok']}/{data['total']} com canais · "
+                f"{data['no_data']} sem dados · {len(data['failed'])} falhas"
+                +(" · cancelado" if data["cancelled"] else ""))
             for error in data["failed"][:20]:self.log("SatNOGS: "+error)
+            QMessageBox.information(self,"Atualização de frequências concluída",
+                self.catalog_progress.text()+"\nDetalhes das falhas na aba LOGs / CAT.")
             return
         if key=='cat-poll':
             if self.radio.connected:self.render_radio_state(data)
@@ -1926,6 +2009,9 @@ class MainWindow(QMainWindow):
         if key=="tx-batch":
             self.refresh_catalog_freq.setEnabled(True)
             self.stop_catalog_freq.setEnabled(False)
+            if self.frequency_progress_dialog:
+                self.frequency_progress_dialog.close()
+                self.frequency_progress_dialog=None
             self.catalog_progress.setText("SatNOGS: falha, cache anterior preservado")
             return
         if key=="cat-poll":
@@ -1965,6 +2051,25 @@ class MainWindow(QMainWindow):
                         c.get("radio_modes",[]),c.get("radio_bands",[]))
         return render_service(info["modes"])
 
+    def filter_tracked_satellites(self,*args):
+        """Hide only nonmatching rows; never modify stored checked NORAD IDs."""
+        if not hasattr(self,"tracked_table"):return
+        text=self.tracked_search.text() if hasattr(self,"tracked_search") else ""
+        normalize=lambda value: "".join(c for c in unicodedata.normalize("NFKD",str(value).casefold())
+                                         if not unicodedata.combining(c))
+        query=normalize(text).strip()
+        count=0
+        for index in range(self.tracked_table.rowCount()):
+            name=self.tracked_table.item(index,1)
+            row_text=name.text() if name is not None else ""
+            show=query in normalize(row_text)
+            self.tracked_table.setRowHidden(index,not show)
+            count+=int(show)
+        enabled=len(self.enabled_satellite_ids()) if self.omm else 0
+        if hasattr(self,"tracked_search_summary"):
+            self.tracked_search_summary.setText(
+                f"{count} resultados de {self.tracked_table.rowCount()} satélites · {enabled} habilitados")
+
     def refresh_tracked_table(self):
         if not hasattr(self,"tracked_table"):return
         self._loading_satellites=True
@@ -1985,6 +2090,7 @@ class MainWindow(QMainWindow):
                 self.tracked_table.setItem(i,2,QTableWidgetItem(f'{render_service(info["modes"])} · {info["notice"]}'))
         finally:
             self._loading_satellites=False
+        self.filter_tracked_satellites()
 
     def satellite_checked(self,row,col):
         if self._loading_satellites or col!=0:return
@@ -1996,6 +2102,7 @@ class MainWindow(QMainWindow):
         self.config.save()
         self.filter_sats(self.search.text())
         self.refresh_passes()
+        self.filter_tracked_satellites()
 
     def bulk_select_satellites(self,select):
         self.config.values["satellite_selection"]=list(self.omm) if select else []
@@ -2014,7 +2121,7 @@ class MainWindow(QMainWindow):
         self.config.save();self.refresh_tracked_table();self.filter_sats(self.search.text());self.refresh_passes()
 
     def connect_from_settings(self):
-        port=self.config_port.currentText().strip()
+        port=self.ports.currentText().strip()
         if not port:
             QMessageBox.warning(self,"Porta CAT","Selecione ou digite a porta COM.");return
         if self.radio.connected:
