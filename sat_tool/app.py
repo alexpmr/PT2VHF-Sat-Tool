@@ -634,7 +634,7 @@ class MainWindow(QMainWindow):
         ss.addWidget(label("Auto sugere satélites por FM/SSB/CW e banda. A confirmação de funcionamento depende das fontes atuais."))
         self.tracked_search=QLineEdit()
         self.tracked_search.setPlaceholderText("Pesquisar por nome ou NORAD…")
-        self.tracked_search.textChanged.connect(self.filter_tracked_satellites)
+        self.tracked_search.textChanged.connect(self.refresh_tracked_table)
         ss.addWidget(self.tracked_search)
         self.tracked_search_summary=label("Nenhum satélite carregado")
         ss.addWidget(self.tracked_search_summary)
@@ -2073,7 +2073,12 @@ class MainWindow(QMainWindow):
 
     def enabled_satellite_ids(self):
         c=self.config.values
-        rows={ident:load_transmitters(self.config.dir,int(ident)) for ident in self.omm}
+        manual=c.get("satellite_selection")
+        if manual is not None:
+            return [str(n) for n in manual if str(n) in self.omm]
+        # Never scan tens of thousands of SatNOGS files for automatic suggestions.
+        rows={ident:load_transmitters(self.config.dir,int(ident))
+              for ident in self.omm if ident in CANDIDATES}
         return choose_satellites(self.omm,rows,c.get("radio_modes",[]),
                                  c.get("radio_bands",[]),c.get("satellite_selection"))
 
@@ -2107,7 +2112,12 @@ class MainWindow(QMainWindow):
         self._loading_satellites=True
         try:
             selected=set(self.enabled_satellite_ids())
-            rows=sorted(self.omm.items(),key=lambda p:p[1].get("OBJECT_NAME",""))
+            query=normalized_satellite_search(self.tracked_search.text())
+            rows=[(sid,obj) for sid,obj in self.omm.items()
+                  if not query or query in satellite_search_text(sid,obj)]
+            rows.sort(key=lambda p:p[1].get("OBJECT_NAME",""))
+            self._tracked_result_count=len(rows)
+            rows=rows[:350]
             self.tracked_table.setRowCount(len(rows))
             for i,(ident,obj) in enumerate(rows):
                 checkbox=QTableWidgetItem("")
