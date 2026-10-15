@@ -1299,13 +1299,28 @@ class MainWindow(QMainWindow):
         meter=f"{st.meter_type} {st.meter_value}/30" if st.meter_value is not None else "—"
         self.cat_telemetry.setText(f"Potência: {watts} · Medidor {meter} · RX/TX real: não confirmado (CAT)")
 
-    def refresh_catalog(self):
+    def refresh_catalog(self,force=False):
+        groups=self.config.values.get("orbit_groups",list(DEFAULT_GROUPS))
         age=age_hours(self.config.dir,"amateur_omm.json")
-        if age is not None and age<2:
-            self.summary.setText(f"OMM em cache há {age:.1f} h; nova consulta permitida após 2 h")
+        if age is not None and age<2 and not force:
+            self.summary.setText(f"OMM em cache há {age:.1f} h; aguarde o intervalo de 2 h")
             return
+        if "omm" in self.pending_jobs:return
+        self.orbit_started_at=time.monotonic()
+        dlg=QProgressDialog("Baixando catálogo orbital por categorias…","",0,len(groups),self)
+        dlg.setWindowTitle("Atualização TLE / OMM")
+        dlg.setMinimumDuration(0)
+        dlg.setAutoClose(False)
+        dlg.setAutoReset(False)
+        dlg.setWindowModality(Qt.WindowModal)
+        dlg.resize(540,150)
+        dlg.move(self.frameGeometry().center()-dlg.rect().center())
+        dlg.show()
+        self.orbit_progress_dialog=dlg
         self.summary.setText("Atualizando elementos orbitais…")
-        self.background('omm',lambda:refresh_orbits(self.config.dir))
+        def notify(index,total,group,count,errors):
+            self.events.result.emit("omm-stage",(index,total,group,count,errors))
+        self.background("omm",lambda:refresh_orbits(self.config.dir,groups=groups,progress=notify))
 
     def populate_catalog(self, objects):
         old=self.sat_combo.currentData() or self.config.values.get('selected_norad')
@@ -1317,7 +1332,7 @@ class MainWindow(QMainWindow):
         if old:
             idx=self.sat_combo.findData(str(old))
             if idx>=0:self.sat_combo.setCurrentIndex(idx)
-        self.summary.setText(f"{len(self.omm)} satélites no catálogo amador  •  CelesTrak OMM/TLE")
+        self.summary.setText(f"{len(self.omm)} satélites no catálogo de múltiplas categorias  •  CelesTrak OMM/TLE")
         self.refresh_satellite_table()
         self.refresh_tracked_table()
         self.refresh_passes()
@@ -2076,6 +2091,18 @@ class MainWindow(QMainWindow):
             self.map_desc.setText(description+" · Natural Earth offline")
             self.update_map()
             return
+        if key=="omm-stage":
+            index,total,group,count,errors=data
+            dlg=self.orbit_progress_dialog
+            if dlg:
+                elapsed=time.monotonic()-(self.orbit_started_at or time.monotonic())
+                eta=format_duration(eta_seconds(index,total,elapsed))
+                dlg.setLabelText(
+                    f"Categoria {index}/{total} · {group.upper()} · {count} satélites\n"
+                    f"{round(index*100/max(total,1))}% · Tempo restante estimado: {eta}\n"
+                    f"Tempo decorrido: {format_duration(elapsed)} · falhas {errors}")
+                dlg.setValue(index)
+            return
         if key=="tx-batch-item":
             ident,rows,index,total=data
             if rows is not None:
@@ -2139,6 +2166,9 @@ class MainWindow(QMainWindow):
             self.update_ready(data)
             return
         if key=='omm':
+            if self.orbit_progress_dialog:
+                self.orbit_progress_dialog.close()
+                self.orbit_progress_dialog=None
             self.populate_catalog(data)
             self.refresh_passes()
             self.log(f'Catálogo atualizado: {len(data)} objetos OMM')
@@ -2210,7 +2240,11 @@ class MainWindow(QMainWindow):
             self.refresh_passes()
         if key=='trail':
             self.map_desc.setText(f"Falha no cálculo da trajetória: {message}")
-        if key=='omm':self.summary.setText('Sem atualização: usando cache OMM, se existente')
+        if key=='omm':
+            if self.orbit_progress_dialog:
+                self.orbit_progress_dialog.close()
+                self.orbit_progress_dialog=None
+            self.summary.setText('Sem atualização: usando cache OMM, se existente')
         if key.startswith('photo:') and key.split(':')[1]==str(self.sat_combo.currentData()):
             self.photo.setHtml(photo_html(None))
 
@@ -2328,7 +2362,7 @@ class MainWindow(QMainWindow):
             return
         self.config.values["orbit_groups"]=chosen
         self.config.save()
-        self.refresh_catalog()
+        self.refresh_catalog(force=True)
 
     def change_auto_cat(self,enabled):
         if enabled and QMessageBox.question(
