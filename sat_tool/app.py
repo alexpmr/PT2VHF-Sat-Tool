@@ -1161,11 +1161,7 @@ class MainWindow(QMainWindow):
         ports=available_ports()
         self.ports.clear()
         self.ports.addItems(ports)
-        if previous in ports:self.ports.setCurrentText(previous)
-        if hasattr(self,"config_port"):
-            selected=self.config_port.currentText() or previous
-            self.config_port.clear();self.config_port.addItems(ports)
-            if selected:self.config_port.setCurrentText(selected)
+        if previous:self.ports.setCurrentText(previous)
         if hasattr(self,"gps_port"):
             old_gps=self.gps_port.currentText() or self.config.values.get("gps_port","")
             self.gps_port.clear();self.gps_port.addItems(ports)
@@ -1188,15 +1184,22 @@ class MainWindow(QMainWindow):
                 widget.setValue(0);widget.setFormat("sem leitura")
             self.log("CAT desconectado")
             return
+        port=self.ports.currentText().strip()
+        if not port:
+            QMessageBox.warning(self,"CAT não configurado",
+                "Selecione uma porta COM em Configurações → Conexão CAT antes de conectar.")
+            self.tabs.setCurrentIndex(2)
+            return
         try:
-            st=self.radio.connect(self.ports.currentText(), int(self.baud_combo.currentText()), int(self.stops_combo.currentText()))
+            st=self.radio.connect(port, int(self.baud_combo.currentText()), int(self.stops_combo.currentText()))
             self.config.values.update({"port":self.ports.currentText(),"baud":int(self.baud_combo.currentText()),
                                        "stopbits":int(self.stops_combo.currentText())})
             self.config.save()
             self.connection.setText("Desconectar")
             self.render_radio_state(st)
         except Exception as exc:
-            QMessageBox.critical(self,"Erro de conexão CAT",str(exc))
+            QMessageBox.warning(self,"Erro de conexão CAT",
+                f"{exc}\n\nVerifique porta COM, baud e stop bits em Configurações → Conexão CAT.")
             self.log(f"ERRO CAT: {exc}")
 
     def enable_satellite(self):
@@ -1424,13 +1427,12 @@ class MainWindow(QMainWindow):
 
     def choose_satellite(self):
         ident=self.sat_combo.currentData()
-        if ident!=self._active_satellite_id:
-            self.suspend_cat_doppler("satélite selecionado mudou")
-            self._active_satellite_id=ident
+        if ident==self._active_satellite_id and self.sat is not None:
+            return  # The same satellite must not interrupt CAT.
+        self.suspend_cat_doppler("satélite selecionado mudou")
+        self._active_satellite_id=ident
         if hasattr(self,"sat_list") and self.sat_combo.currentIndex()>=0 and self.sat_list.rowCount():
             self.sat_list.selectRow(self.sat_combo.currentIndex())
-        if ident==self._active_satellite_id and self.sat is not None:
-            return  # Filtering/marking does not change satellite or disable ongoing CAT
         if not ident or ident not in self.omm:
             self.sat=None;self.sat_detail.setText("Nenhum satélite selecionado");return
         item=self.omm[ident]
@@ -2044,7 +2046,7 @@ class MainWindow(QMainWindow):
         self.config.save();self.refresh_tracked_table();self.filter_sats(self.search.text());self.refresh_passes()
 
     def connect_from_settings(self):
-        port=self.config_port.currentText().strip()
+        port=self.ports.currentText().strip()
         if not port:
             QMessageBox.warning(self,"Porta CAT","Selecione ou digite a porta COM.");return
         if self.radio.connected:
