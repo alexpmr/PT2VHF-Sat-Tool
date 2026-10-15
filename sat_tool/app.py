@@ -1517,6 +1517,7 @@ class MainWindow(QMainWindow):
         if ident==self._active_satellite_id and self.sat is not None:
             return  # The same satellite must not interrupt CAT.
         self.suspend_cat_doppler("satélite selecionado mudou")
+        self.cat_selection_generation+=1
         self._active_satellite_id=ident
         if hasattr(self,"sat_list") and self.sat_combo.currentIndex()>=0 and self.sat_list.rowCount():
             self.sat_list.selectRow(self.sat_combo.currentIndex())
@@ -1558,8 +1559,8 @@ class MainWindow(QMainWindow):
         for i, opt in enumerate(self.options):
             info='RX apenas' if opt['receive_only'] else 'RX/TX'
             self.mode_combo.addItem(f"{opt['name'][:43]} · {opt['mode']} · {info}",i)
-        self.mode_combo.blockSignals(False)
         self.mode_combo.setCurrentIndex(1 if self.options else 0)
+        self.mode_combo.blockSignals(False)
         self.choose_mode()
         self.refresh_satellite_table()
 
@@ -1584,6 +1585,40 @@ class MainWindow(QMainWindow):
             self.tx_mode.setCurrentText('LSB' if mode=='USB' and opt['inverted'] else 'USB' if mode=='LSB' and opt['inverted'] else mode)
         self.mode_note.setText(f"SatNOGS · {'Inversor' if opt['inverted'] else 'Não inversor'} · {'somente recepção (sem TX CAT)' if opt['receive_only'] else 'uplink/downlink'} · confira a situação operacional do satélite")
         self.preview_doppler()
+        self.cat_selection_generation+=1
+        self.auto_tune_selected_satellite()
+
+    def auto_tune_selected_satellite(self):
+        """Opt-in CAT tune, coalescing stale selections on the GUI event loop."""
+        if not self.config.values.get("cat_auto_select",False) or not self.radio.connected:
+            return
+        if not self.sat or not self.radio.state.sat or not self.omm_fresh():
+            self.radio_label.setText("Auto CAT requer SAT ativo e OMM recente")
+            return
+        if "cat-autotune" in self.pending_jobs:
+            return
+        try:
+            ul,dl=self.nominal_hz()
+            site=self.saved_station()
+            pos=position(self.sat,site,ts=self.ts)
+            if ul is not None:
+                ul_new,dl_new=doppler_frequencies(ul,dl,pos["radial_m_s"])
+            else:
+                ul_new=None
+                dl_new=frequency_prediction({"downlink_hz":dl,"uplink_hz":None},pos["radial_m_s"])["rx_hz"]
+            mode=self.rx_mode.currentText()
+            if mode not in ("FM","USB","LSB","CW","AM","FSK"):
+                raise ValueError("Modo RX não suportado")
+            generation=self.cat_selection_generation
+            self.radio_label.setText("CAT: sintonizando…")
+            def task():
+                if generation!=self.cat_selection_generation:
+                    return generation,None
+                return generation,self.radio.set_satellite_channel(dl_new,ul_new,mode)
+            self.background("cat-autotune",task)
+        except Exception as exc:
+            self.radio_label.setText("Auto CAT indisponível: "+str(exc))
+            self.log("Auto CAT protegido: "+str(exc))
 
     def pair_linear(self):
         i=self.mode_combo.currentData()
