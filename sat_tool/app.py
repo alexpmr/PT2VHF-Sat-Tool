@@ -2033,6 +2033,15 @@ class MainWindow(QMainWindow):
                     f"NORAD {ident} · {status}")
                 self.frequency_progress_dialog.setValue(index)
             return
+        if key=="cat-autotune":
+            generation,state=data
+            if generation==self.cat_selection_generation and state is not None:
+                self.last_freqs=(state.uplink,state.downlink)
+                self.render_radio_state(state)
+                self.radio_label.setText("CAT: sintonizado · MAIN "+state.mode+" (SUB conferir)")
+            elif self.config.values.get("cat_auto_select",False):
+                self.auto_tune_selected_satellite()
+            return
         if key=="tx-batch":
             self.refresh_catalog_freq.setEnabled(True)
             self.stop_catalog_freq.setEnabled(False)
@@ -2115,6 +2124,11 @@ class MainWindow(QMainWindow):
                 self.frequency_progress_dialog.close()
                 self.frequency_progress_dialog=None
             self.catalog_progress.setText("SatNOGS: falha, cache anterior preservado")
+            return
+        if key=="cat-autotune":
+            self.radio_label.setText("Auto CAT falhou: "+message)
+            self.cat_indicator.setText("! CAT SEM RESPOSTA")
+            self.cat_indicator.setStyleSheet("color:#ffbf6f;font-size:14px;font-weight:800")
             return
         if key=="cat-poll":
             self.map_radio_label.setText("CAT erro de leitura · dados desatualizados")
