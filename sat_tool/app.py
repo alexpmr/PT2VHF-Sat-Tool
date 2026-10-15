@@ -35,6 +35,7 @@ from .satellite_info import orbital_characteristics, operational_characteristics
 from .updater import check_for_update, download_update, install_flavor, launch_staged_update
 from .profile import choose_satellites, capability, render_service, CANDIDATES
 from .selection import change_selection, transmitter_batch_ids, cat_doppler_allowed
+from .alerts import eta_seconds, format_duration, selected_aos_alarm
 from .media import find_photo, photo_html
 from .operations import select_next_pass, frequency_prediction, status_at, orbital_age_days
 from .core import (Station, now_utc, make_satellite, position, ground_track, footprint,
@@ -620,6 +621,10 @@ class MainWindow(QMainWindow):
         cat_options.addWidget(label("Stop bits"));cat_options.addWidget(self.stops_combo)
         cat_options.addWidget(self.enable_sat,1)
         rs.addLayout(cat_options)
+        self.auto_cat=QCheckBox("Sintonizar TS-2000 ao escolher satélite (CAT automático)")
+        self.auto_cat.setToolTip("Requer SAT ligado e dados válidos. Desativado por padrão; nunca envia PTT.")
+        self.auto_cat.toggled.connect(self.change_auto_cat)
+        rs.addWidget(self.auto_cat)
         rs.addWidget(label("Somente TS-2000; conectar não habilita SAT nem transmite."))
         rs.addWidget(catview)
         connect_btn=QPushButton("Conectar pela porta selecionada")
@@ -656,9 +661,31 @@ class MainWindow(QMainWindow):
         self.tle_hours=QDoubleSpinBox();self.tle_hours.setRange(2,24)
         self.tle_hours.setDecimals(0);self.tle_hours.setSuffix(" horas")
         tg.addWidget(self.tle_hours)
+        tg.addWidget(label("Categorias orbitais para download automático em lote:"))
+        self.orbit_group_checks={}
+        group_grid=QGridLayout()
+        for index,group_name in enumerate(DEFAULT_GROUPS):
+            check=QCheckBox(group_name.upper())
+            self.orbit_group_checks[group_name]=check
+            group_grid.addWidget(check,index//4,index%4)
+        tg.addLayout(group_grid)
+        save_groups=QPushButton("Salvar categorias / Atualizar órbitas")
+        save_groups.clicked.connect(self.save_orbit_groups)
+        tg.addWidget(save_groups)
         button=QPushButton("Salvar intervalo TLE")
         button.clicked.connect(self.save_tle_settings);tg.addWidget(button)
         cfg.addWidget(tle_group)
+        alert_group,alert_layout=group("ALARMES DE PASSAGEM")
+        self.aos_enabled=QCheckBox("Avisar 30 segundos antes da entrada do satélite selecionado")
+        self.aos_enabled.toggled.connect(lambda v:self.set_alarm_option("aos_alarm_enabled",v))
+        self.aos_sound=QCheckBox("Alarme sonoro")
+        self.aos_sound.toggled.connect(lambda v:self.set_alarm_option("aos_alarm_sound",v))
+        alert_layout.addWidget(self.aos_enabled)
+        alert_layout.addWidget(self.aos_sound)
+        alarm_test=QPushButton("Testar som")
+        alarm_test.clicked.connect(QApplication.beep)
+        alert_layout.addWidget(alarm_test)
+        cfg.addWidget(alert_group)
         advanced,adv=group("DOPPLER E SEGURANÇA")
         self.interval=QDoubleSpinBox();self.interval.setRange(1,15);self.interval.setSuffix(' segundos')
         self.threshold=QDoubleSpinBox();self.threshold.setRange(5,1000);self.threshold.setSuffix(' Hz')
@@ -739,6 +766,14 @@ class MainWindow(QMainWindow):
         for name,w in self.station_bands.items():
             w.setChecked(name in c.get("radio_bands",["VHF","UHF"]))
         self.tle_hours.setValue(float(c.get("tle_update_hours",4)))
+        enabled_groups=set(c.get("orbit_groups",DEFAULT_GROUPS))
+        for group_name,check in self.orbit_group_checks.items():
+            check.setChecked(group_name in enabled_groups)
+        self.aos_enabled.setChecked(bool(c.get("aos_alarm_enabled",True)))
+        self.aos_sound.setChecked(bool(c.get("aos_alarm_sound",True)))
+        self.auto_cat.blockSignals(True)
+        self.auto_cat.setChecked(bool(c.get("cat_auto_select",False)))
+        self.auto_cat.blockSignals(False)
         self.stops_combo.setCurrentText(str(c['stopbits']))
         self.interval.setValue(float(c['update_interval_s']))
         self.threshold.setValue(float(c['tune_threshold_hz']))
@@ -2173,6 +2208,31 @@ class MainWindow(QMainWindow):
         if self.ports.findText(port)<0:self.ports.addItem(port)
         self.ports.setCurrentText(port)
         self.toggle_connection()
+
+    def set_alarm_option(self,name,enabled):
+        self.config.values[name]=bool(enabled)
+        self.config.save()
+
+    def save_orbit_groups(self):
+        chosen=[g for g,w in self.orbit_group_checks.items() if w.isChecked()]
+        if not chosen:
+            QMessageBox.warning(self,"Categorias","Selecione pelo menos uma categoria.")
+            return
+        self.config.values["orbit_groups"]=chosen
+        self.config.save()
+        self.refresh_catalog()
+
+    def change_auto_cat(self,enabled):
+        if enabled and QMessageBox.question(
+            self,"Autorizar CAT automático",
+            "Ao selecionar um satélite, o aplicativo poderá ajustar frequências e modo RX no TS-2000 conectado, se SAT estiver ativo. Não transmite nem aciona PTT. Habilitar?",
+            QMessageBox.Yes|QMessageBox.No,QMessageBox.No)!=QMessageBox.Yes:
+            self.auto_cat.blockSignals(True)
+            self.auto_cat.setChecked(False)
+            self.auto_cat.blockSignals(False)
+            enabled=False
+        self.config.values["cat_auto_select"]=bool(enabled)
+        self.config.save()
 
     def save_tle_settings(self):
         self.config.values["tle_update_hours"]=int(self.tle_hours.value())
