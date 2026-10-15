@@ -177,6 +177,6 @@ jobs:
           gh release view "$RELEASE_TAG" --repo '${{ github.repository }}' >/dev/null 2>&1 || \
             gh release create "$RELEASE_TAG" --target '${{ github.sha }}' --repo '${{ github.repository }}' \
               --title "PT2VHF Sat Tool $RELEASE_TAG - Win7 + Win10/11" \
-              --notes 'v1.2.0: interface simplificada e inspirada em operação via satélite, seletores de satélite e modo, cartões Doppler RX/TX sempre visíveis e independentes de CAT/visibilidade, configurações de CAT/rota no menu, filtro de satélites, progresso central para downloads SatNOGS e correção de troca de satélite. Windows 7 SP1 x86 e Windows 10 1809+/11 x64. Requer homologação CAT TS-2000, testes visuais e hardware físico.' \
+              --notes 'v1.2.0: interface simplificada e inspirada em operação via satélite, seletores de satélite e modo, cartões Doppler RX/TX sempre visíveis e independentes de CAT/visibilidade, configurações de CAT/rota no menu, filtro de satélites, progresso central para downloads SatNOGS e correção de troca de satélite. Windows 7 SP1 x86 e Windows 10 1809+/11 x64. Mantém compatibilidade com Windows 10 introduzida na v1.1.1. Requer homologação CAT TS-2000, testes visuais e hardware físico.' \
               --prerelease
           gh release upload "$RELEASE_TAG" release/* --repo '${{ github.repository }}' --clobber
