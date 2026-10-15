@@ -5,6 +5,7 @@ UI is intentionally non-transmitting: no CAT TX/PTT commands exist.
 from __future__ import annotations
 import json
 import math
+import time
 import unicodedata
 import sys
 import threading
@@ -24,7 +25,7 @@ from .qt_compat import QWebEngineView, QGeoPositionInfoSource, qt_exec, QT_BINDI
 from skyfield.api import load
 from . import __version__
 from .cat import TS2000, available_ports
-from .catalog import refresh_orbits, load_orbits, refresh_transmitters, load_transmitters, age_hours
+from .catalog import refresh_orbits, load_orbits, refresh_transmitters, load_transmitters, age_hours, satellite_search_text, normalized_satellite_search, DEFAULT_GROUPS
 from .config import Config
 from .geolocation import GeoFix, lookup_approximate_ip, read_gps_serial
 from .location_map import parse_coordinate_fields, sanitize_map_pick, valid_coordinates
@@ -32,7 +33,7 @@ from .frequency import format_frequency,parse_mhz_input,frequency_label
 from .i18n import LANGUAGES,translated
 from .satellite_info import orbital_characteristics, operational_characteristics, characteristics_text
 from .updater import check_for_update, download_update, install_flavor, launch_staged_update
-from .profile import choose_satellites, capability, render_service
+from .profile import choose_satellites, capability, render_service, CANDIDATES
 from .selection import change_selection, transmitter_batch_ids, cat_doppler_allowed
 from .media import find_photo, photo_html
 from .operations import select_next_pass, frequency_prediction, status_at, orbital_age_days
@@ -133,6 +134,12 @@ class MainWindow(QMainWindow):
         self.freq_update_cancel = False
         self.freq_update_stats = None
         self.frequency_progress_dialog = None
+        self.frequency_started_at = None
+        self.orbit_started_at = None
+        self.orbit_progress_dialog = None
+        self.aos_alarm_dialog = None
+        self.aos_alarm_target = None
+        self.cat_selection_generation = 0
         self._loading_satellites = False
         self._loading_catalog = False
         self._active_satellite_id = None
@@ -208,10 +215,10 @@ class MainWindow(QMainWindow):
             icon=QLabel()
             icon.setPixmap(QPixmap(str(logo_path)).scaled(37,37,Qt.KeepAspectRatio,Qt.SmoothTransformation))
             header.addWidget(icon)
-        headline = QLabel('PT2VHF  SAT TOOL')
+        headline = QLabel(f'PT2VHF  SAT TOOL   v{__version__}')
         headline.setStyleSheet('font-size:20px;font-weight:800;color:#e9fbff;letter-spacing:1px')
         header.addWidget(headline)
-        self.version_btn = QPushButton(f"v{__version__} · verificar atualização")
+        self.version_btn = QPushButton("Verificar atualizações")
         self.version_btn.setToolTip("Verificar versões no GitHub; iniciar atualização com autorização")
         self.version_btn.clicked.connect(lambda: self.request_update(manual=True))
         self.version_btn.setStyleSheet('background:#155a3e;border:1px solid #30a579;color:#e6fff4')
@@ -219,7 +226,12 @@ class MainWindow(QMainWindow):
         self.summary = label("Dados orbitais não carregados")
         self.summary.setStyleSheet('color:#85aaba')
         header.addWidget(self.summary, 1)
-        self.utc = QLabel("UTC")
+        self.cat_indicator=QLabel("● RÁDIO DESCONECTADO")
+        self.cat_indicator.setStyleSheet("font-size:14px;font-weight:800;color:#ef9a9a;padding:6px;background:#243143;border-radius:5px")
+        header.addWidget(self.cat_indicator)
+        self.utc = QLabel("DATA/HORA UTC —")
+        self.utc.setStyleSheet("font-size:17px;font-weight:800;color:#dff9ff;padding:6px;background:#153751;border:1px solid #34758c;border-radius:5px")
+        self.utc.setMinimumWidth(235)
         header.addWidget(self.utc)
         op.addLayout(header)
         upcoming,upcoming_layout=group("PRÓXIMA PASSAGEM COMPATÍVEL · CONTAGEM REGRESSIVA")
@@ -321,9 +333,9 @@ class MainWindow(QMainWindow):
         fv.addWidget(self.apply_main_mode)
         lv.addWidget(freqs)
         lv.addStretch(1)
-        splitter.addWidget(left)
+        # Old satellite editor moves to Settings without deleting its controls.
         # Predicted RX/TX operates without CAT or satellite visibility.
-        operator_panel,ov=group("SATÉLITE · FREQUÊNCIAS DOPPLER CALCULADAS")
+        operator_panel,ov=group("SATÉLITE · FREQUÊNCIAS")
         selectors=QHBoxLayout()
         selectors.addWidget(label("Satélite"))
         selectors.addWidget(self.sat_combo,2)
@@ -335,14 +347,15 @@ class MainWindow(QMainWindow):
         self.pred_tx=label("TX / UPLINK\nAguardando satélite")
         for card,color in ((self.pred_rx,"#68ebcd"),(self.pred_tx,"#8fd8ff")):
             card.setAlignment(Qt.AlignCenter)
-            card.setMinimumHeight(106)
+            card.setMinimumHeight(108)
             card.setMinimumWidth(210)
             card.setStyleSheet("font-size:15px;font-weight:800;color:"+color+
-                               ";background:#10263b;border:1px solid #326080;border-radius:7px;padding:5px")
+                               ";background:transparent;border:0;padding:4px")
             frequency_cards.addWidget(card,1)
         ov.addLayout(frequency_cards)
         self.corrected_label=label("Previsão orbital sem CAT e sem transmissão")
         self.corrected_label.setStyleSheet("color:#a4d5df;font-size:11px")
+        self.corrected_label.setVisible(False)
         ov.addWidget(self.corrected_label)
         op.insertWidget(1,operator_panel)
         mid=QWidget();mv=QVBoxLayout(mid);mv.setContentsMargins(0,0,0,0)
@@ -463,7 +476,7 @@ class MainWindow(QMainWindow):
         self.cat_telemetry.setToolTip("Potência PC é um ajuste, não medição de potência RF. RM mostra medidor selecionado; PTT não é comandado.")
         cv.addWidget(self.cat_telemetry)
         splitter.addWidget(right)
-        splitter.setSizes([340,810,445])
+        splitter.setSizes([1100,420])
         op.addWidget(splitter,1)
         # Settings owns the COM port, baud, stop bits, SAT/TRACE and CAT telemetry.
         self.ports=QComboBox();self.ports.setEditable(True)
@@ -510,8 +523,10 @@ class MainWindow(QMainWindow):
         self.catalog_progress=label("SatNOGS: frequências em cache; atualização sob demanda.")
         catalog_layout.addWidget(self.catalog_progress)
         self.catalog_table=QTableWidget(0, 8)
-        self.catalog_table.setHorizontalHeaderLabels(["Satélite", "NORAD", "Inclinação", "Período", "Modos", "Downlink MHz", "Situação", "Selecionado"])
+        self.catalog_table.setHorizontalHeaderLabels(["Selecionado", "Satélite", "NORAD", "Inclinação", "Período", "Modos", "Downlink MHz", "Situação"])
         self.catalog_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.catalog_table.horizontalHeader().setSectionResizeMode(0,QHeaderView.Fixed)
+        self.catalog_table.setColumnWidth(0,92)
         self.catalog_table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.catalog_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.catalog_table.cellDoubleClicked.connect(self.select_catalog_satellite)
@@ -680,6 +695,9 @@ class MainWindow(QMainWindow):
         self.save_update_btn.clicked.connect(self.save_update_preferences)
         ug.addWidget(self.save_update_btn)
         cfg.addWidget(update_group)
+        extra_controls,extras=group("EDITOR AVANÇADO DE SATÉLITE E TRANSPONDER")
+        extras.addWidget(left)
+        cfg.addWidget(extra_controls)
         cfg.addStretch(1)
         root.addTab(config_page,"Configurações")
         logs=QWidget();ll=QVBoxLayout(logs)
