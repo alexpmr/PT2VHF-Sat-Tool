@@ -875,11 +875,11 @@ class MainWindow(QMainWindow):
         if not force and self.update_last_checked and now-self.update_last_checked<interval:
             return
         if not self.update_distribution:
-            self.version_btn.setText(f'v{__version__} · desenvolvimento')
+            self.version_btn.setText('Desenvolvimento')
             return
         self.update_last_checked=now
         variant,kind=self.update_distribution
-        self.version_btn.setText(f'v{__version__} · verificando…')
+        self.version_btn.setText('Verificando…')
         self.background('update-check', lambda: check_for_update(
             __version__,variant,kind,
             include_prereleases=bool(self.config.values.get('include_prereleases',True))))
@@ -905,6 +905,7 @@ class MainWindow(QMainWindow):
         self.update_dialog.setAutoClose(False)
         self.update_dialog.setMinimumDuration(0)
         self.update_dialog.setValue(0)
+        self.version_btn.setText('Atualização em andamento…')
         self.background('update-download', lambda: download_update(u, lambda n,total:self.events.progress.emit(n,total)))
 
     def download_progress(self, current, total):
@@ -1231,6 +1232,9 @@ class MainWindow(QMainWindow):
         if self.radio.connected:
             self.doppler_checkbox.setChecked(False)
             self.radio.disconnect()
+            self.last_cat_success=None
+            self.cat_indicator.setText("● RÁDIO DESCONECTADO")
+            self.cat_indicator.setStyleSheet("font-size:14px;font-weight:800;color:#ff9595")
             self.connection.setText("Conectar")
             self.radio_label.setText("Desconectado")
             self.map_radio_label.setText("CAT desconectado · RX — MHz · TX — MHz · Modo —")
@@ -1251,6 +1255,8 @@ class MainWindow(QMainWindow):
             self.tabs.setCurrentIndex(2)
             return
         try:
+            self.cat_indicator.setText("◌ CONECTANDO AO RÁDIO…")
+            self.cat_indicator.setStyleSheet("font-size:14px;font-weight:800;color:#f2c16b")
             st=self.radio.connect(port, int(self.baud_combo.currentText()), int(self.stops_combo.currentText()))
             self.config.values.update({"port":self.ports.currentText(),"baud":int(self.baud_combo.currentText()),
                                        "stopbits":int(self.stops_combo.currentText())})
@@ -1258,6 +1264,8 @@ class MainWindow(QMainWindow):
             self.connection.setText("Desconectar")
             self.render_radio_state(st)
         except Exception as exc:
+            self.cat_indicator.setText("! ERRO DE CONEXÃO")
+            self.cat_indicator.setStyleSheet("font-size:14px;font-weight:800;color:#ff9595")
             QMessageBox.warning(self,"Erro de conexão CAT",
                 f"{exc}\n\nVerifique porta COM, baud e stop bits em Configurações → Conexão CAT.")
             self.log(f"ERRO CAT: {exc}")
@@ -1275,6 +1283,8 @@ class MainWindow(QMainWindow):
         self.radio_label.setText(f"{st.model} · SAT {'ON' if st.sat else 'OFF'} · RX {self.radio_freq(st.downlink)} | TX {self.radio_freq(st.uplink)} · Modo {st.mode}")
         self.radio_label.setStyleSheet("color:#69e3bc" if st.sat else "color:#f0c186")
         self.last_cat_success=now_utc()
+        self.cat_indicator.setText("● TS-2000 CONECTADO · "+self.ports.currentText())
+        self.cat_indicator.setStyleSheet("font-size:14px;font-weight:800;color:#67efb2")
         self.map_radio_label.setText(f"CAT · {st.model} · SAT {'ON' if st.sat else 'OFF'} · RX {self.radio_freq(st.downlink)} · TX {self.radio_freq(st.uplink)} · Modo {st.mode} · {self.last_cat_success.astimezone():%H:%M:%S}")
         self.map_radio_label.setStyleSheet("font-size:13px;color:#69e3bc;font-weight:700")
         self.cat_status.setText(f"● Conectado · {st.model} · SAT {'ON' if st.sat else 'OFF'}")
@@ -1517,6 +1527,10 @@ class MainWindow(QMainWindow):
         if ident==self._active_satellite_id and self.sat is not None:
             return  # The same satellite must not interrupt CAT.
         self.suspend_cat_doppler("satélite selecionado mudou")
+        if self.aos_alarm_dialog is not None:
+            self.aos_alarm_dialog.close()
+            self.aos_alarm_dialog=None
+            self.aos_alarm_target=None
         self.cat_selection_generation+=1
         self._active_satellite_id=ident
         if hasattr(self,"sat_list") and self.sat_combo.currentIndex()>=0 and self.sat_list.rowCount():
@@ -1996,7 +2010,7 @@ class MainWindow(QMainWindow):
         # No network calls in the GUI tick; asynchronous check respects the configured period.
         if int(now_utc().timestamp()) % 60 == 0:
             self.check_for_updates()
-        now=now_utc();self.utc.setText(now.strftime('%d/%m/%Y  %H:%M:%S UTC'))
+        now=now_utc();self.utc.setText(now.strftime('DATA/HORA UTC · %d/%m/%Y %H:%M:%S'))
         self.update_next_indicator()
         self.check_selected_aos_alarm(now)
         self.poll_station_map()
@@ -2037,6 +2051,8 @@ class MainWindow(QMainWindow):
             if age>10:
                 self.map_radio_label.setText(f"CAT sem leitura há {age:.0f}s · valores desatualizados")
                 self.map_radio_label.setStyleSheet("color:#e3ad61;font-weight:700")
+                self.cat_indicator.setText(f"! CAT SEM RESPOSTA HÁ {age:.0f}s")
+                self.cat_indicator.setStyleSheet("font-size:14px;font-weight:800;color:#ffbf6f")
                 self.cat_status.setText(f"● CAT desatualizado há {age:.0f}s")
                 self.cat_status.setStyleSheet("color:#efc17b;font-size:12px")
                 self.cat_details.setText("Leitura CAT vencida · conferir cabo e porta COM")
@@ -2108,7 +2124,7 @@ class MainWindow(QMainWindow):
             self.manual_update_requested = False
             self.available_update=data
             if data:
-                self.version_btn.setText(f'Nova v{data.version} · Atualizar')
+                self.version_btn.setText(f'Versão {data.version} disponível')
                 self.version_btn.setStyleSheet('background:#ae6616;color:white;border:1px solid #eda847')
                 if self.config.values.get('last_update_notice')!=data.version:
                     self.config.values['last_update_notice']=data.version
@@ -2116,7 +2132,7 @@ class MainWindow(QMainWindow):
                     QMessageBox.information(self,'Atualização disponível',
                         f'Nova versão v{data.version}. Clique no botão laranja da barra superior para atualizar.\n\n{data.body[:3200]}')
             else:
-                self.version_btn.setText(f'v{__version__} · última versão')
+                self.version_btn.setText('Última versão')
                 self.version_btn.setStyleSheet('background:#145a3d;color:#e6ffee')
             return
         if key=='update-download':
@@ -2172,6 +2188,8 @@ class MainWindow(QMainWindow):
             self.cat_indicator.setStyleSheet("color:#ffbf6f;font-size:14px;font-weight:800")
             return
         if key=="cat-poll":
+            self.cat_indicator.setText("! ERRO DE LEITURA CAT")
+            self.cat_indicator.setStyleSheet("font-size:14px;font-weight:800;color:#ffbf6f")
             self.map_radio_label.setText("CAT erro de leitura · dados desatualizados")
             self.map_radio_label.setStyleSheet("color:#e98b81;font-weight:700")
             self.cat_status.setText("● Erro de leitura CAT")
@@ -2180,7 +2198,7 @@ class MainWindow(QMainWindow):
             self.cat_tx.setText("TX / UPLINK (CAT)\n—")
             self.cat_details.setText("Leitura falhou · confira LOGs / CAT")
         if key.startswith('update-'):
-            self.version_btn.setText(f'v{__version__} · atualização indisponível')
+            self.version_btn.setText('Verificação indisponível')
             if self.update_dialog:
                 self.update_dialog.close()
                 self.update_dialog=None
