@@ -430,5 +430,16 @@ _V113_LABELS={
 for _locale,_labels in _V113_LABELS.items():
     TRANSLATIONS[_locale].update(_labels)
 
+
+_V120_LABELS={
+ "en":{"SATÉLITE · FREQUÊNCIAS DOPPLER CALCULADAS":"SATELLITE · CALCULATED DOPPLER FREQUENCIES","Serviço / modo":"Service / mode","MAPA E TRAJETÓRIA":"MAP AND TRACK","Pesquisar por nome ou NORAD…":"Search by name or NORAD…","Previsão orbital sem CAT e sem transmissão":"Orbital prediction, no CAT and no transmission"},
+ "es":{"SATÉLITE · FREQUÊNCIAS DOPPLER CALCULADAS":"SATÉLITE · FRECUENCIAS DOPPLER CALCULADAS","Serviço / modo":"Servicio / modo","MAPA E TRAJETÓRIA":"MAPA Y TRAYECTORIA","Pesquisar por nome ou NORAD…":"Buscar por nombre o NORAD…","Previsão orbital sem CAT e sem transmissão":"Predicción orbital sin CAT ni transmisión"},
+ "fr":{"SATÉLITE · FREQUÊNCIAS DOPPLER CALCULADAS":"SATELLITE · FRÉQUENCES DOPPLER CALCULÉES","Serviço / modo":"Service / mode","MAPA E TRAJETÓRIA":"CARTE ET TRAJECTOIRE","Pesquisar por nome ou NORAD…":"Rechercher par nom ou NORAD…","Previsão orbital sem CAT e sem transmissão":"Prévision orbitale sans CAT ni émission"},
+ "de":{"SATÉLITE · FREQUÊNCIAS DOPPLER CALCULADAS":"SATELLIT · BERECHNETE DOPPLER-FREQUENZEN","Serviço / modo":"Dienst / Modus","MAPA E TRAJETÓRIA":"KARTE UND FLUGBAHN","Pesquisar por nome ou NORAD…":"Nach Name oder NORAD suchen…","Previsão orbital sem CAT e sem transmissão":"Orbitalprognose ohne CAT und ohne Aussendung"},
+ "it":{"SATÉLITE · FREQUÊNCIAS DOPPLER CALCULADAS":"SATELLITE · FREQUENZE DOPPLER CALCOLATE","Serviço / modo":"Servizio / modalità","MAPA E TRAJETÓRIA":"MAPPA E TRAIETTORIA","Pesquisar por nome ou NORAD…":"Cerca per nome o NORAD…","Previsão orbital sem CAT e sem transmissão":"Previsione orbitale senza CAT né trasmissione"},
+}
+for _locale,_labels in _V120_LABELS.items():
+    TRANSLATIONS[_locale].update(_labels)
+
 def translated(original,locale):
     return TRANSLATIONS.get(locale,{}).get(original,original)
