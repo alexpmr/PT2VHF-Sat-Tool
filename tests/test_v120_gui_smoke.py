@@ -1,45 +1,49 @@
-"""Real Qt QWidget construction smoke test for both Win7/PySide2 and Win11/PySide6.
+"""Construct the v1.2.0 window in a fresh process.
 
-The WebEngine frame is replaced only during this test to avoid Chromium/headless
-system dependencies. All other widgets and layout logic are instantiated for real.
+The existing thread-safety tests use QCoreApplication. Qt does not allow QWidget
+construction using that instance, so the GUI smoke runs in a separate process.
 """
+import subprocess
+import sys
+import textwrap
 
 
-def test_window_constructs_with_reorganized_widgets(tmp_path, monkeypatch):
-    from sat_tool import app as gui
-    from sat_tool.config import Config
+def test_operator_window_constructs_with_new_layout():
+    source=textwrap.dedent(r'''
+        import tempfile
+        from pathlib import Path
+        from sat_tool import app as gui
+        from sat_tool.config import Config
 
-    class FakeWeb(gui.QWidget):
-        def setHtml(self, *args, **kwargs):
-            pass
-        def page(self):
-            return self
-        def runJavaScript(self, *args, **kwargs):
-            pass
-        def reload(self):
-            pass
+        class FakeWeb(gui.QWidget):
+            def setHtml(self,*args,**kwargs):pass
+            def page(self):return self
+            def runJavaScript(self,*args,**kwargs):pass
+            def reload(self):pass
 
-    monkeypatch.setattr(gui,"QWebEngineView",FakeWeb)
-    monkeypatch.setattr(gui,"Config",lambda:Config(tmp_path))
-    monkeypatch.setattr(gui,"load_orbits",lambda directory:[])
-    monkeypatch.setattr(gui.MainWindow,"background",lambda self,key,fn:None)
-    monkeypatch.setattr(gui.MainWindow,"check_for_updates",lambda self:None)
+        gui.QWebEngineView=FakeWeb
+        gui.load_orbits=lambda directory:[]
+        gui.MainWindow.background=lambda self,key,fn:None
+        gui.MainWindow.check_for_updates=lambda self:None
 
-    application=gui.QApplication.instance() or gui.QApplication([])
-    window=gui.MainWindow()
-    try:
-        assert window.tabs.count()==5
-        assert window.pred_rx.minimumHeight()>=100
-        assert window.pred_tx.minimumHeight()>=100
-        assert window.pred_rx.parent() is not None
-        assert window.mode_combo.parent() is not None
-        assert window.ports.parent() is not None
-        assert window.cat_rx.parent() is not None
-        assert window.tracked_search.parent() is not None
-        assert window.connection.text()=="Conectar"
-        window.tracked_search.setText("ISS")
-        assert window.tracked_search_summary.text().startswith("0 resultados")
-    finally:
-        window.tick_timer.stop()
-        window.diagnostic_timer.stop()
-        window.close()
+        with tempfile.TemporaryDirectory() as directory:
+            gui.Config=lambda:Config(Path(directory))
+            application=gui.QApplication([])
+            window=gui.MainWindow()
+            assert window.tabs.count()==5
+            assert window.pred_rx.minimumHeight()>=100
+            assert window.pred_tx.minimumHeight()>=100
+            assert window.mode_combo.parent() is not None
+            assert window.ports.parent() is not None
+            assert window.cat_rx.parent() is not None
+            assert window.tracked_search.parent() is not None
+            assert window.connection.text()=="Conectar"
+            window.tracked_search.setText("ISS")
+            assert window.tracked_search_summary.text().startswith("0 resultados")
+            window.tick_timer.stop()
+            window.diagnostic_timer.stop()
+            window.close()
+    ''')
+    result=subprocess.run([sys.executable,"-c",source],text=True,
+                          stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=60)
+    assert result.returncode==0, result.stdout+"\n"+result.stderr
