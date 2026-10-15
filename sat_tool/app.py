@@ -781,6 +781,8 @@ class MainWindow(QMainWindow):
                 if item:item.setText(translated(original,locale))
         for i,original in enumerate(("Selecionado","Habilitados","Resultados filtrados")):
             self.catalog_refresh_scope.setItemText(i,translated(original,locale))
+        if hasattr(self,"tracked_search"):
+            self.tracked_search.setPlaceholderText(translated("Pesquisar por nome ou NORAD…",locale))
         self._language_active=locale
 
     def change_language(self,*args):
