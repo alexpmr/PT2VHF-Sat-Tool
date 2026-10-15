@@ -906,7 +906,7 @@ class MainWindow(QMainWindow):
         self.map_pick_active=True
         self.map_pick_position=self.stored_map_position()
         self.map_edit_bar.setVisible(True)
-        self.mark_map_button.setEnabled(False)
+        self.station_map_button.setEnabled(False)
         self.tabs.setCurrentIndex(0)
         self.show_station_map_preview(self.map_pick_position)
         payload=json.dumps(self.map_pick_position,ensure_ascii=False)
@@ -977,7 +977,7 @@ class MainWindow(QMainWindow):
         self.map_pick_active=False
         self.map_pick_position=None
         self.map_edit_bar.setVisible(False)
-        self.mark_map_button.setEnabled(True)
+        self.station_map_button.setEnabled(True)
         self.map.page().runJavaScript("window.finishLocationPick && window.finishLocationPick()")
 
     def confirm_station_map(self):
@@ -1024,7 +1024,7 @@ class MainWindow(QMainWindow):
         self.map.page().runJavaScript("window.finishLocationPick && window.finishLocationPick()")
         self.map_pick_active=False
         self.map_edit_bar.setVisible(False)
-        self.mark_map_button.setEnabled(True)
+        self.station_map_button.setEnabled(True)
 
     def change_location_source(self,*args):
         source=self.location_source.currentIndex()
