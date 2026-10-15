@@ -1297,16 +1297,30 @@ class MainWindow(QMainWindow):
         self.refresh_catalog_freq.setEnabled(False)
         self.stop_catalog_freq.setEnabled(True)
         self.catalog_progress.setText(f"SatNOGS: iniciando 0/{len(ids)}")
+        self.frequency_progress_dialog=QProgressDialog(
+            f"Consultando frequências SatNOGS…\n0 de {len(ids)} satélites", "Cancelar",0,len(ids),self)
+        self.frequency_progress_dialog.setWindowTitle("Atualizar frequências dos satélites")
+        self.frequency_progress_dialog.setMinimumDuration(0)
+        self.frequency_progress_dialog.setAutoClose(False)
+        self.frequency_progress_dialog.setAutoReset(False)
+        self.frequency_progress_dialog.setWindowModality(Qt.WindowModal)
+        self.frequency_progress_dialog.resize(520,142)
+        center=self.frameGeometry().center()
+        self.frequency_progress_dialog.move(center-self.frequency_progress_dialog.rect().center())
+        self.frequency_progress_dialog.canceled.connect(self.cancel_catalog_transmitters)
+        self.frequency_progress_dialog.setValue(0)
+        self.frequency_progress_dialog.show()
         data_dir=self.config.dir
         def work():
             import time
-            stats={"total":len(ids),"ok":0,"failed":[],"cancelled":False}
+            stats={"total":len(ids),"ok":0,"no_data":0,"failed":[],"cancelled":False}
             for i,ident in enumerate(ids,1):
                 if self.freq_update_cancel:
                     stats["cancelled"]=True;break
                 try:
                     rows=refresh_transmitters(data_dir,int(ident))
-                    stats["ok"]+=1
+                    if rows:stats["ok"]+=1
+                    else:stats["no_data"]+=1
                     self.events.result.emit("tx-batch-item",(ident,rows,i,len(ids)))
                 except Exception as exc:
                     stats["failed"].append(f"{ident}: {exc}")
@@ -1316,8 +1330,12 @@ class MainWindow(QMainWindow):
         self.background("tx-batch",work)
 
     def cancel_catalog_transmitters(self):
+        if "tx-batch" not in self.pending_jobs:return
         self.freq_update_cancel=True
         self.catalog_progress.setText("Cancelamento solicitado; aguardando consulta atual")
+        if self.frequency_progress_dialog:
+            self.frequency_progress_dialog.setLabelText(
+                "Cancelamento solicitado; aguardando a consulta SatNOGS atual…")
 
     def refresh_satellite_table(self, text=None):
         text=(text if isinstance(text,str) else self.catalog_search.text()).casefold().strip()
@@ -1903,17 +1921,31 @@ class MainWindow(QMainWindow):
                 self.pass_rows[ident]=rows
                 if str(self.sat_combo.currentData())==ident:
                     self.choose_cached_modes(int(ident))
-            self.catalog_progress.setText(f"SatNOGS: {index}/{total} · {'recebido' if rows is not None else 'falha'} NORAD {ident}")
+            status="falha" if rows is None else "sem dados" if not rows else "recebido"
+            self.catalog_progress.setText(f"SatNOGS: {index}/{total} · {status} NORAD {ident}")
+            if self.frequency_progress_dialog:
+                self.frequency_progress_dialog.setLabelText(
+                    f"SatNOGS: {index} de {total} satélites · {round(100*index/total)}%\n"
+                    f"NORAD {ident} · {status}")
+                self.frequency_progress_dialog.setValue(index)
             return
         if key=="tx-batch":
             self.refresh_catalog_freq.setEnabled(True)
             self.stop_catalog_freq.setEnabled(False)
+            if self.frequency_progress_dialog:
+                self.frequency_progress_dialog.close()
+                self.frequency_progress_dialog=None
             self.refresh_satellite_table()
             self.refresh_tracked_table()
             self.refresh_passes()
             self.update_next_indicator()
-            self.catalog_progress.setText(f"SatNOGS: {data['ok']}/{data['total']} atualizados · {len(data['failed'])} falhas"+(" · cancelado" if data["cancelled"] else ""))
+            self.catalog_progress.setText(
+                f"SatNOGS: {data['ok']}/{data['total']} com canais · "
+                f"{data['no_data']} sem dados · {len(data['failed'])} falhas"
+                +(" · cancelado" if data["cancelled"] else ""))
             for error in data["failed"][:20]:self.log("SatNOGS: "+error)
+            QMessageBox.information(self,"Atualização de frequências concluída",
+                self.catalog_progress.text()+"\nDetalhes das falhas na aba LOGs / CAT.")
             return
         if key=='cat-poll':
             if self.radio.connected:self.render_radio_state(data)
@@ -1975,6 +2007,9 @@ class MainWindow(QMainWindow):
         if key=="tx-batch":
             self.refresh_catalog_freq.setEnabled(True)
             self.stop_catalog_freq.setEnabled(False)
+            if self.frequency_progress_dialog:
+                self.frequency_progress_dialog.close()
+                self.frequency_progress_dialog=None
             self.catalog_progress.setText("SatNOGS: falha, cache anterior preservado")
             return
         if key=="cat-poll":
