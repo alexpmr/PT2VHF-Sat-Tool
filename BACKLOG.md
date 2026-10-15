@@ -1,3 +1,12 @@
+## v1.2.0 — interface operacional simplificada e download com progresso (15/10/2026)
+- [x] **Implementado em código:** menu suspenso de seleção satélite e serviço no topo da Operação; cartões destacados de frequências RX/TX Doppler com atualização a cada segundo mesmo sem rádio/conexão CAT e abaixo do horizonte, indicando canal RX-only quando aplicável.
+- [x] **Implementado em código:** conexão rápida Conectar/Desconectar na página principal, com porta COM/baud/stop bits/SAT-TRACE e telemetria real CAT em Configurações; separação entre previsões orbitais e leituras físicas do rádio.
+- [x] **Implementado em código:** direção e período de trajetória em Configurações → Mapa e Trajetória; remoção do botão redundante Marcar estação no mapa da barra do mapa, preservando marcação a partir de Configurações → Estação Terrena.
+- [x] **Implementado em código:** busca por nome/NORAD sem acentos em Configurações → Satélites visíveis, com contador e sem mudar satélites ocultos ou sua seleção; progresso modal central de download SatNOGS com percentual, N/M, NORAD, cancelamento cooperativo, contagem de casos sem dados/falhas e resumo.
+- [x] **Correção de regressão:** troca de satélite não é mais ignorada por guarda de estado que era atualizada cedo demais; reforçadas as alturas mínimas de cartões CAT reais.
+- [x] **Testes adicionados:** verificações de existência e separação desses controles, ações de progresso, troca de satélite e escopo da busca; testes completos Windows dependem da execução do CI.
+- [ ] **Homologação pendente:** testes visuais de tamanho mínimo/DPI, conexão e controle físico TS-2000 e Windows 7 em equipamento real; rotor, gráficos de elevação, KML/Google Earth e outros itens amplos do backlog não fazem parte da v1.2.0.
+
 ## v1.1.3 — correção de seleção em lote e Doppler fora da visada (14/10/2026)
 - [x] **Bug reportado:** na aba Satélites, Marcar todos não apresentava seleção visível e Baixar/atualizar frequências utilizava escopo inicial Selecionado, restringindo indevidamente a atualização a um único satélite; a ação parecia exigir duplo clique no satélite.
 - [x] **Correção em código:** seleção explícita e persistente, checkboxes por satélite, marcação/desmarcação global ou filtrada, e download SatNOGS sequencial/cancelável para os Habilitados por padrão, sem acoplamento ao duplo clique.
