@@ -501,6 +501,11 @@ class MainWindow(QMainWindow):
         self.catalog_search.setPlaceholderText("Filtrar nome, NORAD, modo ou frequência…")
         self.catalog_search.textChanged.connect(self.refresh_satellite_table)
         catalog_layout.addWidget(self.catalog_search)
+        self.catalog_category=QComboBox()
+        self.catalog_category.addItem("Todas as categorias","all")
+        for name in DEFAULT_GROUPS:self.catalog_category.addItem(name.upper(),name)
+        self.catalog_category.currentIndexChanged.connect(self.refresh_satellite_table)
+        catalog_layout.addWidget(self.catalog_category)
         catalog_actions=QHBoxLayout()
         self.scope_filtered=QCheckBox("Somente resultados filtrados")
         self.scope_filtered.setToolTip("Marcar/desmarcar somente os satélites exibidos; desmarcado: catálogo inteiro")
@@ -1273,11 +1278,8 @@ class MainWindow(QMainWindow):
         self.refresh_passes()
 
     def catalog_filtered_ids(self):
-        ids=[]
-        for row in range(self.catalog_table.rowCount()):
-            cell=self.catalog_table.item(row,0)
-            if cell is not None:ids.append(str(cell.data(Qt.UserRole)))
-        return ids
+        """Full search result including off-screen rows, not just the first page."""
+        return list(getattr(self,"_catalog_filtered_ids",[]))
 
     def bulk_catalog_selection(self,select):
         """Explicit marked NORAD IDs work even before their frequency data exists."""
@@ -1358,52 +1360,64 @@ class MainWindow(QMainWindow):
                 "Cancelamento solicitado; aguardando a consulta SatNOGS atual…")
 
     def refresh_satellite_table(self, text=None):
-        text=(text if isinstance(text,str) else self.catalog_search.text()).casefold().strip()
+        """Virtualized search: thousands of cached satellites must not freeze Qt."""
+        query=normalized_satellite_search(
+            text if isinstance(text,str) else self.catalog_search.text())
         old_row=self.catalog_table.currentRow()
         previous=self.catalog_table.item(old_row,0) if old_row>=0 else None
-        selected_id=str(previous.data(Qt.UserRole)) if previous is not None else None
+        previous_id=str(previous.data(Qt.UserRole)) if previous is not None else None
         checked=set(self.enabled_satellite_ids())
-        rows=[]
-        for ident,item in self.omm.items():
-            orb=orbital_characteristics(item)
-            info=operational_characteristics(load_transmitters(self.config.dir,int(ident)))
-            mode=', '.join(info['modes']) or '—'
-            freq=', '.join(f'{n:.3f}' for n in info['downlinks_mhz'][:3]) or '—'
-            fields=[orb['name'],ident,
-                    f"{orb['inclination_deg']:.1f}°" if orb['inclination_deg'] is not None else '—',
-                    f"{orb['period_min']:.1f} min" if orb['period_min'] is not None else '—',
-                    mode,freq,info['status']]
-            if text in ' '.join(fields).casefold():
-                rows.append((orb['name'].casefold(),ident,fields))
-        rows.sort()
+        selected_category=self.catalog_category.currentData() if hasattr(self,"catalog_category") else "all"
+        ids=[]
+        for ident,obj in self.omm.items():
+            if selected_category!="all" and selected_category not in obj.get("CATEGORIES",["amateur"]):
+                continue
+            if query and query not in satellite_search_text(ident,obj):
+                continue
+            ids.append(ident)
+        ids.sort(key=lambda ident:str(self.omm[ident].get("OBJECT_NAME",ident)).casefold())
+        self._catalog_filtered_ids=ids
+        shown=ids[:350]
         self._loading_catalog=True
         try:
             self.catalog_table.setSortingEnabled(False)
-            self.catalog_table.setRowCount(len(rows))
-            for r,(_,ident,fields) in enumerate(rows):
-                for col,value in enumerate(fields):
-                    cell=QTableWidgetItem(value)
+            self.catalog_table.setRowCount(len(shown))
+            for row,ident in enumerate(shown):
+                obj=self.omm[ident]
+                orb=orbital_characteristics(obj)
+                info=operational_characteristics(load_transmitters(self.config.dir,int(ident)))
+                cols=[orb["name"],ident,
+                      f"{orb['inclination_deg']:.1f}°" if orb["inclination_deg"] is not None else "—",
+                      f"{orb['period_min']:.1f} min" if orb["period_min"] is not None else "—",
+                      ", ".join(info["modes"]) or "—",
+                      ", ".join(f"{n:.3f}" for n in info["downlinks_mhz"][:3]) or "—",
+                      info["status"]]
+                box=QTableWidgetItem("")
+                box.setFlags((box.flags()|Qt.ItemIsUserCheckable)&~Qt.ItemIsEditable)
+                box.setData(Qt.UserRole,ident)
+                box.setCheckState(Qt.Checked if ident in checked else Qt.Unchecked)
+                self.catalog_table.setItem(row,0,box)
+                for column,value in enumerate(cols,1):
+                    cell=QTableWidgetItem(str(value))
                     cell.setData(Qt.UserRole,ident)
-                    self.catalog_table.setItem(r,col,cell)
-                marker=QTableWidgetItem("")
-                marker.setFlags((marker.flags()|Qt.ItemIsUserCheckable)&~Qt.ItemIsEditable)
-                marker.setData(Qt.UserRole,ident)
-                marker.setCheckState(Qt.Checked if ident in checked else Qt.Unchecked)
-                self.catalog_table.setItem(r,7,marker)
+                    self.catalog_table.setItem(row,column,cell)
             self.catalog_table.setSortingEnabled(True)
-            if selected_id is not None:
-                for r in range(self.catalog_table.rowCount()):
-                    item=self.catalog_table.item(r,0)
-                    if item is not None and str(item.data(Qt.UserRole))==selected_id:
-                        self.catalog_table.selectRow(r)
+            if previous_id is not None:
+                for row in range(self.catalog_table.rowCount()):
+                    item=self.catalog_table.item(row,0)
+                    if item is not None and str(item.data(Qt.UserRole))==previous_id:
+                        self.catalog_table.selectRow(row)
                         break
         finally:
             self._loading_catalog=False
-        self.catalog_note.setText(f'{len(rows)} satélites (CelesTrak) · {len(checked)} marcados · modo/frequência quando recuperados do SatNOGS')
+        self.catalog_note.setText(
+            f"Exibindo {len(shown)} de {len(ids)} resultados · "
+            f"{len(self.omm)} órbitas em cache · {len(checked)} selecionados. "
+            "Pesquise por nome, NORAD ou apelido para refinar.")
 
     def catalog_satellite_checked(self,item):
         """Individual checkbox persists the same explicit selection as bulk actions."""
-        if self._loading_catalog or item.column()!=7:return
+        if self._loading_catalog or item.column()!=0:return
         ident=str(item.data(Qt.UserRole))
         if ident not in self.omm:return
         updated,_=change_selection(self.omm,[ident],self.enabled_satellite_ids(),
