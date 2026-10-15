@@ -335,9 +335,9 @@ class MainWindow(QMainWindow):
         self.pred_tx=label("TX / UPLINK\nAguardando satélite")
         for card,color in ((self.pred_rx,"#68ebcd"),(self.pred_tx,"#8fd8ff")):
             card.setAlignment(Qt.AlignCenter)
-            card.setMinimumHeight(96)
+            card.setMinimumHeight(106)
             card.setMinimumWidth(210)
-            card.setStyleSheet("font-size:17px;font-weight:800;color:"+color+
+            card.setStyleSheet("font-size:15px;font-weight:800;color:"+color+
                                ";background:#10263b;border:1px solid #326080;border-radius:7px;padding:5px")
             frequency_cards.addWidget(card,1)
         ov.addLayout(frequency_cards)
@@ -1535,15 +1535,32 @@ class MainWindow(QMainWindow):
             calc=frequency_prediction({"downlink_hz":dl,"uplink_hz":ul},p["radial_m_s"])
             age=abs((when-self.sat.epoch.utc_datetime().replace(tzinfo=timezone.utc)).total_seconds())/86400
             if age>7:
-                self.corrected_label.setText(f"Previsão indisponível: TLE/OMM antigo ({age:.1f} d)")
+                self.pred_rx.setText("RX / DOWNLINK\nTLE/OMM antigo\nAtualize órbitas")
+                self.pred_tx.setText("TX / UPLINK\nTLE/OMM antigo\nAtualize órbitas")
+                self.corrected_label.setText(f"Previsão indisponível: efeméride antiga ({age:.1f} dias)")
                 return
-            tx=(self.radio_freq(calc["tx_hz"])+f" ({calc['tx_offset_hz']:+d} Hz)") if ul is not None else "RX apenas"
+            rx_mode=self.rx_mode.currentText()
+            tx_mode=self.tx_mode.currentText()
+            self.pred_rx.setText(
+                f"RX / DOWNLINK · {rx_mode}\n{self.radio_freq(calc['rx_hz'])}\nDoppler {calc['rx_offset_hz']:+d} Hz")
+            self.pred_tx.setText(
+                f"TX / UPLINK · {tx_mode}\n{self.radio_freq(calc['tx_hz'])}\nDoppler {calc['tx_offset_hz']:+d} Hz"
+                if ul is not None else "TX / UPLINK\nSOMENTE RECEPÇÃO\nSem frequência TX")
+            self.pred_rx.setToolTip("Frequência nominal: "+self.radio_freq(dl))
+            self.pred_tx.setToolTip("Frequência nominal: "+self.radio_freq(ul) if ul is not None else "Canal somente recepção")
+            tx=("TX "+self.radio_freq(calc["tx_hz"])+f" ({calc['tx_offset_hz']:+d} Hz)") if ul is not None else "RX apenas"
             self.corrected_label.setText(
-                f"PREVISÃO Doppler RX {self.radio_freq(calc['rx_hz'])} ({calc['rx_offset_hz']:+d} Hz)"
-                f" | TX {tx} · {'EM PASSAGEM' if p['visible'] else 'FORA DA VISADA'} · {when.astimezone():%H:%M:%S}")
+                f"PREVISÃO · RX nominal {self.radio_freq(dl)} | "
+                f"{'TX nominal '+self.radio_freq(ul) if ul is not None else 'sem uplink'} · "
+                f"{'EM PASSAGEM' if p['visible'] else 'FORA DA VISADA'} · "
+                f"{when.astimezone():%H:%M:%S} · CAT independente")
         except (ValueError,TypeError,KeyError) as exc:
+            self.pred_rx.setText("RX / DOWNLINK\nAguardando frequência")
+            self.pred_tx.setText("TX / UPLINK\nAguardando frequência")
             self.corrected_label.setText("Previsão Doppler: "+str(exc))
         except Exception as exc:
+            self.pred_rx.setText("RX / DOWNLINK\nPrevisão indisponível")
+            self.pred_tx.setText("TX / UPLINK\nPrevisão indisponível")
             self.corrected_label.setText("Previsão Doppler indisponível")
             self.log("Previsão Doppler: "+str(exc))
 
