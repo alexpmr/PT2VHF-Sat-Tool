@@ -4,24 +4,34 @@
 
 ## Downloads — instaladores e portáteis
 
-**PT2VHF Sat Tool v1.2.0 — Windows 7 SP1, Windows 10 e Windows 11.** Os quatro downloads são arquivos `.exe` diretos. Links ficam disponíveis após aprovação dos builds Windows. Embora seja o marco 1.0 de funcionalidades, permanece em pré-lançamento até a homologação CAT com TS-2000 físico e Windows 7 real.
+**PT2VHF Sat Tool v1.3.0 — Windows 7 SP1, Windows 10 e Windows 11.** Os quatro downloads são arquivos `.exe` diretos. Links ficam disponíveis após aprovação dos builds Windows. Embora seja o marco 1.0 de funcionalidades, permanece em pré-lançamento até a homologação CAT com TS-2000 físico e Windows 7 real.
 
 | Windows | Instalável | Portátil |
 | --- | --- | --- |
-| **Windows 7 SP1** (x86; executável de 32 bits também para Win7 x64) | [Instalador Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.2.0/PT2VHF-Sat-Tool-v1.2.0-Win7-x86-Setup.exe) | [Portable Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.2.0/PT2VHF-Sat-Tool-v1.2.0-Win7-x86-Portable.exe) |
-| **Windows 10 (1809+)/11** (x64; arquivo `Win11-x64` para manter atualizador) | [Instalador Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.2.0/PT2VHF-Sat-Tool-v1.2.0-Win11-x64-Setup.exe) | [Portable Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.2.0/PT2VHF-Sat-Tool-v1.2.0-Win11-x64-Portable.exe) |
+| **Windows 7 SP1** (x86; executável de 32 bits também para Win7 x64) | [Instalador Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.0/PT2VHF-Sat-Tool-v1.3.0-Win7-x86-Setup.exe) | [Portable Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.0/PT2VHF-Sat-Tool-v1.3.0-Win7-x86-Portable.exe) |
+| **Windows 10 (1809+)/11** (x64; arquivo `Win11-x64` para manter atualizador) | [Instalador Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.0/PT2VHF-Sat-Tool-v1.3.0-Win11-x64-Setup.exe) | [Portable Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.0/PT2VHF-Sat-Tool-v1.3.0-Win11-x64-Portable.exe) |
 
 **Formato dos downloads:** tanto instaladores quanto portáteis são entregues diretamente como arquivos **`.exe`**. O portátil inclui as dependências dentro do mesmo EXE (PyInstaller onefile) e não requer descompactação.
 
 **[Todas as releases](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases)** · **[Acompanhar compilação](https://github.com/alexpmr/PT2VHF-Sat-Tool/actions)**
 
 - **Instalável:** instalação por usuário, atalho e desinstalação, atualização pelo aplicativo usando o Setup de sua edição.
-- **Portátil:** execute diretamente `PT2VHF-Sat-Tool-v1.2.0-*-Portable.exe` (um único arquivo). Configurações ficam em `data/` ao lado do EXE, preservadas após atualizações.
+- **Portátil:** execute diretamente `PT2VHF-Sat-Tool-v1.3.0-*-Portable.exe` (um único arquivo). Configurações ficam em `data/` ao lado do EXE, preservadas após atualizações.
 - **Win7:** Python 3.8 x86 + PySide2/Qt5 + PyInstaller 5.13.2 (legado, precisa ser validado no Windows 7 real).
 - **Win10/11 x64:** Windows 10 1809+ ou Windows 11, Python 3.11 x64 + PySide6/Qt6 + PyInstaller 6.13.0.
 - Arquivos SHA256 acompanham cada compilação. A versão Windows 7 é experimental; não confundir sucesso do CI com homologação em campo.
 
 ---
+
+## Novidades v1.3.0 — catálogo ampliado, AOS e CAT inteligente (15/10/2026)
+
+- **Catálogo orbital em lote:** CelesTrak grupos `amateur`, `stations`, `cubesat`, `starlink`, `oneweb`, `weather`, `science` e `visual`. Grupos configuráveis e cache de duas horas por fonte; dados unificados pelo NORAD. Starlink não aciona downloads automáticos de frequências SatNOGS para todos os satélites.
+- **Pesquisa SO-50:** aliases de SO-50/SAUDISAT 1C (NORAD 27607), FO-29, RS-44 e ISS; filtro por categoria. A grade Satélites mostra **Selecionado** na primeira coluna e renderiza no máximo 350 itens, com busca no catálogo inteiro.
+- **Página principal simplificada:** editor anterior de Satélite e Transponder transferido a Configurações; RX/TX compactos no mesmo grupo, sem mostrar os desvios Doppler, mas mantendo as frequências previstas em tempo real. Versão exibida no título, hora UTC em destaque e estado do rádio CAT visível no topo.
+- **Auto CAT por seleção:** configurável, desligado por padrão, exige autorização e TS-2000 em SAT; ajusta RX/TX e modo MAIN por CAT, com verificação de leitura. **Modo SUB/TX depende de conferência no rádio; sem PTT.** Sinaliza falhas e serializa alterações.
+- **Alarme AOS:** popup e beep 30 segundos antes da próxima entrada no horizonte do satélite **selecionado** (considera elevação mínima da estação); opção para desligar áudio/alarme, registro único por passagem.
+- **Progresso/ETA:** atualização orbital por categorias e frequências SatNOGS mostram estimativa do tempo restante e decorrido, percentuais e quantidades.
+- **Ainda pendente:** testes com TS-2000 físico e Windows 7 real, validação de modo SUB, outras fontes (AMSAT/SatNOGS orbitais/Space-Track), exportação KML, rotor e melhorias adicionais no backlog. O release permanece **pré-lançamento** até validação operacional.
 
 ## Novidades v1.2.0 — interface de operação de satélites (15/10/2026)
 

@@ -5,10 +5,102 @@ from datetime import datetime, timezone
 import json
 import requests
 
+# CelesTrak group feeds return batches; never request one orbit per satellite.
+DEFAULT_GROUPS = ("amateur", "stations", "cubesat", "starlink", "oneweb",
+                  "weather", "science", "visual")
+ALL_GROUPS = DEFAULT_GROUPS + ("active",)
 CELESTRAK_OMM = "https://celestrak.org/NORAD/elements/gp.php?GROUP=amateur&FORMAT=json"
 CELESTRAK_TLE = "https://celestrak.org/NORAD/elements/gp.php?GROUP=amateur&FORMAT=tle"
 SATNOGS_TRANSMITTERS = "https://db.satnogs.org/api/transmitters/"
-HEADERS = {"User-Agent": "PT2VHF-Sat-Tool/1.1.0 (radio amateur tracking tool)", "Accept": "application/json"}
+HEADERS = {"User-Agent": "PT2VHF-Sat-Tool/1.3.0 (radio amateur tracking tool)",
+           "Accept": "application/json"}
+ALIASES = {"27607": ("SO-50", "SO50", "SAUDISAT 1C", "SAUDISAT-1C"),
+           "25544": ("ISS", "ARISS", "ZARYA"),
+           "24278": ("FO-29", "FO29", "JAS-2"),
+           "44881": ("RS-44", "RS44", "DOSAAF-85")}
+
+
+def normalized_satellite_search(text):
+    import unicodedata
+    return "".join(c for c in unicodedata.normalize("NFKD",str(text).casefold())
+                   if c.isalnum() and not unicodedata.combining(c))
+
+
+def satellite_search_text(ident, orbit):
+    fields=[str(ident), str(orbit.get("OBJECT_NAME",""))]+list(ALIASES.get(str(ident),()))
+    return normalized_satellite_search(" ".join(fields))
+
+
+def merge_orbits(groups):
+    """Merge duplicate NORAD IDs without losing category memberships."""
+    output={}
+    for category, objects in groups.items():
+        for row in objects:
+            if not isinstance(row,dict) or not row.get("NORAD_CAT_ID"):
+                continue
+            ident=str(row["NORAD_CAT_ID"])
+            existing=output.get(ident)
+            categories=set(existing.get("CATEGORIES",[])) if existing else set()
+            categories.add(category)
+            # Only replace orbital elements when the GP epoch is newer.
+            current_epoch=str(row.get("EPOCH",""))
+            old_epoch=str(existing.get("EPOCH","")) if existing else ""
+            winner=dict(row) if not existing or (current_epoch and current_epoch>=old_epoch) else dict(existing)
+            winner["CATEGORIES"]=sorted(categories)
+            output[ident]=winner
+    return list(output.values())
+
+
+def refresh_group_omm(data_dir, group):
+    if group not in ALL_GROUPS:
+        raise ValueError("Categoria orbital não reconhecida")
+    response=requests.get("https://celestrak.org/NORAD/elements/gp.php",
+                          params={"GROUP":group,"FORMAT":"json"},headers=HEADERS,timeout=45)
+    response.raise_for_status()
+    objects=response.json()
+    if not isinstance(objects,list) or not objects or not all(
+            isinstance(o,dict) and "NORAD_CAT_ID" in o for o in objects):
+        raise ValueError("OMM inválido para "+group)
+    file=cache_path(data_dir,"group_"+group+".json")
+    temp=file.with_suffix(".tmp")
+    temp.write_text(json.dumps(objects,ensure_ascii=False),encoding="utf-8")
+    temp.replace(file)
+    return objects
+
+
+def load_group_omm(data_dir,group):
+    file=data_dir/("group_"+group+".json")
+    if not file.exists():return []
+    return json.loads(file.read_text(encoding="utf-8"))
+
+
+def refresh_multi_omm(data_dir,groups=None,progress=None):
+    groups=tuple(dict.fromkeys(groups or DEFAULT_GROUPS))
+    all_data={}
+    errors=[]
+    for index,group in enumerate(groups,1):
+        try:
+            old=load_group_omm(data_dir,group)
+            hours=age_hours(data_dir,"group_"+group+".json")
+            if old and hours is not None and hours<2:
+                all_data[group]=old  # CelesTrak group cache minimum 2h
+            else:
+                all_data[group]=refresh_group_omm(data_dir,group)
+        except Exception as exc:
+            errors.append(group+": "+str(exc))
+            cached=load_group_omm(data_dir,group)
+            if cached:all_data[group]=cached
+        if progress:progress(index,len(groups),group,len(all_data.get(group,[])),len(errors))
+    merged=merge_orbits(all_data)
+    if not merged:
+        cached=load_omm(data_dir)
+        if cached:return cached
+        raise ConnectionError("; ".join(errors) or "Nenhuma órbita obtida")
+    file=cache_path(data_dir,"amateur_omm.json")  # Legacy cache name for v1.x migration.
+    temp=file.with_suffix(".tmp")
+    temp.write_text(json.dumps(merged,ensure_ascii=False),encoding="utf-8")
+    temp.replace(file)
+    return merged
 
 
 def cache_path(data_dir: Path, name: str) -> Path:
@@ -17,14 +109,11 @@ def cache_path(data_dir: Path, name: str) -> Path:
 
 
 def refresh_omm(data_dir: Path):
-    response = requests.get(CELESTRAK_OMM, headers=HEADERS, timeout=30)
-    response.raise_for_status()
-    data = response.json()
-    if not isinstance(data, list) or not data or not all("NORAD_CAT_ID" in o for o in data):
-        raise ValueError("Catálogo OMM recebido em formato inválido")
-    cache_path(data_dir, "amateur_omm.json").write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+    """Legacy single-amateur endpoint kept for diagnostics and compatibility."""
+    data=refresh_group_omm(data_dir,"amateur")
+    cache_path(data_dir,"amateur_omm.json").write_text(
+        json.dumps(data,ensure_ascii=False),encoding="utf-8")
     return data
-
 
 def load_omm(data_dir: Path):
     file = cache_path(data_dir, "amateur_omm.json")
@@ -124,12 +213,12 @@ def load_tle(data_dir: Path) -> list[dict]:
     return parse_tle(file.read_text(encoding="utf-8")) if file.exists() else []
 
 
-def refresh_orbits(data_dir: Path) -> list[dict]:
+def refresh_orbits(data_dir: Path, groups=None, progress=None) -> list[dict]:
     # Keep OMM as the preferred primary feed: unlike classical TLE, covers
     # NORAD > 99999; fetch TLE as requested for interoperability/fallback.
     omm, tle = None, None
     errors=[]
-    try:omm=refresh_omm(data_dir)
+    try:omm=refresh_multi_omm(data_dir,groups,progress)
     except Exception as e:errors.append(f"OMM: {e}")
     try:tle=refresh_tle(data_dir)
     except Exception as e:errors.append(f"TLE: {e}")

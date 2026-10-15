@@ -7,7 +7,7 @@ APP=(ROOT/"sat_tool"/"app.py")
 
 def test_predicted_rx_tx_above_map_and_independent_of_cat():
     source=APP.read_text(encoding="utf-8")
-    assert 'operator_panel,ov=group("SATÉLITE · FREQUÊNCIAS DOPPLER CALCULADAS")' in source
+    assert 'operator_panel,ov=group("SATÉLITE · FREQUÊNCIAS")' in source
     assert "self.pred_rx=label(" in source
     assert "self.pred_tx=label(" in source
     assert "self.pred_rx.setText(" in source
@@ -45,7 +45,7 @@ def test_settings_filter_preserves_complete_selection():
     assert "self.tracked_table.setRowHidden(index,not show)" in segment
     assert "unicodedata.normalize" in segment
     assert "satellite_selection" not in segment
-    assert "self.tracked_search.textChanged.connect(self.filter_tracked_satellites)" in source
+    assert "self.tracked_search.textChanged.connect(self.refresh_tracked_table)" in source
 
 
 def test_modal_frequency_download_progress_updates_per_record():

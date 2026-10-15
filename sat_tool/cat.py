@@ -199,6 +199,31 @@ class TS2000:
                 raise RuntimeError("TS-2000 não confirmou as frequências por CAT")
             return state
 
+    def set_satellite_channel(self,downlink_hz:int,uplink_hz:int|None,rx_mode:str):
+        """Operator-authorized SAT preset: FA=RX, FB=TX when defined, MD=MAIN.
+        
+        The SUB TX demodulation mode is not silently guessed: TS-2000 CAT MD
+        operates MAIN only in this driver. Never send PTT/TX/RX commands.
+        """
+        if rx_mode not in MODES:
+            raise ValueError("Modo RX não suportado pelo driver CAT")
+        frequency_command("FA",downlink_hz)
+        if uplink_hz is not None:frequency_command("FB",uplink_hz)
+        with self.lock:
+            sa=self._exchange("SA;","SA")
+            if not sa.startswith("SA1") or len(sa)<5 or sa[4]!="1":
+                raise RuntimeError("Ative SAT com MAIN=RX e SUB=TX antes do Auto CAT")
+            self._exchange(frequency_command("FA",downlink_hz))
+            if uplink_hz is not None:
+                self._exchange(frequency_command("FB",uplink_hz))
+            self._exchange("MD"+MODES[rx_mode]+";")
+            st=self.poll()
+            if st.downlink!=downlink_hz or (uplink_hz is not None and st.uplink!=uplink_hz):
+                raise RuntimeError("Rádio não confirmou as frequências")
+            if st.mode!=rx_mode:
+                raise RuntimeError("Rádio não confirmou o modo de recepção")
+            return st
+
     def set_main_mode(self, mode: str):
         if mode not in MODES:
             raise ValueError("Modo CAT não suportado")
