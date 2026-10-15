@@ -1376,6 +1376,7 @@ class MainWindow(QMainWindow):
                 QMessageBox.Yes|QMessageBox.No,QMessageBox.No)
             if reply!=QMessageBox.Yes:return
         self.freq_update_cancel=False
+        self.frequency_started_at=time.monotonic()
         self.refresh_catalog_freq.setEnabled(False)
         self.stop_catalog_freq.setEnabled(True)
         self.catalog_progress.setText(f"SatNOGS: iniciando 0/{len(ids)}")
@@ -1512,7 +1513,8 @@ class MainWindow(QMainWindow):
         for ident,o in sorted(self.omm.items(),key=lambda item:item[1].get('OBJECT_NAME','')):
             if ident not in enabled:continue
             name=o.get('OBJECT_NAME',ident)
-            if search in f"{name} {ident}".casefold():self.sat_combo.addItem(f"{name}  ·  {ident}",ident)
+            if normalized_satellite_search(search) in satellite_search_text(ident,o):
+                self.sat_combo.addItem(f"{name}  ·  {ident}",ident)
         if selected:
             idx=self.sat_combo.findData(str(selected))
             if idx>=0:self.sat_combo.setCurrentIndex(idx)
@@ -2112,9 +2114,12 @@ class MainWindow(QMainWindow):
             status="falha" if rows is None else "sem dados" if not rows else "recebido"
             self.catalog_progress.setText(f"SatNOGS: {index}/{total} · {status} NORAD {ident}")
             if self.frequency_progress_dialog:
+                elapsed=time.monotonic()-(self.frequency_started_at or time.monotonic())
+                eta=format_duration(eta_seconds(index,total,elapsed))
                 self.frequency_progress_dialog.setLabelText(
                     f"SatNOGS: {index} de {total} satélites · {round(100*index/total)}%\n"
-                    f"NORAD {ident} · {status}")
+                    f"NORAD {ident} · {status}\n"
+                    f"Restante estimado: {eta} · Decorrido: {format_duration(elapsed)}")
                 self.frequency_progress_dialog.setValue(index)
             return
         if key=="cat-autotune":
@@ -2313,11 +2318,15 @@ class MainWindow(QMainWindow):
 
     def satellite_checked(self,row,col):
         if self._loading_satellites or col!=0:return
-        ids=[]
-        for row_index in range(self.tracked_table.rowCount()):
-            entry=self.tracked_table.item(row_index,0)
-            if entry and entry.checkState()==Qt.Checked:ids.append(str(entry.data(Qt.UserRole)))
-        self.config.values["satellite_selection"]=ids
+        # Only the edited checkbox changes. Hidden/paged satellite selections
+        # must never be erased by rebuilding the table from visible rows.
+        item=self.tracked_table.item(row,0)
+        if item is None:return
+        ident=str(item.data(Qt.UserRole))
+        ids=set(self.enabled_satellite_ids())
+        if item.checkState()==Qt.Checked:ids.add(ident)
+        else:ids.discard(ident)
+        self.config.values["satellite_selection"]=sorted(ids)
         self.config.save()
         self.filter_sats(self.search.text())
         self.refresh_passes()
