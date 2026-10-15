@@ -79,7 +79,13 @@ def refresh_multi_omm(data_dir,groups=None,progress=None):
     all_data={}
     errors=[]
     for index,group in enumerate(groups,1):
-        try:all_data[group]=refresh_group_omm(data_dir,group)
+        try:
+            old=load_group_omm(data_dir,group)
+            hours=age_hours(data_dir,"group_"+group+".json")
+            if old and hours is not None and hours<2:
+                all_data[group]=old  # CelesTrak group cache minimum 2h
+            else:
+                all_data[group]=refresh_group_omm(data_dir,group)
         except Exception as exc:
             errors.append(group+": "+str(exc))
             cached=load_group_omm(data_dir,group)
