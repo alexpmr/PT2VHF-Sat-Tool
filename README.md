@@ -24,7 +24,15 @@
 ---
 
 
-## Novidades v1.3.10 — Satélites, Passagens e telemetria TS-2000
+## Novidades v1.3.10 — Grid Locator, Auto CAT e favoritos
+- **Localização:** coordenadas manuais, Grid Locator Maidenhead (centro da quadrícula com validação 2–10 caracteres) ou solicitação explícita de coordenadas ao navegador incorporado. GPS serial, consulta IP aproximada e botão Marcar estação no mapa não estão mais visíveis. A estação só muda após Salvar estação.
+- **CAT contínuo:** quando Auto CAT está autorizado e SAT está ON, acompanha RX/FA e TX/FB automaticamente, mesmo após reconfiguração de satélite/modo e erros temporários; leituras divergentes são reprocessadas com backoff sem desligar Auto CAT silenciosamente. Se o rádio não responder, o painel mostra a falha — não informa sincronismo sem confirmação. Os botões manuais Aplicar RX/TX e Aplicar modo RX foram retirados.
+- **Satélites:** clique simples e duplo clique marcam/desmarcam favoritos na própria tabela, sem abrir a página principal; nenhuma marcação dupla acidental.
+- **Layout:** bloco Passagens aparece acima de Telemetria orbital; contagem regressiva de próxima passagem dentro de Telemetria orbital, sem banner superior adicional.
+- **Atualizador:** apenas indicador no menu superior. Salvar opções de atualização não inicia download nem instalação; somente clicar na versão disponível aciona o fluxo.
+- **Importante:** CI testa CAT simulado, não substitui a validação física do TS-2000.
+
+## Novidades v1.3.9 — Satélites, Passagens e telemetria TS-2000
 
 - **Passagens:** colunas AOS/TCA/LOS e Max ° dimensionadas pelo conteúdo; colunas Satélite e Modos distribuem todo o espaço livre do painel. Cabeçalhos/valores alinhados e conteúdo integral disponível por tooltip.
 - **Satélites:** seleção do catálogo por clique na linha, sem coluna/checkbox “Selecionado”. Registros selecionados ficam com **fundo amarelo e letras pretas** (inclusive após nova pesquisa e reinício). Duplo clique mantém acesso à operação.
