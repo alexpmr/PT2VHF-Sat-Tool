@@ -951,17 +951,16 @@ class MainWindow(QMainWindow):
             QMessageBox.information(self,'Atualizações','O atualizador funciona apenas nos executáveis Windows instalável ou portátil. Compile ou instale uma versão para testar.')
             return
         if self.available_update is None:
+            # Clicking the version button first checks the release. If a newer
+            # build exists, launch the download immediately after that check.
             self.manual_update_requested = bool(manual)
             self.check_for_updates(force=True)
             return
         if 'update-download' in self.pending_jobs:
             return
         u=self.available_update
-        msg=(f'Nova versão {u.version} disponível para {self.update_distribution[0]} / {self.update_distribution[1]}.\n\n'
-             f'Novidades:\n{u.body[:3500] or "Sem descrição."}\n\n'
-             'Baixar e instalar após verificação SHA-256? O aplicativo será fechado; Doppler/CAT serão desconectados.')
-        if QMessageBox.question(self,'Atualização PT2VHF Sat Tool',msg)!=QMessageBox.Yes:
-            return
+        # The version button click is authorization. No separate confirmation
+        # or changelog popup; keep progress and SHA256 integrity checks.
         self.update_dialog=QProgressDialog('Baixando e verificando atualização…','',0,100,self)
         self.update_dialog.setCancelButton(None)
         self.update_dialog.setAutoClose(False)
@@ -983,15 +982,17 @@ class MainWindow(QMainWindow):
             self.update_dialog.setValue(100)
             self.update_dialog.close()
             self.update_dialog=None
-        self.doppler_checkbox.setChecked(False)
-        self.radio.disconnect()
         try:
             base=Path(getattr(sys, '_MEIPASS', Path(__file__).resolve().parents[1]))
             script=base/'scripts'/'apply-update.ps1'
             launch_staged_update(Path(package), portable=self.update_distribution[1]=='Portable', script_path=script)
+            self.doppler_checkbox.setChecked(False)
+            self.cat_tracking_armed=False
+            self.radio.disconnect()
             self.log('Atualização verificada; fechando para atualização externa')
             self.close()
         except Exception as exc:
+            self.version_btn.setText('Falha ao instalar · tentar novamente')
             QMessageBox.critical(self,'Atualização não aplicada',str(exc))
 
     def station(self):
@@ -2575,16 +2576,14 @@ class MainWindow(QMainWindow):
                 self.update_cat_sync_status(data)
             return
         if key=='update-check':
-            self.manual_update_requested = False
+            start_download=self.manual_update_requested
+            self.manual_update_requested=False
             self.available_update=data
             if data:
-                self.version_btn.setText(f'Versão {data.version} disponível')
+                self.version_btn.setText(f'Nova versão {data.version} · instalar')
                 self.version_btn.setStyleSheet('background:#ae6616;color:white;border:1px solid #eda847')
-                if self.config.values.get('last_update_notice')!=data.version:
-                    self.config.values['last_update_notice']=data.version
-                    self.config.save()
-                    QMessageBox.information(self,'Atualização disponível',
-                        f'Nova versão v{data.version}. Clique no botão laranja da barra superior para atualizar.\n\n{data.body[:3200]}')
+                if start_download:
+                    self.request_update(manual=True)
             else:
                 self.version_btn.setText('Última versão')
                 self.version_btn.setStyleSheet('background:#145a3d;color:#e6ffee')
