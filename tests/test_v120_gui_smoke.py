@@ -50,10 +50,10 @@ def test_operator_window_constructs_with_new_layout():
             window.cat_indicator.setText("● TS-2000 CONECTADO · COM1")
             observed_jobs=[]
             window.background=lambda key, fn: observed_jobs.append(key)
-            window.background_error("cat-autotune","Rádio não confirmou frequências FA/FC")
+            window.background_error("cat-autotune","Rádio não confirmou frequências FA/FB")
             assert "CONECTADO" in window.cat_indicator.text()
             assert "SINTONIA NÃO APLICADA" in window.cat_tune_status.text()
-            assert "FA/FC" in window.cat_tune_status.text()
+            assert "FA/FB" in window.cat_tune_status.text()
             assert "cat-poll" in observed_jobs
             # A *real* closed port may be marked disconnected.
             window.radio.port=None
