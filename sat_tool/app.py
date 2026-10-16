@@ -337,9 +337,9 @@ class MainWindow(QMainWindow):
         self.mode_note=label("Selecione uma frequência do SatNOGS ou informe manualmente.")
         self.mode_note.setStyleSheet("color:#e3c477")
         fv.addWidget(self.mode_note)
-        self.doppler_checkbox=QCheckBox("Doppler automático (somente em passagem)")
-        self.doppler_checkbox.stateChanged.connect(self.doppler_state_changed)
-        fv.addWidget(self.doppler_checkbox)
+        # Retire the competing legacy Doppler control; use Auto CAT as the single control.
+        self.doppler_checkbox=QCheckBox()
+        self.doppler_checkbox.setChecked(False)
         self.frequency_apply=QPushButton("Aplicar RX/TX no TS-2000")
         self.frequency_apply.setObjectName('primary')
         self.frequency_apply.clicked.connect(self.apply_freqs)
@@ -502,17 +502,12 @@ class MainWindow(QMainWindow):
         self.stops_combo=QComboBox();self.stops_combo.addItems(["1","2"])
         self.connection=QPushButton("Conectar")
         self.connection.clicked.connect(self.toggle_connection)
-        self.cat_tune_now=QPushButton("Sintonizar agora")
-        self.cat_tune_now.setToolTip("Aplica frequências e modo MAIN ao rádio após confirmação, sem PTT.")
-        self.cat_tune_now.clicked.connect(self.tune_selected_now)
-        self.cat_tune_now.setEnabled(False)
         self.enable_sat=QPushButton("Ativar SAT / desativar TRACE")
         self.enable_sat.clicked.connect(self.enable_satellite)
         quick_cat=QHBoxLayout()
         self.radio_label=label("CAT desconectado · configure a porta em Configurações")
         self.radio_label.setStyleSheet("color:#ecc48f;font-size:12px")
         quick_cat.addWidget(self.radio_label,1)
-        quick_cat.addWidget(self.cat_tune_now)
         quick_cat.addWidget(self.connection)
         op.addLayout(quick_cat)
         self.cat_live_label=label("RÁDIO REAL (CAT) · aguardando FA (RX SAT) / FB (TX SAT) / FC (SUB) / MD")
@@ -655,11 +650,11 @@ class MainWindow(QMainWindow):
         cat_options.addWidget(label("Stop bits"));cat_options.addWidget(self.stops_combo)
         cat_options.addWidget(self.enable_sat,1)
         rs.addLayout(cat_options)
-        self.auto_cat=QCheckBox("Sintonizar TS-2000 ao escolher satélite (CAT automático)")
-        self.auto_cat.setToolTip("Ativo por padrão em novas instalações; controla frequências após seleção explícita. Sem PTT.")
+        self.auto_cat=QCheckBox("Auto CAT contínuo · acompanhar Doppler a cada segundo")
+        self.auto_cat.setToolTip("Acompanha o satélite selecionado a cada segundo. Reprograma FA/FB somente quando a frequência Doppler muda. Sem PTT; exige SAT ON e crossband.")
         self.auto_cat.toggled.connect(self.change_auto_cat)
         rs.addWidget(self.auto_cat)
-        self.auto_cat_startup=QCheckBox("Conectar ao rádio automaticamente ao abrir (somente leitura)")
+        self.auto_cat_startup=QCheckBox("Conectar ao abrir e seguir satélite se Auto CAT estiver habilitado")
         self.auto_cat_startup.toggled.connect(self.change_startup_connect)
         rs.addWidget(self.auto_cat_startup)
         rs.addWidget(label("O programa pode conectar ao abrir, mas só rastreia após escolha explícita do satélite. Não habilita SAT nem transmite."))
@@ -1281,7 +1276,7 @@ class MainWindow(QMainWindow):
         self.config.save()
 
     def startup_cat_connect(self):
-        """Automatic startup is read-only and never triggers Auto CAT tuning."""
+        """Autoconnect; only the configured Auto CAT opt-in can authorize tuning."""
         if not self.radio.connected and self.config.values.get("port","").strip():
             self.request_cat_connection(startup=True)
 
@@ -1314,10 +1309,10 @@ class MainWindow(QMainWindow):
             self.request_cat_connection(startup=False)
             return
         self.cat_tracking_armed=False
+        self.last_freqs=(None,None)
         self.doppler_checkbox.setChecked(False)
         self.radio.disconnect()
         self.cat_selection_generation+=1
-        self.cat_tune_now.setEnabled(False)
         self.cat_diagnose.setEnabled(False)
         self.cat_live_label.setText("RÁDIO REAL (CAT) · desconectado")
         self.cat_sat_orientation.setText("SAT: rádio desconectado")
@@ -1344,8 +1339,8 @@ class MainWindow(QMainWindow):
             msg="O TS-2000 será colocado em modo SAT, com MAIN=RX, SUB=TX e TRACE desativado. Continuar?"
             if QMessageBox.question(self,"Configurar SAT",msg) != QMessageBox.Yes:return
             self.render_radio_state(self.radio.enable_satellite_mode())
-            if self.cat_tracking_armed:
-                self.auto_tune_selected_satellite()
+            if self.config.values.get("cat_auto_select",False):
+                self.arm_cat_tracking()
         except Exception as exc:
             QMessageBox.critical(self,"CAT",str(exc))
 
@@ -1634,6 +1629,8 @@ class MainWindow(QMainWindow):
         if ident==self._active_satellite_id and self.sat is not None:
             return  # The same satellite must not interrupt CAT.
         self.suspend_cat_doppler("satélite selecionado mudou")
+        self.last_freqs=(None,None)
+        self.cat_autotune_requested_generation=-1
         if self.aos_alarm_dialog is not None:
             self.aos_alarm_dialog.close()
             self.aos_alarm_dialog=None
@@ -1687,6 +1684,8 @@ class MainWindow(QMainWindow):
 
     def choose_mode(self):
         self.suspend_cat_doppler("transponder/modo mudou")
+        self.last_freqs=(None,None)
+        self.cat_autotune_requested_generation=-1
         i=self.mode_combo.currentData()
         if not isinstance(i,int) or i<0 or i>=len(self.options):
             self.mode_note.setText("Modo manual: confira cada frequência e modo antes de usar.")
@@ -1716,7 +1715,9 @@ class MainWindow(QMainWindow):
             self.cat_tune_status.setText("Auto CAT desativado pelo operador")
             return
         self.cat_tracking_armed=True
-        self.cat_tune_status.setText("CAT: rastreamento armado · verificando condições…")
+        self.last_freqs=(None,None)
+        self.cat_autotune_requested_generation=-1
+        self.cat_tune_status.setText("Auto CAT online · iniciando acompanhamento 1 s…")
         self.auto_tune_selected_satellite()
 
     def save_complete_logs(self):
@@ -1749,6 +1750,17 @@ class MainWindow(QMainWindow):
             return
         if not self.sat or not self.last_pos or not self.omm_fresh():
             return
+        if (self.last_freqs==(None,None)
+                and self.cat_autotune_requested_generation!=self.cat_selection_generation
+                and isinstance(self.mode_combo.currentData(),int)
+                and self.mode_combo.currentData()>=0):
+            # When a saved/updated catalog becomes ready, initiate once.
+            self.auto_tune_selected_satellite()
+            return
+        if self.last_freqs==(None,None):
+            return
+        if any(k in self.pending_jobs for k in ("cat-autotune","cat-track","cat-connect","cat-diagnostic")):
+            return
         # A manual MAIN/SAT-Uplink dial change must not trigger a VFO tug-of-war.
         # Pausing explicitly is safer than overwriting the operator\'s adjustment.
         current=self.radio.state
@@ -1762,8 +1774,6 @@ class MainWindow(QMainWindow):
             return
         if not cat_doppler_allowed(self.last_pos["visible"],
                 self.config.values.get("cat_doppler_out_of_view",True)):
-            return
-        if any(k in self.pending_jobs for k in ("cat-autotune","cat-track","cat-connect","cat-diagnostic")):
             return
         if time.monotonic()-self.last_tracking_write < max(1.0,float(
                 self.interval.value())):
@@ -1844,23 +1854,10 @@ class MainWindow(QMainWindow):
              "CAT: leitura FA/FB/FC/MD concluída · veja LOGs / CAT"))
         QMessageBox.information(self,"Diagnóstico CAT · somente leitura",report)
 
-    def tune_selected_now(self):
-        """Explicit operator-triggered CAT tune; usable without enabling Auto CAT."""
-        if not self.radio.connected:
-            QMessageBox.warning(self,"CAT","Conecte o TS-2000 antes de sintonizar.")
-            return
-        if QMessageBox.question(self,"Sintonizar TS-2000",
-                "Aplicar as frequências do satélite selecionado e o modo MAIN de RX?\n"
-                "O modo SUB precisa ser conferido. Nenhum PTT será enviado.",
-                QMessageBox.Yes|QMessageBox.No,QMessageBox.No)!=QMessageBox.Yes:
-            return
-        self.auto_tune_selected_satellite(force=True)
-
     def auto_tune_selected_satellite(self,force=False):
-        """Automatic only with explicit consent, plus an explicitly confirmed manual retry.
+        """Set the selected satellite frequency once, then track Doppler each second.
 
-        This must also be invoked on connect, after SAT activation and when the
-        Auto CAT preference is enabled; a selection-change signal alone is not enough.
+        Persisted Auto CAT preference authorizes writes only under SAT and safety gates.
         """
         if not force and not self.config.values.get("cat_auto_select",False):
             return False
@@ -2312,7 +2309,7 @@ class MainWindow(QMainWindow):
                 if (self.last_map_time is None or (now-self.last_map_time).total_seconds()>=12):
                     self.update_map();self.last_map_time=now
                 self.track_cat_frequencies(now)
-                if self.doppler_checkbox.isChecked() and not self.cat_tracking_armed:
+                if False and self.doppler_checkbox.isChecked() and not self.cat_tracking_armed:
                     if not cat_doppler_allowed(pos['visible'],self.config.values.get('cat_doppler_out_of_view',False)) or not self.omm_fresh() or not self.radio.connected or not self.radio.state.sat:
                         self.doppler_checkbox.setChecked(False)
                         self.log('Doppler CAT parado: visada, OMM antigo, SAT desligado ou CAT desconectado')
@@ -2396,25 +2393,30 @@ class MainWindow(QMainWindow):
             self.cat_indicator.setEnabled(True)
             self.connection.setEnabled(True)
             self.connection.setText("Desconectar")
-            self.cat_tune_now.setEnabled(True)
             self.cat_diagnose.setEnabled(True)
             self.render_radio_state(data)
-            self.cat_tune_status.setText("CAT conectado · leitura MAIN/SUB válida · aguardando seleção explícita")
+            self.cat_tune_status.setText("CAT conectado · verificando Auto CAT online")
             self.config.values.update({"port":self.radio.port.port,
                 "baud":int(self.baud_combo.currentText()),
                 "stopbits":int(self.stops_combo.currentText())})
             self.config.save()
-            self.log("CAT: conectado e conferido por ID/SA/FA/FC/MD")
-            # No writes on startup, even with Auto CAT enabled by default.
-            if self.cat_tracking_armed and not self.cat_connect_was_startup:
+            self.log("CAT: conectado e conferido por ID/SA/FA/FB/FC/MD")
+            self.cat_tracking_armed=bool(self.config.values.get("cat_auto_select",False))
+            self.last_freqs=(None,None)
+            self.cat_autotune_requested_generation=-1
+            if self.cat_tracking_armed and self.radio.state.sat and self.sat is not None:
                 self.auto_tune_selected_satellite()
+            elif not self.cat_tracking_armed:
+                self.cat_tune_status.setText("Auto CAT desativado em Configurações")
+            else:
+                self.cat_tune_status.setText("Auto CAT aguardando SAT ON e satélite válido")
             return
         if key=="cat-track":
             generation,state,ul,dl=data
             if state is not None and generation==self.cat_selection_generation:
                 self.last_freqs=(ul,dl)
                 self.render_radio_state(state)
-                self.cat_tune_status.setText("CAT: acompanhamento contínuo ativo · MAIN/SUB confirmados")
+                self.cat_tune_status.setText("Auto CAT ONLINE · Doppler 1 s · FA/FB confirmados")
             return
         if key=="logs-export":
             path,count=data
@@ -2430,7 +2432,7 @@ class MainWindow(QMainWindow):
             if generation==self.cat_selection_generation and state is not None:
                 self.last_freqs=(state.uplink,state.downlink)
                 self.render_radio_state(state)
-                self.cat_tune_status.setText("CAT: sintonizado · MAIN "+state.mode+" (SUB conferir)")
+                self.cat_tune_status.setText("Auto CAT ONLINE · Doppler 1 s · MAIN "+state.mode+" (SUB conferir)")
             elif (self.config.values.get("cat_auto_select",False) and self.radio.connected
                   and generation!=self.cat_selection_generation):
                 self.auto_tune_selected_satellite()
@@ -2532,7 +2534,6 @@ class MainWindow(QMainWindow):
             self.cat_indicator.setEnabled(True)
             self.connection.setEnabled(True)
             self.connection.setText("Conectar")
-            self.cat_tune_now.setEnabled(False)
             self.cat_diagnose.setEnabled(False)
             self.cat_indicator.setText("! CAT DESCONECTADO / ERRO")
             self.cat_indicator.setStyleSheet("font-size:14px;font-weight:800;color:#ff9595")
@@ -2754,11 +2755,13 @@ class MainWindow(QMainWindow):
         self.config.save()
         if enabled:
             self.cat_tracking_armed=True
+            self.last_freqs=(None,None)
+            self.cat_autotune_requested_generation=-1
             self.auto_tune_selected_satellite()
         else:
             self.cat_tracking_armed=False
             self.cat_selection_generation+=1
-            self.cat_tune_status.setText("Auto CAT desligado · sintonia somente por comando manual")
+            self.cat_tune_status.setText("Auto CAT desligado · frequências não serão alteradas automaticamente")
 
     def save_tle_settings(self):
         self.config.values["tle_update_hours"]=int(self.tle_hours.value())
