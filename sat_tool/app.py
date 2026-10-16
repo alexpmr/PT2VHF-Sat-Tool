@@ -157,6 +157,7 @@ class MainWindow(QMainWindow):
         self.last_tracking_write = 0.0
         self.last_cat_poll_started = 0.0
         self.last_cat_track_completed = 0.0
+        self.last_cat_frequency_readback = 0.0
         self.cat_live_queued = False
         self.cat_last_requested = (None,None)
         self.cat_last_roundtrip_ms = None
@@ -392,6 +393,11 @@ class MainWindow(QMainWindow):
         self.corrected_label.setStyleSheet("color:#a4d5df;font-size:11px")
         self.corrected_label.setVisible(False)
         ov.addWidget(self.corrected_label)
+        # Distinguish calculated Doppler frequency from real FA/FB CAT state.
+        # Never silently copy the radio dial to the mathematical prediction.
+        self.pred_cat_status=label("CAT · sem leitura recente FA/FB")
+        self.pred_cat_status.setStyleSheet("font-size:12px;color:#c5dbe7")
+        ov.addWidget(self.pred_cat_status)
         op.insertWidget(1,operator_panel)
         mid=QWidget();mv=QVBoxLayout(mid);mv.setContentsMargins(0,0,0,0)
         trail_bar=QHBoxLayout()
@@ -1891,7 +1897,7 @@ class MainWindow(QMainWindow):
             return
         if self.last_freqs==(None,None):
             return
-        if any(k in self.pending_jobs for k in ("cat-autotune","cat-track","cat-connect","cat-diagnostic")):
+        if any(k in self.pending_jobs for k in ("cat-autotune","cat-track","cat-readback","cat-connect","cat-diagnostic")):
             return
         # Live synchronization is authoritative while Auto CAT is enabled.
         # A changed FA/FB readback is a divergence to correct, not an
@@ -1910,8 +1916,19 @@ class MainWindow(QMainWindow):
                 self.cat_tune_status.setText("CAT: acompanhamento bloqueado · "+reason)
                 return
             threshold=max(1,int(self.threshold.value()))
-            if (self.last_freqs[0] is not None and self.last_freqs[1] is not None
-                and max(abs(ul-self.last_freqs[0]),abs(dl-self.last_freqs[1]))<threshold):
+            # v1.3.11: 'last_freqs' is only what this program previously
+            # requested. Real FA/FB may change by physical tuning, another
+            # CAT client, or an incomplete CAT write. Reconcile against the
+            # last *actual* SA/FA/FB readback as well, never just the request.
+            last_request_delta=max(abs(ul-self.last_freqs[0]),
+                                   abs(dl-self.last_freqs[1]))
+            observed=self.radio.state
+            observed_delta=(
+                max(abs(ul-observed.uplink),abs(dl-observed.downlink))
+                if observed.uplink is not None and observed.downlink is not None
+                else None)
+            if (last_request_delta<threshold
+                    and observed_delta is not None and observed_delta<threshold):
                 return
             generation=self.cat_selection_generation
             self.last_tracking_write=time.monotonic()
@@ -1938,28 +1955,71 @@ class MainWindow(QMainWindow):
                 or not self.radio.connected or not self.sat):
             return
         try:
-            self.last_pos=position(self.sat,self.saved_station(),ts=self.ts)
-            self.track_cat_frequencies(now_utc())
+            now=now_utc()
+            self.last_pos=position(self.sat,self.saved_station(),when=now,ts=self.ts)
+            # Update predicted RX/TX from the very same orbital fix as CAT.
+            self.preview_doppler(pos=self.last_pos,when=now)
+            if ("cat-readback" in self.pending_jobs
+                    or "cat-autotune" in self.pending_jobs
+                    or "cat-track" in self.pending_jobs
+                    or "cat-connect" in self.pending_jobs):
+                return
+            # Independent frequency readback: telemetry/meter poll deliberately
+            # does not read FA/FB, so dial changes used to go unnoticed.
+            if (self.last_freqs!=(None,None)
+                    and time.monotonic()-self.last_cat_frequency_readback>=1.0):
+                self.last_cat_frequency_readback=time.monotonic()
+                self.background("cat-readback",self.radio.poll_tracking)
+                return
+            self.track_cat_frequencies(now)
         except Exception as exc:
             self.cat_sync_status.setText("CAT SYNC · previsão indisponível: "+str(exc)[:105])
 
     def update_cat_sync_status(self,state):
-        """Compare the latest predicted Hz with the radio's readback, not UI labels."""
-        predicted=self.cat_last_requested
-        if predicted[0] is None or predicted[1] is None:
-            self.cat_sync_status.setText("CAT SYNC · FA/FB lidos · previsão ainda não enviada")
+        """Compare current Doppler calculation with read FA/FB, not old TX intent."""
+        if not hasattr(self,"pred_cat_status"):
+            # Minimal test fixtures or older UI embedding may omit this label.
+            self.pred_cat_status=self.cat_sync_status
+        if not state.sat:
+            message="CAT INATIVO · modo SAT OFF no TS-2000; Auto CAT não pode sintonizar"
+            self.cat_sync_status.setText(message)
+            self.pred_cat_status.setText(message)
             return
         if state.uplink is None or state.downlink is None:
-            self.cat_sync_status.setText("CAT SYNC · aguardando FA/FB do rádio")
+            message="CAT SEM LEITURA · aguardando resposta FA/FB"
+            self.cat_sync_status.setText(message)
+            self.pred_cat_status.setText(message)
             return
-        rx_delta=predicted[1]-state.downlink
-        tx_delta=predicted[0]-state.uplink
+        try:
+            ul,dl=self.corrected()
+        except (ValueError,TypeError,KeyError) as exc:
+            message="CAT · frequência prevista indisponível: "+str(exc)
+            self.cat_sync_status.setText(message)
+            self.pred_cat_status.setText(message)
+            return
+        rx_delta=dl-state.downlink
+        tx_delta=ul-state.uplink
         lag="—" if self.cat_last_roundtrip_ms is None else str(self.cat_last_roundtrip_ms)+" ms"
-        result=("SINCRONIZADO" if max(abs(rx_delta),abs(tx_delta))<=max(1,int(self.threshold.value()))
-                else "DIVERGENTE")
+        threshold=max(1,int(self.threshold.value()))
+        synced=max(abs(rx_delta),abs(tx_delta))<threshold
+        # The status is specific to the *current* selected transponder, not
+        # the last frequency that was sent or an old "sync" result.
+        status=("SINCRONIZADO" if synced else "DIVERGENTE")
+        age=time.monotonic()-getattr(self,"last_cat_frequency_readback",0.0)
+        fresh=age<2.5
+        if not fresh:
+            status="AGUARDANDO READBACK FA/FB"
+        summary=(
+            f"CAT {status} · previsto menos rádio: RX {rx_delta:+d} Hz · "
+            f"TX {tx_delta:+d} Hz")
+        self.pred_cat_status.setText(summary)
+        self.pred_cat_status.setStyleSheet(
+            "font-size:12px;font-weight:700;color:"+
+            ("#69e3bc" if synced and fresh else "#efc17b"))
         self.cat_sync_status.setText(
-            f"CAT {result} · RX Δ{rx_delta:+d} Hz · TX Δ{tx_delta:+d} Hz · "
-            f"último comando {lag} · FA {state.downlink/1e6:.6f} / FB {state.uplink/1e6:.6f} MHz")
+            summary+f" · FA {state.downlink/1e6:.6f} / FB {state.uplink/1e6:.6f} MHz "
+            f"· último comando {lag}")
+
 
     def diagnose_cat(self):
         """Operator-initiated read-only TS-2000 serial CAT probe."""
@@ -2500,7 +2560,7 @@ class MainWindow(QMainWindow):
             interval=2.0 if active else max(1,int(self.config.values.get("poll_interval_s",1)))
             if (time.monotonic()-self.last_cat_poll_started>=interval
                     and not any(k in self.pending_jobs for k in (
-                        "cat-connect","cat-autotune","cat-track","cat-diagnostic","cat-poll"))):
+                        "cat-connect","cat-autotune","cat-track","cat-readback","cat-diagnostic","cat-poll"))):
                 self.last_cat_poll_started=time.monotonic()
                 self.background("cat-poll",self.radio.poll_telemetry if active else self.radio.poll)
         if self.radio.connected and self.last_cat_success:
@@ -2592,6 +2652,7 @@ class MainWindow(QMainWindow):
             generation,state,ul,dl,elapsed=data
             if state is not None and generation==self.cat_selection_generation:
                 self.last_freqs=(ul,dl)
+                self.last_cat_frequency_readback=time.monotonic()
                 self.cat_consecutive_failures=0
                 self.cat_retry_after=0.0
                 self.last_cat_track_completed=time.monotonic()
@@ -2600,6 +2661,16 @@ class MainWindow(QMainWindow):
                 self.update_cat_sync_status(state)
                 self.cat_tune_status.setText("Auto CAT ONLINE · FA/FB confirmados · "
                                              +str(self.cat_last_roundtrip_ms)+" ms")
+            return
+        if key=="cat-readback":
+            if self.radio.connected:
+                self.last_cat_frequency_readback=time.monotonic()
+                self.render_radio_state(data)
+                self.update_cat_sync_status(data)
+                if self.cat_tracking_armed and self.config.values.get("cat_auto_select",False):
+                    # Immediately correct drift detected at the dial, even if
+                    # predicted Doppler changed by less than the normal limit.
+                    self.track_cat_frequencies(now_utc())
             return
         if key=="logs-export":
             path,count=data
@@ -2614,6 +2685,7 @@ class MainWindow(QMainWindow):
             generation,state=data
             if generation==self.cat_selection_generation and state is not None:
                 self.last_freqs=(state.uplink,state.downlink)
+                self.last_cat_frequency_readback=time.monotonic()
                 self.cat_consecutive_failures=0
                 self.cat_retry_after=0.0
                 self.cat_last_requested=(state.uplink,state.downlink)
@@ -2739,6 +2811,16 @@ class MainWindow(QMainWindow):
             self.log("CAT: falha ao conectar: "+message)
             if not self.cat_connect_was_startup:
                 QMessageBox.warning(self,"Falha de conexão CAT",message)
+            return
+        if key=="cat-readback":
+            self.cat_consecutive_failures+=1
+            self.cat_retry_after=time.monotonic()+min(
+                8.0,0.5*2**min(4,self.cat_consecutive_failures))
+            self.last_freqs=(None,None)
+            self.cat_tune_status.setText(
+                "CAT: leitura FA/FB falhou · reconecte a porta se necessário · "
+                "tentativa automática em instantes")
+            self.pred_cat_status.setText("CAT · leitura FA/FB não confirmada: "+message[:105])
             return
         if key=="cat-track":
             # A CAT timeout/readback mismatch must not silently turn off
