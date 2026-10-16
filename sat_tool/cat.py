@@ -269,7 +269,7 @@ class TS2000:
         if rx_mode not in MODES:
             raise ValueError("Modo RX não suportado pelo driver CAT")
         frequency_command("FA",downlink_hz)
-        if uplink_hz is not None:frequency_command("FB",uplink_hz)
+        if uplink_hz is not None:frequency_command("FC",uplink_hz)
         with self.lock:
             sa=self._exchange("SA;","SA")
             if not sa.startswith("SA1") or len(sa)<6 or sa[4]!="1":
