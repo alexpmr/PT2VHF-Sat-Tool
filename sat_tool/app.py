@@ -1344,7 +1344,8 @@ class MainWindow(QMainWindow):
             msg="O TS-2000 será colocado em modo SAT, com MAIN=RX, SUB=TX e TRACE desativado. Continuar?"
             if QMessageBox.question(self,"Configurar SAT",msg) != QMessageBox.Yes:return
             self.render_radio_state(self.radio.enable_satellite_mode())
-            self.auto_tune_selected_satellite()
+            if self.cat_tracking_armed:
+                self.auto_tune_selected_satellite()
         except Exception as exc:
             QMessageBox.critical(self,"CAT",str(exc))
 
@@ -1753,7 +1754,7 @@ class MainWindow(QMainWindow):
         if any(k in self.pending_jobs for k in ("cat-autotune","cat-track","cat-connect","cat-diagnostic")):
             return
         if time.monotonic()-self.last_tracking_write < max(1.0,float(
-                self.config.values.get("cat_tracking_interval_s",2))):
+                self.interval.value()))):
             return
         try:
             ul,dl=self.corrected()
