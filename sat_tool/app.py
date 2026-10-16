@@ -1671,6 +1671,58 @@ class MainWindow(QMainWindow):
         self.cat_selection_generation+=1
         self.auto_tune_selected_satellite()
 
+    def diagnose_cat(self):
+        """Operator-initiated read-only TS-2000 serial CAT probe."""
+        if not self.radio.connected:
+            QMessageBox.warning(self,"Diagnóstico CAT","Rádio não conectado.")
+            return
+        if "cat-diagnostic" in self.pending_jobs:
+            return
+        self.cat_diagnose.setEnabled(False)
+        self.cat_tune_status.setText("CAT: consultando somente ID / SA / FA / FB / MD…")
+        self.log("Diagnóstico CAT: início da leitura de ID, SA, FA, FB e MD; sem comandos de escrita")
+        self.background("cat-diagnostic",self.radio.read_diagnostics)
+
+    def show_cat_diagnostic(self,diag):
+        """Show exact protocol evidence without claiming hardware compatibility."""
+        raw=diag["raw"]
+        errors=diag["errors"]
+        status=diag["sat"]
+        freq=diag["frequency_hz"]
+        parts=["TESTE CAT SOMENTE LEITURA · TS-2000",
+               "Porta COM: "+self.ports.currentText().strip(),
+               "Nenhuma alteração de frequência, modo SAT ou PTT foi enviada.",
+               "",
+               "RESPOSTAS BRUTAS:"]
+        for command in ("ID","SA","FA","FB","MD"):
+            parts.append(command+"; → "+str(raw.get(command,"SEM RESPOSTA")))
+        parts.append("")
+        if status:
+            parts.append("SAT: "+("ON" if status["sat"] else "OFF"))
+            parts.append("Direção: "+("MAIN=RX/downlink · SUB=TX/uplink" if status["main_downlink"]
+                                     else "MAIN=TX/uplink · SUB=RX/downlink (inverso)"))
+            parts.append("Canal SAT: "+str(status["channel"]))
+            parts.append("TRACE: "+("ON" if status["trace"] else "OFF"))
+            if status["sat"] and not status["main_downlink"]:
+                parts.append("ALERTA: SA P3=0; Auto CAT bloqueado por orientação inversa.")
+        else:
+            parts.append("SA não interpretável; conferir comunicação CAT.")
+        if "FA" in freq:
+            parts.append("FA real: "+self.radio_freq(freq["FA"]))
+        if "FB" in freq:
+            parts.append("FB real: "+self.radio_freq(freq["FB"]))
+        parts.append("Modo MAIN: "+str(diag["main_mode"] or "indisponível"))
+        if errors:
+            parts.extend(["","ERROS DE LEITURA:"]+[k+": "+v for k,v in errors.items()])
+        report="\n".join(parts)
+        self.log("CAT diagnóstico resultado:\n"+report)
+        self.cat_tune_status.setText(
+            "CAT: diagnóstico com falhas · veja LOGs / CAT" if errors else
+            ("CAT: SAT ON, orientação MAIN/SUB inversa · leia diagnóstico"
+             if status.get("sat") and not status.get("main_downlink") else
+             "CAT: leitura FA/FB/MD concluída · veja LOGs / CAT"))
+        QMessageBox.information(self,"Diagnóstico CAT · somente leitura",report)
+
     def tune_selected_now(self):
         """Explicit operator-triggered CAT tune; usable without enabling Auto CAT."""
         if not self.radio.connected:
@@ -2242,6 +2294,11 @@ class MainWindow(QMainWindow):
             QMessageBox.information(self,"Atualização de frequências concluída",
                 self.catalog_progress.text()+"\nDetalhes das falhas na aba LOGs / CAT.")
             return
+        if key=='cat-diagnostic':
+            self.cat_diagnose.setEnabled(self.radio.connected)
+            if self.radio.connected:
+                self.show_cat_diagnostic(data)
+            return
         if key=='cat-poll':
             if self.radio.connected and "cat-autotune" not in self.pending_jobs:
                 self.render_radio_state(data)
@@ -2318,6 +2375,11 @@ class MainWindow(QMainWindow):
             if (self.config.values.get("cat_auto_select",False) and self.radio.connected
                     and self.cat_autotune_requested_generation!=self.cat_selection_generation):
                 self.auto_tune_selected_satellite()
+            return
+        if key=="cat-diagnostic":
+            self.cat_diagnose.setEnabled(self.radio.connected)
+            self.cat_tune_status.setText("CAT: diagnóstico falhou · "+message)
+            QMessageBox.warning(self,"Falha no diagnóstico CAT",message)
             return
         if key=="cat-poll":
             self.cat_live_label.setText("RÁDIO REAL (CAT) · erro de leitura")
