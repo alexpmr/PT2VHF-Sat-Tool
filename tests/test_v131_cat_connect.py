@@ -9,12 +9,13 @@ ROOT=Path(__file__).resolve().parents[1]
 
 def test_auto_cat_trigger_paths_and_independent_status():
     text=(ROOT/"sat_tool"/"app.py").read_text(encoding="utf-8")
-    connect=text.split("    def toggle_connection(self):",1)[1].split("    def enable_satellite(self):",1)[0]
-    assert 'self.render_radio_state(st)\n            self.auto_tune_selected_satellite()' in connect
+    connection=text.split("    def request_cat_connection(self,startup=False):",1)[1].split("    def enable_satellite(self):",1)[0]
+    assert 'self.background("cat-connect",lambda:self.radio.connect(' in connection
+    assert 'if self.cat_tracking_armed and not self.cat_connect_was_startup' in text
     enable=text.split("    def enable_satellite(self):",1)[1].split("    def render_radio_state(",1)[0]
     assert "self.auto_tune_selected_satellite()" in enable
     preference=text.split("    def change_auto_cat(",1)[1].split("    def save_tle_settings(",1)[0]
-    assert 'if enabled:\n            self.auto_tune_selected_satellite()' in preference
+    assert 'if enabled:\n            self.cat_tracking_armed=True\n            self.auto_tune_selected_satellite()' in preference
     assert 'self.cat_tune_now.clicked.connect(self.tune_selected_now)' in text
     assert "self.cat_tune_status=label(" in text
     assert "self.cat_tune_status.setText(" in text

@@ -4,24 +4,32 @@
 
 ## Downloads — instaladores e portáteis
 
-**PT2VHF Sat Tool v1.3.3 — Windows 7 SP1, Windows 10 e Windows 11.** Os quatro downloads são arquivos `.exe` diretos. Links ficam disponíveis após aprovação dos builds Windows. Embora seja o marco 1.0 de funcionalidades, permanece em pré-lançamento até a homologação CAT com TS-2000 físico e Windows 7 real.
+**PT2VHF Sat Tool v1.3.4 — Windows 7 SP1, Windows 10 e Windows 11.** Os quatro downloads são arquivos `.exe` diretos. Links ficam disponíveis após aprovação dos builds Windows. Embora seja o marco 1.0 de funcionalidades, permanece em pré-lançamento até a homologação CAT com TS-2000 físico e Windows 7 real.
 
 | Windows | Instalável | Portátil |
 | --- | --- | --- |
-| **Windows 7 SP1** (x86; executável de 32 bits também para Win7 x64) | [Instalador Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.3/PT2VHF-Sat-Tool-v1.3.3-Win7-x86-Setup.exe) | [Portable Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.3/PT2VHF-Sat-Tool-v1.3.3-Win7-x86-Portable.exe) |
-| **Windows 10 (1809+)/11** (x64; arquivo `Win11-x64` para manter atualizador) | [Instalador Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.3/PT2VHF-Sat-Tool-v1.3.3-Win11-x64-Setup.exe) | [Portable Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.3/PT2VHF-Sat-Tool-v1.3.3-Win11-x64-Portable.exe) |
+| **Windows 7 SP1** (x86; executável de 32 bits também para Win7 x64) | [Instalador Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.4/PT2VHF-Sat-Tool-v1.3.4-Win7-x86-Setup.exe) | [Portable Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.4/PT2VHF-Sat-Tool-v1.3.4-Win7-x86-Portable.exe) |
+| **Windows 10 (1809+)/11** (x64; arquivo `Win11-x64` para manter atualizador) | [Instalador Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.4/PT2VHF-Sat-Tool-v1.3.4-Win11-x64-Setup.exe) | [Portable Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.4/PT2VHF-Sat-Tool-v1.3.4-Win11-x64-Portable.exe) |
 
 **Formato dos downloads:** tanto instaladores quanto portáteis são entregues diretamente como arquivos **`.exe`**. O portátil inclui as dependências dentro do mesmo EXE (PyInstaller onefile) e não requer descompactação.
 
 **[Todas as releases](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases)** · **[Acompanhar compilação](https://github.com/alexpmr/PT2VHF-Sat-Tool/actions)**
 
 - **Instalável:** instalação por usuário, atalho e desinstalação, atualização pelo aplicativo usando o Setup de sua edição.
-- **Portátil:** execute diretamente `PT2VHF-Sat-Tool-v1.3.3-*-Portable.exe` (um único arquivo). Configurações ficam em `data/` ao lado do EXE, preservadas após atualizações.
+- **Portátil:** execute diretamente `PT2VHF-Sat-Tool-v1.3.4-*-Portable.exe` (um único arquivo). Configurações ficam em `data/` ao lado do EXE, preservadas após atualizações.
 - **Win7:** Python 3.8 x86 + PySide2/Qt5 + PyInstaller 5.13.2 (legado, precisa ser validado no Windows 7 real).
 - **Win10/11 x64:** Windows 10 1809+ ou Windows 11, Python 3.11 x64 + PySide6/Qt6 + PyInstaller 6.13.0.
 - Arquivos SHA256 acompanham cada compilação. A versão Windows 7 é experimental; não confundir sucesso do CI com homologação em campo.
 
 ---
+
+## Novidades v1.3.4 — Auto CAT, acompanhamento contínuo e exportação de logs
+
+- **Conexão CAT automática na abertura** quando houver COM previamente salva e preferência ligada. A conexão inicial **somente lê o rádio** (ID/SA/FA/FC/MD), não sintoniza, não muda SAT e não ativa PTT.
+- **Indicador superior conectado/desconectado clicável:** usa a mesma rotina de conexão do botão inferior. Conexão e reconexão feitas em worker Qt, com erro sem bloquear a aplicação. O indicador não mostra falha de conexão quando ocorre apenas erro de sintonia.
+- **Auto CAT habilitado por padrão em perfis novos**, preservando preferências ON/OFF já salvas. Ao **selecionar explicitamente** satélite/transponder, arma rastreio de frequências calculadas: aplica MAIN/FA e SUB/FC com confirmação por leitura, usa a cadência configurável de Doppler, limiar Hz e política de visibilidade; o botão **Sintonizar agora** permanece para diagnóstico. O sistema evita comandos para perfil mesma-banda em modo SAT, registra bloqueios e pausa após falhas, sem PTT.
+- **LOGs / CAT → Baixar log completo (ZIP):** grava RX/TX e eventos em jornal local rotativo (retém as três gerações mais recentes) e exporta arquivos de sessão, mensagens da tela e relatórios de falha para o local escolhido; o ZIP não é enviado para a Internet. Atenção: logs podem conter indicativo e coordenadas; revise antes de compartilhar. Dados de versões anteriores não persistidos não são recuperáveis.
+- **Compatibilidade:** builds de Windows 7 SP1 x86 e Windows 10/11 x64, incluindo Setup e Portable. A validação em equipamento físico TS-2000 ainda é indispensável. A inversão **MAIN TX / SUB RX**, modos da SUB e rastreio em perfil SAT same-band/SPLIT permanecem em backlog; não houve implementação de comandos CAT de inversão sem homologação.
 
 ## Correção de controle CAT v1.3.3 — **sub-receptor FC em vez de VFO B FB**
 
