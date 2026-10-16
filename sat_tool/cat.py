@@ -31,6 +31,30 @@ def parse_frequency(answer: str, channel: str) -> int:
     return int(digits)
 
 
+def decode_satellite_status(answer: str) -> dict:
+    """Decode the Kenwood SA response without changing the radio.
+
+    P1: SAT, P2: channel, P3: MAIN/SUB orientation, P4: CTRL,
+    P5/P6: TRACE, P7: VFO/memory. P8 (name) is optional for
+    diagnostic parsing so older firmware can still be inspected.
+    """
+    if not answer.startswith("SA") or not answer.endswith(";") or len(answer) < 10:
+        raise ValueError("Resposta SA inválida: "+repr(answer))
+    values=answer[2:9]
+    if len(values)!=7 or not values.isdigit() or values[0] not in "01" or values[2] not in "01":
+        raise ValueError("Parâmetros SA inválidos: "+repr(answer))
+    return {
+        "sat": values[0]=="1",
+        "channel": int(values[1]),
+        "main_downlink": values[2]=="1",
+        "ctrl_sub": values[3]=="1",
+        "trace": values[4]=="1",
+        "trace_reverse": values[5]=="1",
+        "memory_mode": values[6]=="1",
+        "raw": answer,
+    }
+
+
 def satellite_mode_command(answer: str) -> str:
     """Preserve memory channel; select main RX/sub TX; turn off radio TRACE.
 
@@ -176,6 +200,43 @@ class TS2000:
                         else:setattr(self.state,attr,None)
                         self.logger(f"CAT leitura opcional {command}: {exc}")
             return self.state
+
+    def read_diagnostics(self) -> dict:
+        """Read-only probe: safe with SAT on; never writes VFO, SAT or PTT.
+
+        Runs under the same serial lock as CAT polling and retuning. Return
+        individual errors rather than losing all evidence on one timeout.
+        """
+        responses={}
+        errors={}
+        with self.lock:
+            if not self.connected:
+                raise ConnectionError("Conecte o TS-2000 antes de testar CAT")
+            for code in ("ID","SA","FA","FB","MD"):
+                try:
+                    responses[code]=self._exchange(code+";",code)
+                except (TimeoutError,ValueError,ConnectionError) as exc:
+                    errors[code]=str(exc)
+        status={}
+        try:
+            status=decode_satellite_status(responses["SA"])
+        except (KeyError,ValueError) as exc:
+            errors.setdefault("SA",str(exc))
+        frequency={}
+        for key in ("FA","FB"):
+            try:
+                frequency[key]=parse_frequency(responses[key],key)
+            except (KeyError,ValueError) as exc:
+                errors.setdefault(key,str(exc))
+        mode=None
+        if "MD" in responses:
+            raw=responses["MD"]
+            if len(raw)>=4 and raw.endswith(";"):
+                mode=MODES_REV.get(raw[2:-1],"?")
+            else:
+                errors["MD"]="Resposta MD inválida: "+repr(raw)
+        return {"raw":responses,"errors":errors,"sat":status,
+                "frequency_hz":frequency,"main_mode":mode}
 
     def enable_satellite_mode(self):
         sa = self._exchange("SA;", "SA")
