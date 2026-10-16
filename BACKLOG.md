@@ -1,3 +1,10 @@
+## v1.3.8 — seleção de canal SO-50 FM V/U e diagnóstico CAT (16/10/2026)
+- [x] **Relato:** SO-50 foi bloqueado como “transponder na mesma banda”, embora AMSAT confirme uplink 145,850 MHz (VHF/2m) e downlink 436,795 MHz (UHF/70cm). A regra de bandas no código aceita esse par: causa real provavelmente foi seleção automática de outro registro SatNOGS, ainda sem LOG da falha.
+- [x] **Correção:** prioridade ao perfil FM SO-50/NORAD 27607 respaldado pela AMSAT, sem remover os demais transponders. Para outros satélites, escolher primeiro um transponder RX/TX crossband quando disponível, evitando canais isolados de telemetria como padrão.
+- [x] **Diagnóstico:** se bloquear, exibir o par de frequências efetivamente lido dos campos RX/TX, NORAD e descrição do transponder, com categoria de erro (mesma banda, RX-only, banda CAT desconhecida), gravando também em LOGs.
+- [x] **Regressões:** teste com duplicata SatNOGS, telemetria primeiro, outros satélites e proteção CAT sem PTT. Preservar seleção explícita na atualização de frequências em background.
+- [ ] **Homologação física:** confirmar SO-50 selecionado no TS-2000 e CAT FA/FB atualizado pelo Doppler, com registro das frequências efetivas quando bloquear.
+
 ## v1.3.7 — Auto CAT online contínuo (16/10/2026)
 - [x] **Relato TS-2000 após v1.3.6:** sintonia funciona após clicar em “Sintonizar agora”, mas FA/FB não acompanham o Doppler segundo a segundo. Causa: a ação manual efetuava a sintonia inicial sem armar necessariamente o rastreador contínuo; caminhos e estados concorrentes de Doppler.
 - [x] **Correção:** remover “Sintonizar agora” da UI; preferir uma única chave Auto CAT, com sintonia inicial e posterior acompanhamento continuamente via QTimer de 1 segundo, com escrita CAT apenas quando a diferença prevista chegar a 1 Hz, readback FA/FB e limite de apenas um job ativo.
