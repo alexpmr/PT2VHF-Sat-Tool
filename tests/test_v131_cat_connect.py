@@ -37,7 +37,8 @@ class SerialCAT:
     def close(self):self.is_open=False
     def write(self,raw):
         cmd=raw.decode("ascii");self.writes.append(cmd)
-        if cmd=="SA;":self.answer=("SA1010000;" if self.sat else "SA0010000;").encode()
+        if cmd=="ID;":self.answer=b"ID019;"
+        elif cmd=="SA;":self.answer=("SA1010000;" if self.sat else "SA0010000;").encode()
         elif cmd=="FA;":self.answer=f"FA{self.down:011d};".encode()
         elif cmd=="FB;":self.answer=f"FB{self.up:011d};".encode()
         elif cmd=="MD;":self.answer=f"MD{self.main_mode};".encode()
@@ -83,3 +84,33 @@ def test_sat_mode_required_before_any_frequency_writes():
     with pytest.raises(RuntimeError,match="SAT"):
         radio.set_satellite_channel(435_847_000,145_951_000,"FM")
     assert not any(s.startswith(("FA00","FB00","MD4")) for s in sim.writes)
+
+
+def test_read_only_diagnostic_reports_actual_radio_frequency_and_mode():
+    from sat_tool.cat import decode_satellite_status
+    radio,sim=rig_with_sim()
+    sim.down=436_795_000
+    sim.up=145_850_000
+    sim.main_mode="4"
+    result=radio.read_diagnostics()
+    assert result["raw"]["ID"]=="ID019;"
+    assert result["sat"]["sat"] is True
+    assert result["sat"]["main_downlink"] is True
+    assert result["frequency_hz"]=={"FA":436_795_000,"FB":145_850_000}
+    assert result["main_mode"]=="FM"
+    assert result["errors"]=={}
+    assert sim.writes==["ID;","SA;","FA;","FB;","MD;"]
+    reversed_status=decode_satellite_status("SA1000000;")
+    assert reversed_status["sat"] is True
+    assert reversed_status["main_downlink"] is False
+
+
+def test_radio_operation_displays_actual_cat_readback_separate_from_prediction():
+    text=(ROOT/"sat_tool"/"app.py").read_text(encoding="utf-8")
+    assert 'self.cat_live_label=label("RÁDIO REAL (CAT)' in text
+    assert 'self.cat_live_label.setText(' in text
+    assert "decode_satellite_status(st.sat_raw)" in text
+    assert 'self.cat_diagnose.clicked.connect(self.diagnose_cat)' in text
+    diag=text.split("    def diagnose_cat(self):",1)[1].split("    def tune_selected_now(self):",1)[0]
+    assert 'self.background("cat-diagnostic",self.radio.read_diagnostics)' in diag
+    assert '"FA"' in diag and '"FB"' in diag and '"SA"' in diag
