@@ -38,7 +38,6 @@ def run_self_test(report_path: str, expected_qt: str = "") -> int:
         result["checks"].append("qt_native")
         import sat_tool.app
         result["checks"].append("app_import")
-        from pathlib import Path
         root = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parents[1]))
         mapfile = root / "sat_tool" / "map.html"
         logo = root / "assets" / "branding" / "icon-256.png"
