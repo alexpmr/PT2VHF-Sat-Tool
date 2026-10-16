@@ -68,3 +68,15 @@ def test_operator_window_constructs_with_new_layout():
     result=subprocess.run([sys.executable,"-c",source],text=True,
                           stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=60)
     assert result.returncode==0, result.stdout+"\n"+result.stderr
+
+
+def test_manual_tune_error_reports_specific_cause():
+    from pathlib import Path
+    source=(Path(__file__).resolve().parents[1]/"sat_tool"/"app.py").read_text(encoding="utf-8")
+    error_handler=source.split("    def background_error(self,key,message):",1)[1]
+    error_case=error_handler.split('        if key=="cat-autotune":',1)[1].split('        if key=="cat-diagnostic":',1)[0]
+    assert 'self.cat_tune_manual_request' in error_case
+    assert 'QMessageBox.warning(self,"Falha ao sintonizar TS-2000"' in error_case
+    assert "SINTONIA NÃO APLICADA:" in error_case
+    assert "self.background(\"cat-poll\",self.radio.poll)" in error_case
+    assert 'self.cat_indicator.setText("! FALHA DE SINTONIA CAT")' not in error_case
