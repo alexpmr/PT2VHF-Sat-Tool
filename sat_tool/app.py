@@ -160,6 +160,8 @@ class MainWindow(QMainWindow):
         self._loading_catalog = False
         self._active_satellite_id = None
         self._passes_refresh_again = False
+        self._pass_refresh_last = 0.0
+        self._pass_refresh_sat = None
         self.pos_source = None
         self.map_pick_active = False
         self.map_pick_position = None
@@ -258,7 +260,7 @@ class MainWindow(QMainWindow):
         self.utc.setMinimumWidth(235)
         header.addWidget(self.utc)
         op.addLayout(header)
-        upcoming,upcoming_layout=group("PRÓXIMA PASSAGEM COMPATÍVEL · CONTAGEM REGRESSIVA")
+        upcoming,upcoming_layout=group("PRÓXIMA PASSAGEM DO SATÉLITE SELECIONADO · CONTAGEM REGRESSIVA")
         upcoming_row=QHBoxLayout()
         self.next_event_label=label("Cadastre a estação e selecione FM / SSB / CW")
         self.next_event_label.setStyleSheet("font-size:14px;font-weight:800;color:#70d8ed")
@@ -272,11 +274,14 @@ class MainWindow(QMainWindow):
         upcoming_row.addWidget(self.next_countdown,1)
         upcoming_row.addWidget(self.next_select)
         upcoming_layout.addLayout(upcoming_row)
+        self.next_event_label.setWordWrap(False)
         self.next_times=label("AOS — · TCA — · LOS — · Elevação máxima —")
         self.next_times.setStyleSheet("color:#b5cfde;font-size:11px")
+        self.next_times.setWordWrap(False)
         upcoming_layout.addWidget(self.next_times)
         self.next_frequencies=label("RX/TX: aguardando transponder publicado e TLE válido")
         self.next_frequencies.setStyleSheet("color:#7ee5d4;font-size:12px;font-weight:700")
+        self.next_frequencies.setWordWrap(False)
         upcoming_layout.addWidget(self.next_frequencies)
         self.pass_progress=QProgressBar()
         self.pass_progress.setRange(0,1000)
@@ -462,17 +467,17 @@ class MainWindow(QMainWindow):
         self.visibility.setObjectName('metric')
         sv.addWidget(self.visibility)
         rv.addWidget(stat)
-        nextpass,np=group("PRÓXIMAS PASSAGENS · 36 H")
+        nextpass,np=group("PASSAGENS DO SATÉLITE SELECIONADO · 36 H")
+        nextpass.setMinimumWidth(520)
         self.pass_table=QTableWidget(0,6)
         self.pass_table.setHorizontalHeaderLabels(["Satélite","AOS local","TCA local","LOS local","Max °","Modos"])
         self.pass_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.pass_table.setWordWrap(False)
+        self.pass_table.verticalHeader().setDefaultSectionSize(26)
         self.pass_table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.pass_table.cellDoubleClicked.connect(self.select_pass_satellite)
         self.pass_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         np.addWidget(self.pass_table)
-        self.refresh_passes_btn=QPushButton("Recalcular passagens")
-        self.refresh_passes_btn.clicked.connect(self.refresh_passes)
-        np.addWidget(self.refresh_passes_btn)
         rv.insertWidget(0,nextpass,2)
         catview,cv=group("RÁDIO / CAT  ·  KENWOOD TS-2000")
         self.cat_status=label("● Desconectado  ·  porta CAT indisponível")
@@ -502,7 +507,7 @@ class MainWindow(QMainWindow):
         self.cat_telemetry.setToolTip("Potência PC é um ajuste, não medição de potência RF. RM mostra medidor selecionado; PTT não é comandado.")
         cv.addWidget(self.cat_telemetry)
         splitter.addWidget(right)
-        splitter.setSizes([1100,420])
+        splitter.setSizes([910,640])
         op.addWidget(splitter,1)
         # Settings owns the COM port, baud, stop bits, SAT/TRACE and CAT telemetry.
         self.ports=QComboBox();self.ports.setEditable(True)
@@ -1677,6 +1682,8 @@ class MainWindow(QMainWindow):
         self.refresh_modes(force=False)
         self.update_map()
         self.preview_doppler()
+        self.refresh_passes()
+        self.update_next_indicator()
 
     def refresh_modes(self,force=False):
         ident=self.sat_combo.currentData()
@@ -2192,12 +2199,13 @@ class MainWindow(QMainWindow):
             self.pass_progress.setValue(0)
             return
         c=self.config.values
+        selected=str(self.sat_combo.currentData() or "")
         event=select_next_pass(self.passes,self.pass_rows,c.get("radio_modes",[]),c.get("radio_bands",[]),
-                               now,self.pass_enabled)
+                               now,{selected} if selected else set())
         self.next_candidate=event
         self.next_select.setEnabled(event is not None)
         if event is None:
-            self.next_event_label.setText("Nenhuma passagem com canal publicado compatível")
+            self.next_event_label.setText("Sem passagem compatível para o satélite selecionado")
             self.next_countdown.setText("--:--:--")
             self.next_times.setText("Consulte seleção FM/SSB/CW, bandas, elevação e dados SatNOGS")
             self.next_frequencies.setText("Sem dados de frequências compatíveis · não inferir uplink")
@@ -2237,36 +2245,40 @@ class MainWindow(QMainWindow):
             self.next_frequencies.setText(f"Doppler indisponível: {exc}")
 
     def refresh_passes(self):
+        """Recalculate selected satellite passes in background; countdown is live.
+
+        Refresh on satellite selection and every five minutes to avoid blocking
+        the GUI. Ignore stale results when the selected NORAD changes.
+        """
         if "passes" in self.pending_jobs:
             self._passes_refresh_again=True
             return
-        try:station=self.saved_station()
+        try:
+            station=self.saved_station()
         except Exception:
             self.pass_table.setRowCount(0)
             return
-        selected=set(self.enabled_satellite_ids())
-        self.pass_enabled=selected
-        self.pass_rows={sid:load_transmitters(self.config.dir,int(sid)) for sid in selected}
-        entries=[(ident,obj) for ident,obj in self.omm.items() if ident in selected]
-        if len(entries)>150:
-            self.log("Agenda: limite de 150 satélites simultâneos; refine a seleção para preservar a responsividade.")
-            entries=entries[:150]
-        # Capture immutable snapshot; skyfield object construction in background.
+        ident=str(self.sat_combo.currentData() or "")
+        if not ident or ident not in self.omm:
+            self.pass_table.setRowCount(0)
+            self.passes=[]
+            self.next_candidate=None
+            return
+        self._pass_refresh_sat=ident
+        self._pass_refresh_last=time.monotonic()
+        self.pass_enabled={ident}
+        self.pass_rows={ident:load_transmitters(self.config.dir,int(ident))}
+        obj=dict(self.omm[ident])
         def task():
-            out=[]
-            for ident,obj in entries:
-                try:
-                    sat=make_satellite(obj,self.ts)
-                    # Include genuine AOS for passes already in progress at startup.
-                    passes=predict_passes(sat,station,now=now_utc()-timedelta(hours=3),hours=39,ts=self.ts)
-                    for p in passes:
-                        out.append({**p,'id':ident,'name':obj.get('OBJECT_NAME',ident)})
-                except Exception:
-                    continue
-            out=[p for p in out if p['los']>now_utc()]
-            out.sort(key=lambda p:p['aos'])
-            return out[:100]
-        self.background('passes',task)
+            try:
+                sat=make_satellite(obj,self.ts)
+                rows=predict_passes(sat,station,now=now_utc()-timedelta(hours=3),hours=39,ts=self.ts)
+                return [dict(p,id=ident,name=obj.get("OBJECT_NAME",ident))
+                        for p in rows if p["los"]>now_utc()][:100]
+            except Exception as exc:
+                self.log("Agenda órbita "+ident+": "+str(exc))
+                return []
+        self.background("passes",task)
 
     def prefetch_upcoming_modes(self):
         """Download a small, bounded group of transmitter catalogs (not TLE) in background."""
@@ -2368,6 +2380,9 @@ class MainWindow(QMainWindow):
             self.check_for_updates()
         now=now_utc();self.utc.setText(now.strftime('DATA/HORA UTC · %d/%m/%Y %H:%M:%S'))
         self.update_next_indicator()
+        if (self.sat is not None and time.monotonic()-self._pass_refresh_last>=300
+                and "passes" not in self.pending_jobs):
+            self.refresh_passes()
         self.check_selected_aos_alarm(now)
         self.poll_station_map()
         if self.sat:
@@ -2578,6 +2593,10 @@ class MainWindow(QMainWindow):
             self.pass_rows[ident]=data
             self.update_next_indicator()
         elif key=='passes':
+            if self._pass_refresh_sat!=str(self.sat_combo.currentData() or ""):
+                self._passes_refresh_again=False
+                self.refresh_passes()
+                return
             self.passes=data[:75]
             self.pass_table.setRowCount(len(self.passes))
             for i,p in enumerate(self.passes):
