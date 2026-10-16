@@ -619,7 +619,11 @@ class MainWindow(QMainWindow):
             "Clique uma vez na linha para marcar/desmarcar o favorito (amarelo). "
             "Duplo clique abre a operação do satélite.")
         self.catalog_table.cellDoubleClicked.connect(self.select_catalog_satellite)
-        self.catalog_table.cellClicked.connect(self.toggle_catalog_satellite_selection)
+        self.catalog_table.cellClicked.connect(self.queue_catalog_single_click)
+        self.catalog_click_timer=QTimer(self)
+        self.catalog_click_timer.setSingleShot(True)
+        self.catalog_click_timer.timeout.connect(self.commit_catalog_single_click)
+        self.catalog_click_norad=None
         catalog_layout.addWidget(self.catalog_table)
         self.catalog_note=label("Dados orbitais: CelesTrak OMM/TLE · Frequências e modos: SatNOGS · Não confundir catálogo com atividade confirmada.")
         catalog_layout.addWidget(self.catalog_note)
@@ -1611,49 +1615,54 @@ class MainWindow(QMainWindow):
             f"{len(self.omm)} órbitas em cache · {len(checked)} selecionados. "
             "Pesquise por nome, NORAD ou apelido para refinar.")
 
-    def toggle_catalog_satellite_selection(self,row,col):
-        """Click anywhere in a row to toggle persistent favorite highlighting.
-
-        Not the Qt temporary/current selection: saved NORAD IDs determine
-        yellow/black row styling, independently of sorting and pagination.
-        """
+    def queue_catalog_single_click(self,row,col):
+        """Delay a single click so a double click does not toggle twice."""
         if self._loading_catalog:return
         item=self.catalog_table.item(row,0)
         if item is None:return
-        ident=str(item.data(Qt.UserRole))
-        if ident not in self.omm:return
-        selected=set(self.enabled_satellite_ids())
-        updated,_=change_selection(self.omm,[ident],selected,
-                                   ident not in selected,True)
+        self.catalog_click_norad=str(item.data(Qt.UserRole))
+        self.catalog_click_timer.start(QApplication.doubleClickInterval()+40)
+
+    def commit_catalog_single_click(self):
+        ident=self.catalog_click_norad
+        self.catalog_click_norad=None
+        if ident:self.toggle_catalog_favorite(ident)
+
+    def toggle_catalog_satellite_selection(self,row,col):
+        """Compatible single-row action for programmatic use."""
+        item=self.catalog_table.item(row,0)
+        if item is not None:self.toggle_catalog_favorite(str(item.data(Qt.UserRole)))
+
+    def toggle_catalog_favorite(self,ident):
+        """Persist favorite state; repaint the row, stay on Satélites."""
+        if self._loading_catalog or ident not in self.omm:return
+        enabled=set(self.enabled_satellite_ids())
+        updated,_=change_selection(self.omm,[ident],enabled,ident not in enabled,True)
         self.config.values["satellite_selection"]=updated
         self.config.save()
-        now_selected=ident in updated
-        for col_index in range(self.catalog_table.columnCount()):
-            cell=self.catalog_table.item(row,col_index)
-            if cell is None:continue
-            cell.setBackground(QBrush(QColor("#ffe36a" if now_selected else "#0b1b2e")))
-            cell.setForeground(QBrush(QColor("#111111" if now_selected else "#e8edf5")))
+        selected=ident in updated
+        for row in range(self.catalog_table.rowCount()):
+            item=self.catalog_table.item(row,0)
+            if item is None or str(item.data(Qt.UserRole))!=ident:continue
+            for col in range(self.catalog_table.columnCount()):
+                cell=self.catalog_table.item(row,col)
+                if cell is not None:
+                    cell.setBackground(QBrush(QColor("#ffe36a" if selected else "#0b1b2e")))
+                    cell.setForeground(QBrush(QColor("#111111" if selected else "#e8edf5")))
+            break
         self.refresh_tracked_table()
         self.filter_sats(self.search.text())
         self.refresh_passes()
         self.catalog_progress.setText(
-            f"Seleção salva: {len(updated)} de {len(self.omm)} satélites · "
-            f"{ident} {'marcado' if now_selected else 'desmarcado'} (amarelo)")
+            f"NORAD {ident}: {'favorito marcado' if selected else 'favorito desmarcado'} · "
+            f"{len(updated)} de {len(self.omm)} satélites selecionados")
 
     def select_catalog_satellite(self,row,col):
-        cell=self.catalog_table.item(row,0)
-        if cell is None:return
-        ident=str(cell.data(Qt.UserRole))
-        if ident not in self.enabled_satellite_ids():
-            self.config.values["satellite_selection"]=list(dict.fromkeys(self.enabled_satellite_ids()+[ident]))
-            self.config.save()
-            self.refresh_satellite_table()
-            self.refresh_tracked_table()
-        self.search.clear()
-        self.filter_sats("")
-        idx=self.sat_combo.findData(ident)
-        if idx>=0:self.sat_combo.setCurrentIndex(idx)
-        self.centralWidget().setCurrentIndex(0)
+        """Double click toggles the favorite; never navigates to Operação."""
+        self.catalog_click_timer.stop()
+        self.catalog_click_norad=None
+        item=self.catalog_table.item(row,0)
+        if item is not None:self.toggle_catalog_favorite(str(item.data(Qt.UserRole)))
 
     def filter_sats(self,text):
         selected=self.sat_combo.currentData() or self.config.values.get('selected_norad')
