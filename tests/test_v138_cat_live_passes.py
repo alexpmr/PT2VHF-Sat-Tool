@@ -63,7 +63,7 @@ def test_cat_scheduler_decoupled_from_gis_and_fast_readback_visible():
     source=(ROOT/"sat_tool"/"app.py").read_text(encoding="utf-8")
     assert "self.cat_live_timer.start(250)" in source
     assert "self.cat_live_timer.timeout.connect(self.cat_live_tick)" in source
-    assert 'self.background("cat-poll",self.radio.poll_tracking if active else self.radio.poll)' in source
+    assert 'self.background("cat-poll",self.radio.poll_telemetry if active else self.radio.poll)' in source
     assert "self.update_cat_sync_status(state)" in source
     assert "CAT SYNC" in source and "DIVERGENTE" in source
     assert "self.last_cat_track_completed=time.monotonic()" in source
