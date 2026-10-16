@@ -30,7 +30,7 @@ class SerialCAT:
         self.writes=[]
         self.down=435_847_500
         self.up=145_950_000
-        self.vfo_b=435_450_000  # must NOT represent satellite SUB/TX
+        self.sub_vfo=435_450_000  # FC is independent; FB is the documented SAT uplink
         self.main_mode="2"
         self.sat=sat
         self.answer=b""
@@ -42,12 +42,12 @@ class SerialCAT:
         if cmd=="ID;":self.answer=b"ID019;"
         elif cmd=="SA;":self.answer=("SA1010000;" if self.sat else "SA0010000;").encode()
         elif cmd=="FA;":self.answer=f"FA{self.down:011d};".encode()
-        elif cmd=="FB;":self.answer=f"FB{self.vfo_b:011d};".encode()
-        elif cmd=="FC;":self.answer=f"FC{self.up:011d};".encode()
+        elif cmd=="FB;":self.answer=f"FB{self.up:011d};".encode()
+        elif cmd=="FC;":self.answer=f"FC{self.sub_vfo:011d};".encode()
         elif cmd=="MD;":self.answer=f"MD{self.main_mode};".encode()
         elif cmd.startswith("FA"):self.down=int(cmd[2:-1]);self.answer=b""
-        elif cmd.startswith("FB"):self.vfo_b=int(cmd[2:-1]);self.answer=b""
-        elif cmd.startswith("FC"):self.up=int(cmd[2:-1]);self.answer=b""
+        elif cmd.startswith("FB"):self.up=int(cmd[2:-1]);self.answer=b""
+        elif cmd.startswith("FC"):self.sub_vfo=int(cmd[2:-1]);self.answer=b""
         elif cmd.startswith("MD"):self.main_mode=cmd[2:-1];self.answer=b""
         elif cmd=="SM0;":self.answer=b"SM00012;"
         elif cmd=="SM1;":self.answer=b"SM10004;"
@@ -72,9 +72,9 @@ def test_satellite_preset_changes_frequencies_and_main_mode_without_ptt():
     assert sim.main_mode=="4"
     assert "MD4;" in sim.writes
     assert "FA00435847000;" in sim.writes
-    assert "FC00145951000;" in sim.writes
-    assert not any(cmd.startswith("FB0") for cmd in sim.writes)
-    assert sim.vfo_b==435_450_000
+    assert "FB00145951000;" in sim.writes
+    assert not any(cmd.startswith("FC0") for cmd in sim.writes)
+    assert sim.sub_vfo==435_450_000
     assert not any(cmd.startswith(("TX","RX","MO","PS","SA1")) for cmd in sim.writes)
 
 def test_rx_only_does_not_tune_tx_sub_frequency():
@@ -102,7 +102,9 @@ def test_read_only_diagnostic_reports_actual_radio_frequency_and_mode():
     assert result["raw"]["ID"]=="ID019;"
     assert result["sat"]["sat"] is True
     assert result["sat"]["main_downlink"] is True
-    assert result["frequency_hz"]=={"FA":436_795_000,"FB":435_450_000,"FC":145_850_000}
+    assert result["frequency_hz"]=={"FA":436_795_000,"FB":145_850_000,"FC":435_450_000}
+    assert result["sat_uplink_hz"]==145_850_000
+    assert result["sub_receiver_hz"]==435_450_000
     assert result["main_mode"]=="FM"
     assert result["errors"]=={}
     assert sim.writes==["ID;","SA;","FA;","FB;","FC;","MD;"]
@@ -122,14 +124,25 @@ def test_radio_operation_displays_actual_cat_readback_separate_from_prediction()
     assert '"FA"' in diag and '"FB"' in diag and '"FC"' in diag and '"SA"' in diag
 
 
-def test_radio_poll_tracks_sub_knob_using_fc_not_vfo_b():
+def test_radio_poll_tracks_sat_uplink_from_fb_not_independent_fc():
     radio,sim=rig_with_sim()
-    sim.up=145_860_000       # operator changes SUB on radio panel
-    sim.vfo_b=430_150_000    # unrelated memory/VFO B
+    sim.up=145_860_000       # satellite uplink changes on FB
+    sim.sub_vfo=430_150_000  # separate sub-receiver VFO
     state=radio.poll()
     assert state.uplink==145_860_000
-    assert "FC;" in sim.writes
-    assert "FB;" not in sim.writes
+    assert state.vfo_b==145_860_000
+    assert state.sub_receiver==430_150_000
+    assert "FB;" in sim.writes and "FC;" in sim.writes
+
+
+def test_doppler_updates_sat_uplink_fb_not_independent_fc():
+    radio,sim=rig_with_sim()
+    radio.set_frequencies(145_850_000,435_850_000)
+    assert sim.up==145_850_000
+    assert sim.down==435_850_000
+    assert sim.sub_vfo==435_450_000
+    assert "FB00145850000;" in sim.writes
+    assert not any(c.startswith("FC0") for c in sim.writes)
 
 
 def test_cat_main_control_guard_does_not_send_any_frequency_or_mode_writes():
