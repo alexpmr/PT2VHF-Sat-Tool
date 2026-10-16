@@ -81,7 +81,7 @@ jobs:
           $report = Join-Path $env:RUNNER_TEMP 'sattool-selftest-${{ matrix.target }}.json'
           $expected = if ('${{ matrix.target }}' -eq 'Win7-x86') { 'PySide2' } else { 'PySide6' }
           $proc = Start-Process -FilePath $exe -ArgumentList @('--self-test', $report, $expected) -Wait -PassThru
-          foreach ($debug in @('pt2vhf-selftest-argv.txt','pt2vhf-selftest-error.txt','pt2vhf-selftest-import-error.txt')) {
+          foreach ($debug in @('pt2vhf-selftest-argv.txt','pt2vhf-selftest-error.txt','pt2vhf-selftest-import-error.txt','pt2vhf-selftest-phases.txt')) {
             $file = Join-Path $env:RUNNER_TEMP $debug
             if (Test-Path $file) { Write-Host "SELFTEST DEBUG $debug"; Get-Content $file }
           }
@@ -103,7 +103,7 @@ jobs:
           $report = Join-Path $env:RUNNER_TEMP 'portable-onefile-${{ matrix.target }}.json'
           $binding = if ('${{ matrix.target }}' -eq 'Win7-x86') { 'PySide2' } else { 'PySide6' }
           $process = Start-Process -FilePath $portable -ArgumentList @('--self-test', $report, $binding) -Wait -PassThru
-          foreach ($debug in @('pt2vhf-selftest-argv.txt','pt2vhf-selftest-error.txt','pt2vhf-selftest-import-error.txt')) {
+          foreach ($debug in @('pt2vhf-selftest-argv.txt','pt2vhf-selftest-error.txt','pt2vhf-selftest-import-error.txt','pt2vhf-selftest-phases.txt')) {
             $file = Join-Path $env:RUNNER_TEMP $debug
             if (Test-Path $file) { Write-Host "SELFTEST DEBUG $debug"; Get-Content $file }
           }
