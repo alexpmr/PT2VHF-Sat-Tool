@@ -235,6 +235,48 @@ class TS2000:
                         self.logger(f"CAT leitura opcional {command}: {exc}")
             return self.state
 
+    def poll_telemetry(self):
+        """Read current TS-2000 control/meter state without touching VFOs/PTT.
+
+        The CAT Doppler worker already reads SA/FA/FB at a much faster cadence.
+        These supplementary commands run on a separate, throttled read-only
+        worker, serialized under the same COM-port lock.
+        """
+        with self.lock:
+            sa=self._exchange("SA;","SA")
+            md=self._exchange("MD;","MD")
+            fc=self._exchange("FC;","FC")
+            self.state.sat_raw=sa
+            self.state.sat=decode_satellite_status(sa)["sat"]
+            self.state.mode=MODES_REV.get(md[2:3],"?")
+            self.state.sub_receiver=parse_frequency(fc,"FC")
+            for command,expected,receiver,attr in (
+                ("SM0;","SM0",0,"signal_main"),
+                ("SM1;","SM1",1,"signal_sub")):
+                try:
+                    setattr(self.state,attr,parse_smeter(self._exchange(command,expected),receiver))
+                except (TimeoutError,ValueError,ConnectionError) as exc:
+                    setattr(self.state,attr,None)
+                    self.logger(f"CAT S-meter {command}: {exc}")
+            if time.monotonic()-self._last_optional_poll>=6:
+                self._last_optional_poll=time.monotonic()
+                for command,expected,parser,attr in (
+                    ("PC;","PC",parse_power_setting,"power_set_w"),
+                    ("RM;","RM",parse_meter,"meter")):
+                    try:
+                        val=parser(self._exchange(command,expected))
+                        if attr=="meter":
+                            self.state.meter_type,self.state.meter_value=val
+                        else:
+                            setattr(self.state,attr,val)
+                    except (TimeoutError,ValueError,ConnectionError) as exc:
+                        if attr=="meter":
+                            self.state.meter_type="";self.state.meter_value=None
+                        else:
+                            setattr(self.state,attr,None)
+                        self.logger(f"CAT leitura opcional {command}: {exc}")
+            return self.state
+
     def read_diagnostics(self) -> dict:
         """Read-only probe: safe with SAT on; never writes VFO, SAT or PTT.
 

@@ -4,25 +4,34 @@
 
 ## Downloads — instaladores e portáteis
 
-**PT2VHF Sat Tool v1.3.8 — Windows 7 SP1, Windows 10 e Windows 11.** Os quatro downloads são arquivos `.exe` diretos. Links ficam disponíveis após aprovação dos builds Windows. Embora seja o marco 1.0 de funcionalidades, permanece em pré-lançamento até a homologação CAT com TS-2000 físico e Windows 7 real.
+**PT2VHF Sat Tool v1.3.9 — Windows 7 SP1, Windows 10 e Windows 11.** Os quatro downloads são arquivos `.exe` diretos. Links ficam disponíveis após aprovação dos builds Windows. Embora seja o marco 1.0 de funcionalidades, permanece em pré-lançamento até a homologação CAT com TS-2000 físico e Windows 7 real.
 
 | Windows | Instalável | Portátil |
 | --- | --- | --- |
-| **Windows 7 SP1** (x86; executável de 32 bits também para Win7 x64) | [Instalador Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.8/PT2VHF-Sat-Tool-v1.3.8-Win7-x86-Setup.exe) | [Portable Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.8/PT2VHF-Sat-Tool-v1.3.8-Win7-x86-Portable.exe) |
-| **Windows 10 (1809+)/11** (x64; arquivo `Win11-x64` para manter atualizador) | [Instalador Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.8/PT2VHF-Sat-Tool-v1.3.8-Win11-x64-Setup.exe) | [Portable Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.8/PT2VHF-Sat-Tool-v1.3.8-Win11-x64-Portable.exe) |
+| **Windows 7 SP1** (x86; executável de 32 bits também para Win7 x64) | [Instalador Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.9/PT2VHF-Sat-Tool-v1.3.9-Win7-x86-Setup.exe) | [Portable Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.9/PT2VHF-Sat-Tool-v1.3.9-Win7-x86-Portable.exe) |
+| **Windows 10 (1809+)/11** (x64; arquivo `Win11-x64` para manter atualizador) | [Instalador Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.9/PT2VHF-Sat-Tool-v1.3.9-Win11-x64-Setup.exe) | [Portable Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.9/PT2VHF-Sat-Tool-v1.3.9-Win11-x64-Portable.exe) |
 
 **Formato dos downloads:** tanto instaladores quanto portáteis são entregues diretamente como arquivos **`.exe`**. O portátil inclui as dependências dentro do mesmo EXE (PyInstaller onefile) e não requer descompactação.
 
 **[Todas as releases](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases)** · **[Acompanhar compilação](https://github.com/alexpmr/PT2VHF-Sat-Tool/actions)**
 
 - **Instalável:** instalação por usuário, atalho e desinstalação, atualização pelo aplicativo usando o Setup de sua edição.
-- **Portátil:** execute diretamente `PT2VHF-Sat-Tool-v1.3.8-*-Portable.exe` (um único arquivo). Configurações ficam em `data/` ao lado do EXE, preservadas após atualizações.
+- **Portátil:** execute diretamente `PT2VHF-Sat-Tool-v1.3.9-*-Portable.exe` (um único arquivo). Configurações ficam em `data/` ao lado do EXE, preservadas após atualizações.
 - **Win7:** Python 3.8 x86 + PySide2/Qt5 + PyInstaller 5.13.2 (legado, precisa ser validado no Windows 7 real).
 - **Win10/11 x64:** Windows 10 1809+ ou Windows 11, Python 3.11 x64 + PySide6/Qt6 + PyInstaller 6.13.0.
 - Arquivos SHA256 acompanham cada compilação. A versão Windows 7 é experimental; não confundir sucesso do CI com homologação em campo.
 
 ---
 
+
+## Novidades v1.3.9 — Satélites, Passagens e telemetria TS-2000
+
+- **Passagens:** colunas AOS/TCA/LOS e Max ° dimensionadas pelo conteúdo; colunas Satélite e Modos distribuem todo o espaço livre do painel. Cabeçalhos/valores alinhados e conteúdo integral disponível por tooltip.
+- **Satélites:** seleção do catálogo por clique na linha, sem coluna/checkbox “Selecionado”. Registros selecionados ficam com **fundo amarelo e letras pretas** (inclusive após nova pesquisa e reinício). Duplo clique mantém acesso à operação.
+- **Baixar/atualizar frequências:** inclui **todos os NORAD IDs do catálogo orbital carregado**, independentemente de favoritos, seleção individual ou filtro de pesquisa. O processo em lote continua cancelável, com progresso, resumo de falhas e confirmação antes de consultas numerosas.
+- **Cartões de frequência RX/TX:** exibir modo e frequência corrigida, removendo a linha de deslocamento Doppler desses cartões; a informação orbital/Doppler e o diagnóstico continuam disponíveis em outras seções.
+- **Informações reais do TS-2000:** telemetria CAT somente leitura a cada cerca de 2 segundos (enquanto Auto CAT está ativo), incluindo controle MAIN/SUB, TRACE, VFO/MEM, modo MAIN, SUB RX/FC, S-meter MAIN/SUB e potência configurada/medidor quando a resposta for válida. Leitura da potência **não significa medição da saída RF**. As leituras não enviam PTT e não substituem o loop rápido FA/FB de Doppler.
+- **Homologação pendente:** verificar a responsividade das leituras com TS-2000 físico e eventual limitação da porta COM; os testes CI usam emulação de protocolo.
 
 ## Novidades v1.3.8 — SO-50 FM V/U e diagnóstico do bloqueio CAT
 

@@ -15,13 +15,17 @@ def change_selection(orbit_objects, filtered_ids, current_ids, select, filtered)
 
 
 def transmitter_batch_ids(scope, chosen_id, enabled_ids, filtered_ids, orbit_objects):
-    """Resolve one of three scopes using the UI index (safe in all languages)."""
+    """Resolve a scope using stable indices, including the entire orbital catalog."""
     if scope==0:
         proposed=[chosen_id] if chosen_id is not None else []
     elif scope==1:
         proposed=enabled_ids
     elif scope==2:
         proposed=filtered_ids
+    elif scope==3:
+        # Full orbital catalog: never limit frequency updates to favorites,
+        # the current row or a search filter.
+        proposed=list(orbit_objects)
     else:
         raise ValueError("Escopo de atualização SatNOGS inválido")
     available={str(ident) for ident in orbit_objects}

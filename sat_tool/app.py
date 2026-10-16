@@ -15,7 +15,7 @@ from pathlib import Path
 from .qt_compat import Qt, QTimer, QObject, Signal, Slot, QUrl
 from .crash_diagnostics import heartbeat,report_event,report_exception,diagnostic_dir
 from .log_journal import EventJournal
-from .qt_compat import QDoubleValidator, QFont, QIcon, QPixmap
+from .qt_compat import QDoubleValidator, QFont, QIcon, QPixmap, QColor, QBrush
 from .qt_compat import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
     QLabel, QPushButton, QLineEdit, QComboBox, QGroupBox, QTabWidget, QPlainTextEdit,
@@ -135,6 +135,7 @@ class MainWindow(QMainWindow):
         self.last_freqs = (None, None)
         self.last_radio_poll = 0
         self.last_cat_success = None
+        self.last_cat_telemetry = None
         self.selected_cat_target = None
         self.freq_update_cancel = False
         self.freq_update_stats = None
@@ -472,7 +473,18 @@ class MainWindow(QMainWindow):
         nextpass.setMinimumWidth(520)
         self.pass_table=QTableWidget(0,6)
         self.pass_table.setHorizontalHeaderLabels(["Satélite","AOS local","TCA local","LOS local","Max °","Modos"])
-        self.pass_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        # Distribuição proporcional: datas e elevação com largura do conteúdo;
+        # nome e modos expandem para ocupar TODO o espaço que sobrar.
+        # Diferente de Stretch em todas as colunas, não desperdiça largura
+        # em 'Max °' nem corta AOS/TCA/LOS em painéis mais estreitos.
+        pass_header=self.pass_table.horizontalHeader()
+        pass_header.setStretchLastSection(False)
+        pass_header.setMinimumSectionSize(42)
+        pass_header.setDefaultAlignment(Qt.AlignCenter)
+        for col in (1,2,3,4):
+            pass_header.setSectionResizeMode(col,QHeaderView.ResizeToContents)
+        for col in (0,5):
+            pass_header.setSectionResizeMode(col,QHeaderView.Stretch)
         self.pass_table.setWordWrap(False)
         self.pass_table.verticalHeader().setDefaultSectionSize(26)
         self.pass_table.setSelectionBehavior(QAbstractItemView.SelectRows)
@@ -496,6 +508,9 @@ class MainWindow(QMainWindow):
         self.cat_details=label("SAT: —  ·  MAIN: —  ·  Leitura CAT: —")
         self.cat_details.setStyleSheet("color:#a8cee0;font-size:12px")
         cv.addWidget(self.cat_details)
+        self.cat_operating_detail=label("CTRL — · TRACE — · VFO/MEM — · TS-2000 sem telemetria CAT")
+        self.cat_operating_detail.setStyleSheet("color:#bce4e1;font-size:12px")
+        cv.addWidget(self.cat_operating_detail)
         meter=QHBoxLayout()
         self.smeter_main=QProgressBar();self.smeter_main.setRange(0,30);self.smeter_main.setTextVisible(True)
         self.smeter_sub=QProgressBar();self.smeter_sub.setRange(0,15);self.smeter_sub.setTextVisible(True)
@@ -562,29 +577,42 @@ class MainWindow(QMainWindow):
         self.mark_catalog_none=QPushButton("Desmarcar todos")
         self.mark_catalog_all.clicked.connect(lambda:self.bulk_catalog_selection(True))
         self.mark_catalog_none.clicked.connect(lambda:self.bulk_catalog_selection(False))
-        self.catalog_refresh_scope=QComboBox()
-        self.catalog_refresh_scope.addItems(["Selecionado","Habilitados","Resultados filtrados"])
-        self.catalog_refresh_scope.setCurrentIndex(1)  # Batch follows marked satellites by default
-        self.refresh_catalog_freq=QPushButton("Baixar/atualizar frequências")
+        # Frequency catalog update always covers ALL downloaded OMM/TLE NORAD IDs;
+        # selection/favorites and search filters affect only visibility/monitoring.
+        self.refresh_catalog_freq=QPushButton("Baixar/atualizar frequências · todos")
+        self.refresh_catalog_freq.setToolTip(
+            "Consulta frequências de TODOS os satélites do catálogo, inclusive não selecionados. "
+            "Pode envolver milhares de consultas; há confirmação, progresso e cancelamento.")
         self.refresh_catalog_freq.clicked.connect(self.refresh_catalog_transmitters)
         self.stop_catalog_freq=QPushButton("Cancelar download")
         self.stop_catalog_freq.clicked.connect(self.cancel_catalog_transmitters)
         self.stop_catalog_freq.setEnabled(False)
         for widget in (self.scope_filtered,self.mark_catalog_all,self.mark_catalog_none,
-                       self.catalog_refresh_scope,self.refresh_catalog_freq,self.stop_catalog_freq):
+                       self.refresh_catalog_freq,self.stop_catalog_freq):
             catalog_actions.addWidget(widget)
         catalog_layout.addLayout(catalog_actions)
         self.catalog_progress=label("SatNOGS: frequências em cache; atualização sob demanda.")
         catalog_layout.addWidget(self.catalog_progress)
-        self.catalog_table=QTableWidget(0, 8)
-        self.catalog_table.setHorizontalHeaderLabels(["Selecionado", "Satélite", "NORAD", "Inclinação", "Período", "Modos", "Downlink MHz", "Situação"])
+        self.catalog_table=QTableWidget(0, 7)
+        self.catalog_table.setObjectName("catalogSatellites")
+        self.catalog_table.setStyleSheet(
+            "QTableWidget#catalogSatellites::item:selected {"
+            "background:#ffe36a;color:#111111;}"
+        )
+        self.catalog_table.setHorizontalHeaderLabels(
+            ["Satélite", "NORAD", "Inclinação", "Período", "Modos", "Downlink MHz", "Situação"])
         self.catalog_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.catalog_table.horizontalHeader().setSectionResizeMode(0,QHeaderView.Fixed)
-        self.catalog_table.setColumnWidth(0,92)
         self.catalog_table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        # Favorito é marcado por cores persistentes, não pela seleção visual
+        # temporária do Qt. Não deixar uma linha desmarcada amarela só
+        # por continuar com o foco após o clique.
+        self.catalog_table.setSelectionMode(QAbstractItemView.NoSelection)
         self.catalog_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.catalog_table.setToolTip(
+            "Clique uma vez na linha para marcar/desmarcar o favorito (amarelo). "
+            "Duplo clique abre a operação do satélite.")
         self.catalog_table.cellDoubleClicked.connect(self.select_catalog_satellite)
-        self.catalog_table.itemChanged.connect(self.catalog_satellite_checked)
+        self.catalog_table.cellClicked.connect(self.toggle_catalog_satellite_selection)
         catalog_layout.addWidget(self.catalog_table)
         self.catalog_note=label("Dados orbitais: CelesTrak OMM/TLE · Frequências e modos: SatNOGS · Não confundir catálogo com atividade confirmada.")
         catalog_layout.addWidget(self.catalog_note)
@@ -899,8 +927,6 @@ class MainWindow(QMainWindow):
             for i,original in enumerate(originals):
                 item=widget.horizontalHeaderItem(i)
                 if item:item.setText(translated(original,locale))
-        for i,original in enumerate(("Selecionado","Habilitados","Resultados filtrados")):
-            self.catalog_refresh_scope.setItemText(i,translated(original,locale))
         if hasattr(self,"tracked_search"):
             self.tracked_search.setPlaceholderText(translated("Pesquisar por nome ou NORAD…",locale))
         self._language_active=locale
@@ -1347,7 +1373,9 @@ class MainWindow(QMainWindow):
         self.cat_rx.setText("RX / DOWNLINK (CAT)\\n— MHz")
         self.cat_tx.setText("TX / UPLINK (CAT)\\n— MHz")
         self.cat_details.setText("SAT — · MAIN — · sem leitura atual")
-        self.cat_telemetry.setText("Potência: — · Medidor: — · RX/TX: sem leitura CAT")
+        self.cat_telemetry.setText("Potência: — · Medidor: — · sem leitura CAT")
+        self.cat_operating_detail.setText("CTRL — · TRACE — · VFO/MEM — · CAT desconectado")
+        self.last_cat_telemetry=None
         for widget in (self.smeter_main,self.smeter_sub):
             widget.setValue(0);widget.setFormat("sem leitura")
         self.cat_tune_status.setText("CAT desconectado · rastreamento pausado")
@@ -1401,7 +1429,26 @@ class MainWindow(QMainWindow):
             widget.setFormat(f"{value:02d}/{scale}" if value is not None else "sem leitura")
         watts=f"{st.power_set_w} W (ajuste)" if st.power_set_w is not None else "—"
         meter=f"{st.meter_type} {st.meter_value}/30" if st.meter_value is not None else "—"
-        self.cat_telemetry.setText(f"Potência: {watts} · Medidor {meter} · RX/TX real: não confirmado (CAT)")
+        telemetry_age=(
+            (now_utc()-self.last_cat_telemetry).total_seconds()
+            if self.last_cat_telemetry is not None else None)
+        telemetry_status=(
+            f"há {telemetry_age:.0f} s" if telemetry_age is not None
+            else "aguardando leitura periódica CAT")
+        self.cat_telemetry.setText(
+            f"Potência configurada: {watts} · Medidor CAT: {meter} · "
+            f"Telemetria {telemetry_status}")
+        try:
+            current=decode_satellite_status(st.sat_raw)
+            self.cat_operating_detail.setText(
+                f"CTRL {'SUB' if current['ctrl_sub'] else 'MAIN'} · "
+                f"TRACE {'ON' if current['trace'] else 'OFF'} · "
+                f"{'MEMÓRIA' if current['memory_mode'] else 'VFO'} · "
+                f"SUB RX [FC] {self.radio_freq(st.sub_receiver)} · "
+                f"MD MAIN {st.mode}")
+        except (TypeError,ValueError):
+            self.cat_operating_detail.setText(
+                "Estado operacional SA/MD: aguardando leitura válida do rádio")
 
     def refresh_catalog(self,force=False):
         groups=self.config.values.get("orbit_groups",list(DEFAULT_GROUPS))
@@ -1464,13 +1511,9 @@ class MainWindow(QMainWindow):
 
     def refresh_catalog_transmitters(self):
         """Execute download without requiring a double-click on an individual satellite."""
-        row=self.catalog_table.currentRow()
-        item=self.catalog_table.item(row,0) if row>=0 else None
-        chosen=str(item.data(Qt.UserRole)) if item is not None else self.sat_combo.currentData()
-        ids=transmitter_batch_ids(self.catalog_refresh_scope.currentIndex(),chosen,
-            self.enabled_satellite_ids(),self.catalog_filtered_ids(),self.omm)
+        ids=transmitter_batch_ids(3,None,[],[],self.omm)
         if not ids:
-            self.catalog_progress.setText("Selecione pelo menos um satélite ou clique em Marcar todos")
+            self.catalog_progress.setText("Catálogo orbital vazio: atualize as órbitas antes das frequências")
             return
         if "tx-batch" in self.pending_jobs:
             self.catalog_progress.setText("Já existe atualização em execução")
@@ -1558,14 +1601,13 @@ class MainWindow(QMainWindow):
                       ", ".join(info["modes"]) or "—",
                       ", ".join(f"{n:.3f}" for n in info["downlinks_mhz"][:3]) or "—",
                       info["status"]]
-                box=QTableWidgetItem("")
-                box.setFlags((box.flags()|Qt.ItemIsUserCheckable)&~Qt.ItemIsEditable)
-                box.setData(Qt.UserRole,ident)
-                box.setCheckState(Qt.Checked if ident in checked else Qt.Unchecked)
-                self.catalog_table.setItem(row,0,box)
-                for column,value in enumerate(cols,1):
+                for column,value in enumerate(cols):
                     cell=QTableWidgetItem(str(value))
+                    cell.setFlags(cell.flags()&~Qt.ItemIsEditable)
                     cell.setData(Qt.UserRole,ident)
+                    if ident in checked:
+                        cell.setBackground(QBrush(QColor("#ffe36a")))
+                        cell.setForeground(QBrush(QColor("#111111")))
                     self.catalog_table.setItem(row,column,cell)
             self.catalog_table.setSortingEnabled(True)
             if previous_id is not None:
@@ -1581,19 +1623,34 @@ class MainWindow(QMainWindow):
             f"{len(self.omm)} órbitas em cache · {len(checked)} selecionados. "
             "Pesquise por nome, NORAD ou apelido para refinar.")
 
-    def catalog_satellite_checked(self,item):
-        """Individual checkbox persists the same explicit selection as bulk actions."""
-        if self._loading_catalog or item.column()!=0:return
+    def toggle_catalog_satellite_selection(self,row,col):
+        """Click anywhere in a row to toggle persistent favorite highlighting.
+
+        Not the Qt temporary/current selection: saved NORAD IDs determine
+        yellow/black row styling, independently of sorting and pagination.
+        """
+        if self._loading_catalog:return
+        item=self.catalog_table.item(row,0)
+        if item is None:return
         ident=str(item.data(Qt.UserRole))
         if ident not in self.omm:return
-        updated,_=change_selection(self.omm,[ident],self.enabled_satellite_ids(),
-                                   item.checkState()==Qt.Checked,True)
+        selected=set(self.enabled_satellite_ids())
+        updated,_=change_selection(self.omm,[ident],selected,
+                                   ident not in selected,True)
         self.config.values["satellite_selection"]=updated
         self.config.save()
+        now_selected=ident in updated
+        for col_index in range(self.catalog_table.columnCount()):
+            cell=self.catalog_table.item(row,col_index)
+            if cell is None:continue
+            cell.setBackground(QBrush(QColor("#ffe36a" if now_selected else "#0b1b2e")))
+            cell.setForeground(QBrush(QColor("#111111" if now_selected else "#e8edf5")))
         self.refresh_tracked_table()
         self.filter_sats(self.search.text())
         self.refresh_passes()
-        self.catalog_progress.setText(f"Seleção salva: {len(updated)} de {len(self.omm)} satélites")
+        self.catalog_progress.setText(
+            f"Seleção salva: {len(updated)} de {len(self.omm)} satélites · "
+            f"{ident} {'marcado' if now_selected else 'desmarcado'} (amarelo)")
 
     def select_catalog_satellite(self,row,col):
         cell=self.catalog_table.item(row,0)
@@ -1602,6 +1659,7 @@ class MainWindow(QMainWindow):
         if ident not in self.enabled_satellite_ids():
             self.config.values["satellite_selection"]=list(dict.fromkeys(self.enabled_satellite_ids()+[ident]))
             self.config.save()
+            self.refresh_satellite_table()
             self.refresh_tracked_table()
         self.search.clear()
         self.filter_sats("")
@@ -2043,9 +2101,9 @@ class MainWindow(QMainWindow):
             rx_mode=self.rx_mode.currentText()
             tx_mode=self.tx_mode.currentText()
             self.pred_rx.setText(
-                f"RX / DOWNLINK · {rx_mode}\n{self.radio_freq(calc['rx_hz'])}\nDoppler {calc['rx_offset_hz']:+d} Hz")
+                f"RX / DOWNLINK · {rx_mode}\n{self.radio_freq(calc['rx_hz'])}")
             self.pred_tx.setText(
-                f"TX / UPLINK · {tx_mode}\n{self.radio_freq(calc['tx_hz'])}\nDoppler {calc['tx_offset_hz']:+d} Hz"
+                f"TX / UPLINK · {tx_mode}\n{self.radio_freq(calc['tx_hz'])}"
                 if ul is not None else "TX / UPLINK\nSOMENTE RECEPÇÃO\nSem frequência TX")
             self.pred_rx.setToolTip("Frequência nominal: "+self.radio_freq(dl))
             self.pred_tx.setToolTip("Frequência nominal: "+self.radio_freq(ul) if ul is not None else "Canal somente recepção")
@@ -2424,12 +2482,12 @@ class MainWindow(QMainWindow):
         # independent and must not interleave with the live tuning loop.
         if self.radio.connected:
             active=self.cat_tracking_armed and self.config.values.get("cat_auto_select",False)
-            interval=8.0 if active else max(1,int(self.config.values.get("poll_interval_s",1)))
+            interval=2.0 if active else max(1,int(self.config.values.get("poll_interval_s",1)))
             if (time.monotonic()-self.last_cat_poll_started>=interval
                     and not any(k in self.pending_jobs for k in (
                         "cat-connect","cat-autotune","cat-track","cat-diagnostic","cat-poll"))):
                 self.last_cat_poll_started=time.monotonic()
-                self.background("cat-poll",self.radio.poll_tracking if active else self.radio.poll)
+                self.background("cat-poll",self.radio.poll_telemetry if active else self.radio.poll)
         if self.radio.connected and self.last_cat_success:
             age=(now-self.last_cat_success).total_seconds()
             if age>10:
@@ -2497,6 +2555,7 @@ class MainWindow(QMainWindow):
             self.connection.setEnabled(True)
             self.connection.setText("Desconectar")
             self.cat_diagnose.setEnabled(True)
+            self.last_cat_telemetry=now_utc()
             self.render_radio_state(data)
             self.cat_tune_status.setText("CAT conectado · verificando Auto CAT online")
             self.config.values.update({"port":self.radio.port.port,
@@ -2574,6 +2633,7 @@ class MainWindow(QMainWindow):
         if key=='cat-poll':
             if self.radio.connected and not any(
                     k in self.pending_jobs for k in ("cat-autotune","cat-track")):
+                self.last_cat_telemetry=now_utc()
                 self.render_radio_state(data)
                 self.update_cat_sync_status(data)
             return
@@ -2622,7 +2682,11 @@ class MainWindow(QMainWindow):
                 los=p['los'].astimezone().strftime('%d/%m %H:%M')
                 modes=self.suggested_mode_text(p['id'])
                 for j,value in enumerate((p['name'],aos,peak,los,f"{p['max_el']:.0f}",modes)):
-                    self.pass_table.setItem(i,j,QTableWidgetItem(value))
+                    cell=QTableWidgetItem(value)
+                    cell.setTextAlignment(
+                        Qt.AlignVCenter | (Qt.AlignCenter if j in (1,2,3,4) else Qt.AlignLeft))
+                    cell.setToolTip(value)  # texto integral se coluna for comprimida
+                    self.pass_table.setItem(i,j,cell)
             self.log(f'Previsão: {len(data)} passagens nas próximas 36 h (lista limitada a 100)')
             self.update_next_indicator()
             self.prefetch_upcoming_modes()

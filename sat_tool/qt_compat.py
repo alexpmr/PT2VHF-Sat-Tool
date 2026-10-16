@@ -7,7 +7,7 @@ import sys
 
 try:
     from PySide6.QtCore import Qt, QTimer, QObject, Signal, Slot, QUrl
-    from PySide6.QtGui import QDoubleValidator, QFont, QIcon, QPixmap
+    from PySide6.QtGui import QDoubleValidator, QFont, QIcon, QPixmap, QColor, QBrush
     from PySide6.QtWidgets import (
         QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
         QLabel, QPushButton, QLineEdit, QComboBox, QGroupBox, QTabWidget,
@@ -23,7 +23,7 @@ except ImportError as qt6_error:
     if "No module named 'PySide6'" not in str(qt6_error):
         raise
     from PySide2.QtCore import Qt, QTimer, QObject, Signal, Slot, QUrl
-    from PySide2.QtGui import QDoubleValidator, QFont, QIcon, QPixmap
+    from PySide2.QtGui import QDoubleValidator, QFont, QIcon, QPixmap, QColor, QBrush
     from PySide2.QtWidgets import (
         QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
         QLabel, QPushButton, QLineEdit, QComboBox, QGroupBox, QTabWidget,

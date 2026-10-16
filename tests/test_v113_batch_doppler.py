@@ -26,8 +26,9 @@ def test_batch_default_habilitados_and_single_or_filtered():
     assert transmitter_batch_ids(0,"25544",enabled,[],orbits)==["25544"]
     assert transmitter_batch_ids(2,None,enabled,["25544","99999"],orbits)==["25544"]
     assert transmitter_batch_ids(0,None,enabled,[],orbits)==[]
+    assert transmitter_batch_ids(3,None,enabled,[],orbits)==["25544","27607","44881"]
     with pytest.raises(ValueError):
-        transmitter_batch_ids(3,None,enabled,[],orbits)
+        transmitter_batch_ids(4,None,enabled,[],orbits)
 
 
 def test_predicted_doppler_independent_of_visibility_and_cat_protected():
@@ -53,9 +54,9 @@ def test_cat_out_of_view_setting_defaults_off_and_persists(tmp_path):
 
 def test_gui_wires_batch_checkboxes_and_every_second_preview():
     source=(Path(__file__).resolve().parents[1]/"sat_tool"/"app.py").read_text(encoding="utf-8")
-    assert "self.catalog_refresh_scope.setCurrentIndex(1)" in source
-    assert "self.catalog_table.itemChanged.connect(self.catalog_satellite_checked)" in source
-    assert "def catalog_satellite_checked(self,item):" in source
+    assert "ids=transmitter_batch_ids(3,None,[],[],self.omm)" in source
+    assert "self.catalog_table.cellClicked.connect(self.toggle_catalog_satellite_selection)" in source
+    assert "def toggle_catalog_satellite_selection(self,row,col):" in source
     assert "self.preview_doppler(pos=pos,when=now)" in source
     assert "self.cat_live_timer.timeout.connect(self.cat_live_tick)" in source
     assert "cat_doppler_allowed(self.last_pos[\"visible\"]" in source
