@@ -142,6 +142,7 @@ class MainWindow(QMainWindow):
         self.aos_alarm_target = None
         self.cat_selection_generation = 0
         self.cat_autotune_requested_generation = -1
+        self.cat_tune_manual_request = False
         self._loading_satellites = False
         self._loading_catalog = False
         self._active_satellite_id = None
@@ -1780,6 +1781,7 @@ class MainWindow(QMainWindow):
                 return blocked("modo RX não suportado pelo TS-2000")
             generation=self.cat_selection_generation
             self.cat_autotune_requested_generation=generation
+            self.cat_tune_manual_request=bool(force)
             self.cat_tune_status.setText("CAT: sintonizando RX/TX e modo MAIN…")
             self.log(f"Auto CAT: solicitação NORAD {self.sat_combo.currentData()} "
                      f"RX {dl_new} TX {ul_new or 'somente RX'} MAIN {mode}")
@@ -2269,6 +2271,7 @@ class MainWindow(QMainWindow):
                 self.frequency_progress_dialog.setValue(index)
             return
         if key=="cat-autotune":
+            self.cat_tune_manual_request=False
             generation,state=data
             if generation==self.cat_selection_generation and state is not None:
                 self.last_freqs=(state.uplink,state.downlink)
@@ -2371,6 +2374,8 @@ class MainWindow(QMainWindow):
             self.catalog_progress.setText("SatNOGS: falha, cache anterior preservado")
             return
         if key=="cat-autotune":
+            was_manual=self.cat_tune_manual_request
+            self.cat_tune_manual_request=False
             # A failed write/readback is not a failed *connection*.  The radio
             # can still answer ID/SA/FA/FC after rejecting a requested tune.
             # Keep the connection indicator independent of tune status.
@@ -2387,6 +2392,11 @@ class MainWindow(QMainWindow):
                 self.last_cat_success=None
                 self.cat_indicator.setText("● RÁDIO DESCONECTADO")
                 self.cat_indicator.setStyleSheet("font-size:14px;font-weight:800;color:#ff9595")
+            if was_manual:
+                QMessageBox.warning(self,"Falha ao sintonizar TS-2000",
+                                    "O rádio não confirmou a sintonia solicitada. "
+                                    "Isso não significa, necessariamente, perda da conexão CAT.\n\n"
+                                    +message+"\n\nVeja também LOGs / CAT.")
             if (self.config.values.get("cat_auto_select",False) and self.radio.connected
                     and self.cat_autotune_requested_generation!=self.cat_selection_generation):
                 self.auto_tune_selected_satellite()
