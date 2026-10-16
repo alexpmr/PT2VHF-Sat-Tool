@@ -15,7 +15,7 @@ from pathlib import Path
 from .qt_compat import Qt, QTimer, QObject, Signal, Slot, QUrl
 from .crash_diagnostics import heartbeat,report_event,report_exception,diagnostic_dir
 from .log_journal import EventJournal
-from .qt_compat import QDoubleValidator, QFont, QIcon, QPixmap
+from .qt_compat import QDoubleValidator, QFont, QIcon, QPixmap, QColor, QBrush
 from .qt_compat import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
     QLabel, QPushButton, QLineEdit, QComboBox, QGroupBox, QTabWidget, QPlainTextEdit,
@@ -573,29 +573,38 @@ class MainWindow(QMainWindow):
         self.mark_catalog_none=QPushButton("Desmarcar todos")
         self.mark_catalog_all.clicked.connect(lambda:self.bulk_catalog_selection(True))
         self.mark_catalog_none.clicked.connect(lambda:self.bulk_catalog_selection(False))
-        self.catalog_refresh_scope=QComboBox()
-        self.catalog_refresh_scope.addItems(["Selecionado","Habilitados","Resultados filtrados"])
-        self.catalog_refresh_scope.setCurrentIndex(1)  # Batch follows marked satellites by default
-        self.refresh_catalog_freq=QPushButton("Baixar/atualizar frequências")
+        # Frequency catalog update always covers ALL downloaded OMM/TLE NORAD IDs;
+        # selection/favorites and search filters affect only visibility/monitoring.
+        self.refresh_catalog_freq=QPushButton("Baixar/atualizar frequências · todos")
+        self.refresh_catalog_freq.setToolTip(
+            "Consulta frequências de TODOS os satélites do catálogo, inclusive não selecionados. "
+            "Pode envolver milhares de consultas; há confirmação, progresso e cancelamento.")
         self.refresh_catalog_freq.clicked.connect(self.refresh_catalog_transmitters)
         self.stop_catalog_freq=QPushButton("Cancelar download")
         self.stop_catalog_freq.clicked.connect(self.cancel_catalog_transmitters)
         self.stop_catalog_freq.setEnabled(False)
         for widget in (self.scope_filtered,self.mark_catalog_all,self.mark_catalog_none,
-                       self.catalog_refresh_scope,self.refresh_catalog_freq,self.stop_catalog_freq):
+                       self.refresh_catalog_freq,self.stop_catalog_freq):
             catalog_actions.addWidget(widget)
         catalog_layout.addLayout(catalog_actions)
         self.catalog_progress=label("SatNOGS: frequências em cache; atualização sob demanda.")
         catalog_layout.addWidget(self.catalog_progress)
-        self.catalog_table=QTableWidget(0, 8)
-        self.catalog_table.setHorizontalHeaderLabels(["Selecionado", "Satélite", "NORAD", "Inclinação", "Período", "Modos", "Downlink MHz", "Situação"])
+        self.catalog_table=QTableWidget(0, 7)
+        self.catalog_table.setObjectName("catalogSatellites")
+        self.catalog_table.setStyleSheet(
+            "QTableWidget#catalogSatellites::item:selected {"
+            "background:#ffe36a;color:#111111;}"
+        )
+        self.catalog_table.setHorizontalHeaderLabels(
+            ["Satélite", "NORAD", "Inclinação", "Período", "Modos", "Downlink MHz", "Situação"])
         self.catalog_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.catalog_table.horizontalHeader().setSectionResizeMode(0,QHeaderView.Fixed)
-        self.catalog_table.setColumnWidth(0,92)
         self.catalog_table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.catalog_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.catalog_table.setToolTip(
+            "Clique uma vez na linha para marcar/desmarcar o favorito (amarelo). "
+            "Duplo clique abre a operação do satélite.")
         self.catalog_table.cellDoubleClicked.connect(self.select_catalog_satellite)
-        self.catalog_table.itemChanged.connect(self.catalog_satellite_checked)
+        self.catalog_table.cellClicked.connect(self.toggle_catalog_satellite_selection)
         catalog_layout.addWidget(self.catalog_table)
         self.catalog_note=label("Dados orbitais: CelesTrak OMM/TLE · Frequências e modos: SatNOGS · Não confundir catálogo com atividade confirmada.")
         catalog_layout.addWidget(self.catalog_note)
@@ -1475,13 +1484,9 @@ class MainWindow(QMainWindow):
 
     def refresh_catalog_transmitters(self):
         """Execute download without requiring a double-click on an individual satellite."""
-        row=self.catalog_table.currentRow()
-        item=self.catalog_table.item(row,0) if row>=0 else None
-        chosen=str(item.data(Qt.UserRole)) if item is not None else self.sat_combo.currentData()
-        ids=transmitter_batch_ids(self.catalog_refresh_scope.currentIndex(),chosen,
-            self.enabled_satellite_ids(),self.catalog_filtered_ids(),self.omm)
+        ids=transmitter_batch_ids(3,None,[],[],self.omm)
         if not ids:
-            self.catalog_progress.setText("Selecione pelo menos um satélite ou clique em Marcar todos")
+            self.catalog_progress.setText("Catálogo orbital vazio: atualize as órbitas antes das frequências")
             return
         if "tx-batch" in self.pending_jobs:
             self.catalog_progress.setText("Já existe atualização em execução")
@@ -1569,14 +1574,13 @@ class MainWindow(QMainWindow):
                       ", ".join(info["modes"]) or "—",
                       ", ".join(f"{n:.3f}" for n in info["downlinks_mhz"][:3]) or "—",
                       info["status"]]
-                box=QTableWidgetItem("")
-                box.setFlags((box.flags()|Qt.ItemIsUserCheckable)&~Qt.ItemIsEditable)
-                box.setData(Qt.UserRole,ident)
-                box.setCheckState(Qt.Checked if ident in checked else Qt.Unchecked)
-                self.catalog_table.setItem(row,0,box)
-                for column,value in enumerate(cols,1):
+                for column,value in enumerate(cols):
                     cell=QTableWidgetItem(str(value))
+                    cell.setFlags(cell.flags()&~Qt.ItemIsEditable)
                     cell.setData(Qt.UserRole,ident)
+                    if ident in checked:
+                        cell.setBackground(QBrush(QColor("#ffe36a")))
+                        cell.setForeground(QBrush(QColor("#111111")))
                     self.catalog_table.setItem(row,column,cell)
             self.catalog_table.setSortingEnabled(True)
             if previous_id is not None:
@@ -1592,19 +1596,34 @@ class MainWindow(QMainWindow):
             f"{len(self.omm)} órbitas em cache · {len(checked)} selecionados. "
             "Pesquise por nome, NORAD ou apelido para refinar.")
 
-    def catalog_satellite_checked(self,item):
-        """Individual checkbox persists the same explicit selection as bulk actions."""
-        if self._loading_catalog or item.column()!=0:return
+    def toggle_catalog_satellite_selection(self,row,col):
+        """Click anywhere in a row to toggle persistent favorite highlighting.
+
+        Not the Qt temporary/current selection: saved NORAD IDs determine
+        yellow/black row styling, independently of sorting and pagination.
+        """
+        if self._loading_catalog:return
+        item=self.catalog_table.item(row,0)
+        if item is None:return
         ident=str(item.data(Qt.UserRole))
         if ident not in self.omm:return
-        updated,_=change_selection(self.omm,[ident],self.enabled_satellite_ids(),
-                                   item.checkState()==Qt.Checked,True)
+        selected=set(self.enabled_satellite_ids())
+        updated,_=change_selection(self.omm,[ident],selected,
+                                   ident not in selected,True)
         self.config.values["satellite_selection"]=updated
         self.config.save()
+        now_selected=ident in updated
+        for col_index in range(self.catalog_table.columnCount()):
+            cell=self.catalog_table.item(row,col_index)
+            if cell is None:continue
+            cell.setBackground(QBrush(QColor("#ffe36a" if now_selected else "#0b1b2e")))
+            cell.setForeground(QBrush(QColor("#111111" if now_selected else "#e8edf5")))
         self.refresh_tracked_table()
         self.filter_sats(self.search.text())
         self.refresh_passes()
-        self.catalog_progress.setText(f"Seleção salva: {len(updated)} de {len(self.omm)} satélites")
+        self.catalog_progress.setText(
+            f"Seleção salva: {len(updated)} de {len(self.omm)} satélites · "
+            f"{ident} {'marcado' if now_selected else 'desmarcado'} (amarelo)")
 
     def select_catalog_satellite(self,row,col):
         cell=self.catalog_table.item(row,0)
@@ -1613,6 +1632,7 @@ class MainWindow(QMainWindow):
         if ident not in self.enabled_satellite_ids():
             self.config.values["satellite_selection"]=list(dict.fromkeys(self.enabled_satellite_ids()+[ident]))
             self.config.save()
+            self.refresh_satellite_table()
             self.refresh_tracked_table()
         self.search.clear()
         self.filter_sats("")
