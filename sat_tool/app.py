@@ -720,7 +720,7 @@ class MainWindow(QMainWindow):
         cfg.addWidget(alert_group)
         advanced,adv=group("DOPPLER E SEGURANÇA")
         self.interval=QDoubleSpinBox();self.interval.setRange(1,15);self.interval.setSuffix(' segundos')
-        self.threshold=QDoubleSpinBox();self.threshold.setRange(5,1000);self.threshold.setSuffix(' Hz')
+        self.threshold=QDoubleSpinBox();self.threshold.setRange(1,1000);self.threshold.setDecimals(0);self.threshold.setSuffix(' Hz')
         ag=QGridLayout();ag.addWidget(label("Intervalo de ajuste automático"),0,0);ag.addWidget(self.interval,0,1)
         ag.addWidget(label("Mínima variação para reprogramar CAT"),1,0);ag.addWidget(self.threshold,1,1)
         adv.addLayout(ag)
@@ -1752,8 +1752,7 @@ class MainWindow(QMainWindow):
             return
         if (self.last_freqs==(None,None)
                 and self.cat_autotune_requested_generation!=self.cat_selection_generation
-                and isinstance(self.mode_combo.currentData(),int)
-                and self.mode_combo.currentData()>=0):
+                and self.down_edit.text().strip()):
             # When a saved/updated catalog becomes ready, initiate once.
             self.auto_tune_selected_satellite()
             return
@@ -1875,9 +1874,6 @@ class MainWindow(QMainWindow):
             return blocked("SAT está OFF no TS-2000; ative em Configurações → Conexão CAT")
         if not self.omm_fresh():
             return blocked("OMM/TLE vencido; atualize elementos orbitais antes de sintonizar")
-        if not force and (not isinstance(self.mode_combo.currentData(),int)
-                          or self.mode_combo.currentData()<0):
-            return blocked("sem transponder selecionado; baixe frequências SatNOGS em Satélites")
         if "cat-autotune" in self.pending_jobs:
             self.cat_tune_status.setText("CAT: nova seleção aguardando sintonia anterior…")
             return False
@@ -2745,7 +2741,7 @@ class MainWindow(QMainWindow):
     def change_auto_cat(self,enabled):
         if enabled and QMessageBox.question(
             self,"Autorizar CAT automático",
-            "Ao selecionar um satélite, o aplicativo poderá ajustar frequências e modo RX no TS-2000 conectado, se SAT estiver ativo. Não transmite nem aciona PTT. Habilitar?",
+            "O aplicativo acompanhará continuamente as frequências FA/FB conforme o Doppler, aproximadamente a cada segundo, enquanto conectado e com SAT ativo. Não transmite nem aciona PTT. Habilitar?",
             QMessageBox.Yes|QMessageBox.No,QMessageBox.No)!=QMessageBox.Yes:
             self.auto_cat.blockSignals(True)
             self.auto_cat.setChecked(False)
