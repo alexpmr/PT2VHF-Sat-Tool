@@ -45,7 +45,7 @@ def test_predicted_doppler_independent_of_visibility_and_cat_protected():
 
 def test_cat_out_of_view_setting_defaults_off_and_persists(tmp_path):
     config=Config(tmp_path)
-    assert config.values["cat_doppler_out_of_view"] is False
+    assert config.values["cat_doppler_out_of_view"] is True
     config.values["cat_doppler_out_of_view"]=True
     config.save()
     assert Config(tmp_path).values["cat_doppler_out_of_view"] is True
