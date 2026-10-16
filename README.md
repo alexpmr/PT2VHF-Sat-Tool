@@ -4,24 +4,33 @@
 
 ## Downloads — instaladores e portáteis
 
-**PT2VHF Sat Tool v1.3.5 — Windows 7 SP1, Windows 10 e Windows 11.** Os quatro downloads são arquivos `.exe` diretos. Links ficam disponíveis após aprovação dos builds Windows. Embora seja o marco 1.0 de funcionalidades, permanece em pré-lançamento até a homologação CAT com TS-2000 físico e Windows 7 real.
+**PT2VHF Sat Tool v1.3.6 — Windows 7 SP1, Windows 10 e Windows 11.** Os quatro downloads são arquivos `.exe` diretos. Links ficam disponíveis após aprovação dos builds Windows. Embora seja o marco 1.0 de funcionalidades, permanece em pré-lançamento até a homologação CAT com TS-2000 físico e Windows 7 real.
 
 | Windows | Instalável | Portátil |
 | --- | --- | --- |
-| **Windows 7 SP1** (x86; executável de 32 bits também para Win7 x64) | [Instalador Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.5/PT2VHF-Sat-Tool-v1.3.5-Win7-x86-Setup.exe) | [Portable Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.5/PT2VHF-Sat-Tool-v1.3.5-Win7-x86-Portable.exe) |
-| **Windows 10 (1809+)/11** (x64; arquivo `Win11-x64` para manter atualizador) | [Instalador Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.5/PT2VHF-Sat-Tool-v1.3.5-Win11-x64-Setup.exe) | [Portable Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.5/PT2VHF-Sat-Tool-v1.3.5-Win11-x64-Portable.exe) |
+| **Windows 7 SP1** (x86; executável de 32 bits também para Win7 x64) | [Instalador Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.6/PT2VHF-Sat-Tool-v1.3.6-Win7-x86-Setup.exe) | [Portable Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.6/PT2VHF-Sat-Tool-v1.3.6-Win7-x86-Portable.exe) |
+| **Windows 10 (1809+)/11** (x64; arquivo `Win11-x64` para manter atualizador) | [Instalador Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.6/PT2VHF-Sat-Tool-v1.3.6-Win11-x64-Setup.exe) | [Portable Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.6/PT2VHF-Sat-Tool-v1.3.6-Win11-x64-Portable.exe) |
 
 **Formato dos downloads:** tanto instaladores quanto portáteis são entregues diretamente como arquivos **`.exe`**. O portátil inclui as dependências dentro do mesmo EXE (PyInstaller onefile) e não requer descompactação.
 
 **[Todas as releases](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases)** · **[Acompanhar compilação](https://github.com/alexpmr/PT2VHF-Sat-Tool/actions)**
 
 - **Instalável:** instalação por usuário, atalho e desinstalação, atualização pelo aplicativo usando o Setup de sua edição.
-- **Portátil:** execute diretamente `PT2VHF-Sat-Tool-v1.3.5-*-Portable.exe` (um único arquivo). Configurações ficam em `data/` ao lado do EXE, preservadas após atualizações.
+- **Portátil:** execute diretamente `PT2VHF-Sat-Tool-v1.3.6-*-Portable.exe` (um único arquivo). Configurações ficam em `data/` ao lado do EXE, preservadas após atualizações.
 - **Win7:** Python 3.8 x86 + PySide2/Qt5 + PyInstaller 5.13.2 (legado, precisa ser validado no Windows 7 real).
 - **Win10/11 x64:** Windows 10 1809+ ou Windows 11, Python 3.11 x64 + PySide6/Qt6 + PyInstaller 6.13.0.
 - Arquivos SHA256 acompanham cada compilação. A versão Windows 7 é experimental; não confundir sucesso do CI com homologação em campo.
 
 ---
+
+
+## Novidades v1.3.6 — correção das respostas CAT fragmentadas (16/10/2026)
+
+- **Evidência de rádio real:** exportação de logs da v1.3.4 mostrou respostas COM1 como `RX F` + `RX A00436799891;`, `RX M` + `RX D4;`, e respostas `SA` fragmentadas. Anteriormente, o driver descartava os fragmentos independentes e gerava falso `TimeoutError`.
+- **Enquadramento serial:** o driver agora concatena os segmentos recebidos até o terminador `;`, com limite de tempo total de 4 segundos, máximo de 48 leituras e 256 caracteres. Quadros não correspondentes (`?;`) são ignorados sem invalidar respostas válidas posteriores; respostas sem quadro completo continuam falhando de forma explícita.
+- **Segurança:** a correção não repete nem retransmite comandos CAT de escrita; não envia PTT/TX, não ativa SAT automaticamente e preserva `FA` downlink SAT, `FB` uplink SAT e `FC` como VFO independente do sub-receptor, corrigidos na v1.3.5.
+- **Verificação:** testes simulados de frames `SA/FA/FB/FC/MD` fragmentados, confirmação pós-sintonia `FA/FB`, falha por resposta incompleta e ausência de repetição de comandos de escrita. Build para Win7 SP1 x86 e Windows 10 1809+/11 x64 (Setup e Portable).
+- **Pendente:** validação física do novo parser com TS-2000 e interface USB/COM1 em condições de atraso ou ruído. Latência serial elevada também pode ter origem em driver, cabo, adaptador ou configuração baud/COM; não há prova de qual componente originou a fragmentação.
 
 ## Novidades v1.3.5 — correção do uplink SAT no Kenwood TS-2000
 
