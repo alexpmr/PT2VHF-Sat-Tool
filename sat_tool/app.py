@@ -1760,8 +1760,9 @@ class MainWindow(QMainWindow):
         selection=self.mode_combo.currentText()
         rx="—" if dl is None else f"{dl/1e6:.6f}"
         tx="—" if ul is None else f"{ul/1e6:.6f}"
-        self.log(f"CAT PERFIL: NORAD={norad}; transponder={selection}; "
-                 f"RX={rx} MHz; TX={tx} MHz; avaliação={reason}")
+        if not safe:
+            self.log(f"CAT PERFIL BLOQUEADO: NORAD={norad}; transponder={selection}; "
+                     f"RX={rx} MHz; TX={tx} MHz; avaliação={reason}")
         hint=(" Para SO-50, selecione 'SO-50 · repetidor FM V/U (AMSAT)' "
               "e confira RX 436,795 / TX 145,850 MHz.") if norad=="27607" else ""
         return safe,(f"{reason}. NORAD {norad} · transponder: {selection} · "
