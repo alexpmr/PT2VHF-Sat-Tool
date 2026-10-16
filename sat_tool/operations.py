@@ -69,6 +69,26 @@ def select_next_pass(passes: list, rows_by_norad: dict, selected_modes: list,
     return min(possible,key=lambda item:item[0])[1] if possible else None
 
 
+def select_selected_satellite_pass(passes: list, selected_norad: str, channel: dict,
+                                   now: datetime):
+    """Current or next predicted pass for exactly one user-selected satellite.
+
+    The UI-selected transponder controls the displayed RX/TX prediction; the
+    broader station's suggested channel list must never override it.
+    """
+    eligible=[]
+    for p in passes:
+        if str(p.get("id",""))!=str(selected_norad) or p.get("los") is None:
+            continue
+        if p["los"]<=now or p.get("aos") is None:
+            continue
+        active=p["aos"]<=now<p["los"]
+        rank=(0,-float(p.get("max_el",0)),p["aos"]) if active else (
+            1,p["aos"].timestamp(),p["aos"])
+        eligible.append((rank,dict(p,channel=channel,in_progress=active)))
+    return min(eligible,key=lambda item:item[0])[1] if eligible else None
+
+
 def clock_text(seconds: float) -> str:
     remaining=max(0,int(seconds))
     days,remaining=divmod(remaining,86400)
