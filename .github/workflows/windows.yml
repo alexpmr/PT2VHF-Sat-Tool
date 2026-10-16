@@ -53,13 +53,18 @@ jobs:
       - name: Unit tests and Qt binding smoke test
         shell: pwsh
         run: |
+          python -m compileall -q sat_tool
+          if ($LASTEXITCODE -ne 0) { throw 'Python source does not compile' }
           python -m pytest -q tests
+          if ($LASTEXITCODE -ne 0) { throw 'Unit/regression tests failed; release blocked' }
           python -c "from sat_tool.qt_compat import QT_BINDING,QWebEngineView,QGeoPositionInfoSource; import sat_tool.app; print('Qt binding:',QT_BINDING)"
+          if ($LASTEXITCODE -ne 0) { throw 'Qt GUI module import failed; release blocked' }
           if ('${{ matrix.target }}' -eq 'Win7-x86') {
             python -c "import struct; from sat_tool.qt_compat import QT_BINDING; assert 8*struct.calcsize('P')==32 and QT_BINDING=='PySide2'"
           } else {
             python -c "import struct; from sat_tool.qt_compat import QT_BINDING; assert 8*struct.calcsize('P')==64 and QT_BINDING=='PySide6'"
           }
+          if ($LASTEXITCODE -ne 0) { throw 'Qt binding/architecture validation failed' }
       - name: Generate and verify Windows brand icons
         shell: pwsh
         run: |
