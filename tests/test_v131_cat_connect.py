@@ -11,12 +11,12 @@ def test_auto_cat_trigger_paths_and_independent_status():
     text=(ROOT/"sat_tool"/"app.py").read_text(encoding="utf-8")
     connection=text.split("    def request_cat_connection(self,startup=False):",1)[1].split("    def enable_satellite(self):",1)[0]
     assert 'self.background("cat-connect",lambda:self.radio.connect(' in connection
-    assert 'if self.cat_tracking_armed and not self.cat_connect_was_startup' in text
+    assert 'self.cat_tracking_armed=bool(self.config.values.get("cat_auto_select",False))' in text
     enable=text.split("    def enable_satellite(self):",1)[1].split("    def render_radio_state(",1)[0]
-    assert "self.auto_tune_selected_satellite()" in enable
+    assert "self.arm_cat_tracking()" in enable
     preference=text.split("    def change_auto_cat(",1)[1].split("    def save_tle_settings(",1)[0]
-    assert 'if enabled:\n            self.cat_tracking_armed=True\n            self.auto_tune_selected_satellite()' in preference
-    assert 'self.cat_tune_now.clicked.connect(self.tune_selected_now)' in text
+    assert 'if enabled:\n            self.cat_tracking_armed=True' in preference
+    assert 'self.cat_tune_now' not in text
     assert "self.cat_tune_status=label(" in text
     assert "self.cat_tune_status.setText(" in text
     assert 'if not force and not self.config.values.get("cat_auto_select",False)' in text
@@ -119,7 +119,7 @@ def test_radio_operation_displays_actual_cat_readback_separate_from_prediction()
     assert 'self.cat_live_label.setText(' in text
     assert "decode_satellite_status(st.sat_raw)" in text
     assert 'self.cat_diagnose.clicked.connect(self.diagnose_cat)' in text
-    diag=text.split("    def diagnose_cat(self):",1)[1].split("    def tune_selected_now(self):",1)[0]
+    diag=text.split("    def diagnose_cat(self):",1)[1].split("    def auto_tune_selected_satellite(",1)[0]
     assert 'self.background("cat-diagnostic",self.radio.read_diagnostics)' in diag
     assert '"FA"' in diag and '"FB"' in diag and '"FC"' in diag and '"SA"' in diag
 
