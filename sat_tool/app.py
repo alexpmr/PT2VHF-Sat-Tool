@@ -859,7 +859,7 @@ class MainWindow(QMainWindow):
         root.addTab(logs,"LOGs / CAT")
         about=QWidget();about_layout=QVBoxLayout(about)
         about_layout.addWidget(label(f"PT2VHF Sat Tool v{__version__} — Controle CAT do TS-2000"))
-        about_layout.addWidget(label("Distribuição: Windows 7 / Windows 11; instalador Setup EXE e portátil EXE único."))
+        about_layout.addWidget(label("Distribuição: Windows 10/11 x64; instalador Setup EXE e portátil EXE único. Win7 pausado."))
         about_layout.addWidget(label("Elementos orbitais: CelesTrak OMM/TLE. Transponders e modos: SatNOGS (créditos e licenças nos provedores)."))
         about_layout.addWidget(label("Repositório: https://github.com/alexpmr/PT2VHF-Sat-Tool · Licença MIT"))
         btn=QPushButton("Verificar versão");btn.clicked.connect(lambda:self.request_update(manual=True))
