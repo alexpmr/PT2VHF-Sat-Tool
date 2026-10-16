@@ -141,6 +141,7 @@ class MainWindow(QMainWindow):
         self.aos_alarm_dialog = None
         self.aos_alarm_target = None
         self.cat_selection_generation = 0
+        self.cat_autotune_requested_generation = -1
         self._loading_satellites = False
         self._loading_catalog = False
         self._active_satellite_id = None
@@ -487,12 +488,17 @@ class MainWindow(QMainWindow):
         self.stops_combo=QComboBox();self.stops_combo.addItems(["1","2"])
         self.connection=QPushButton("Conectar")
         self.connection.clicked.connect(self.toggle_connection)
+        self.cat_tune_now=QPushButton("Sintonizar agora")
+        self.cat_tune_now.setToolTip("Aplica frequências e modo MAIN ao rádio após confirmação, sem PTT.")
+        self.cat_tune_now.clicked.connect(self.tune_selected_now)
+        self.cat_tune_now.setEnabled(False)
         self.enable_sat=QPushButton("Ativar SAT / desativar TRACE")
         self.enable_sat.clicked.connect(self.enable_satellite)
         quick_cat=QHBoxLayout()
         self.radio_label=label("CAT desconectado · configure a porta em Configurações")
         self.radio_label.setStyleSheet("color:#ecc48f;font-size:12px")
         quick_cat.addWidget(self.radio_label,1)
+        quick_cat.addWidget(self.cat_tune_now)
         quick_cat.addWidget(self.connection)
         op.addLayout(quick_cat)
         root.addTab(operation,"Operação")
@@ -1232,6 +1238,8 @@ class MainWindow(QMainWindow):
         if self.radio.connected:
             self.doppler_checkbox.setChecked(False)
             self.radio.disconnect()
+            self.cat_selection_generation+=1
+            self.cat_tune_now.setEnabled(False)
             self.last_cat_success=None
             self.cat_indicator.setText("● RÁDIO DESCONECTADO")
             self.cat_indicator.setStyleSheet("font-size:14px;font-weight:800;color:#ff9595")
@@ -1262,7 +1270,9 @@ class MainWindow(QMainWindow):
                                        "stopbits":int(self.stops_combo.currentText())})
             self.config.save()
             self.connection.setText("Desconectar")
+            self.cat_tune_now.setEnabled(True)
             self.render_radio_state(st)
+            self.auto_tune_selected_satellite()
         except Exception as exc:
             self.cat_indicator.setText("! ERRO DE CONEXÃO")
             self.cat_indicator.setStyleSheet("font-size:14px;font-weight:800;color:#ff9595")
@@ -1276,6 +1286,7 @@ class MainWindow(QMainWindow):
             msg="O TS-2000 será colocado em modo SAT, com MAIN=RX, SUB=TX e TRACE desativado. Continuar?"
             if QMessageBox.question(self,"Configurar SAT",msg) != QMessageBox.Yes:return
             self.render_radio_state(self.radio.enable_satellite_mode())
+            self.auto_tune_selected_satellite()
         except Exception as exc:
             QMessageBox.critical(self,"CAT",str(exc))
 
@@ -2388,6 +2399,11 @@ class MainWindow(QMainWindow):
             enabled=False
         self.config.values["cat_auto_select"]=bool(enabled)
         self.config.save()
+        if enabled:
+            self.auto_tune_selected_satellite()
+        else:
+            self.cat_selection_generation+=1
+            self.radio_label.setText("Auto CAT desligado · sintonia somente por comando manual")
 
     def save_tle_settings(self):
         self.config.values["tle_update_hours"]=int(self.tle_hours.value())
