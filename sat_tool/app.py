@@ -627,6 +627,7 @@ class MainWindow(QMainWindow):
         self.catalog_click_timer.setSingleShot(True)
         self.catalog_click_timer.timeout.connect(self.commit_catalog_single_click)
         self.catalog_click_norad=None
+        self.catalog_ignore_clicks_until=0.0
         catalog_layout.addWidget(self.catalog_table)
         self.catalog_note=label("Dados orbitais: CelesTrak OMM/TLE · Frequências e modos: SatNOGS · Não confundir catálogo com atividade confirmada.")
         catalog_layout.addWidget(self.catalog_note)
@@ -1622,7 +1623,7 @@ class MainWindow(QMainWindow):
 
     def queue_catalog_single_click(self,row,col):
         """Delay a single click so a double click does not toggle twice."""
-        if self._loading_catalog:return
+        if self._loading_catalog or time.monotonic()<self.catalog_ignore_clicks_until:return
         item=self.catalog_table.item(row,0)
         if item is None:return
         self.catalog_click_norad=str(item.data(Qt.UserRole))
@@ -1664,6 +1665,7 @@ class MainWindow(QMainWindow):
 
     def select_catalog_satellite(self,row,col):
         """Double click toggles the favorite; never navigates to Operação."""
+        self.catalog_ignore_clicks_until=time.monotonic()+0.45
         self.catalog_click_timer.stop()
         self.catalog_click_norad=None
         item=self.catalog_table.item(row,0)
