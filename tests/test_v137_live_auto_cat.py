@@ -109,11 +109,11 @@ def test_no_cat_writes_when_disabled_or_moving_radio_dial(monkeypatch):
     MainWindow.track_cat_frequencies(window,None)
     assert cat.tunes == []
     window.cat_tracking_armed = True
-    cat.state.uplink = 145860000  # operator manually changed the dial
+    cat.state.uplink = 145860000  # changed VFO must be corrected, not silently disabled
     MainWindow.track_cat_frequencies(window,None)
-    assert window.cat_tracking_armed is False
-    assert cat.tunes == []
-    assert "PAUSADO" in window.cat_tune_status.message
+    assert window.cat_tracking_armed is True
+    assert cat.tunes == [(145850012,436800030)]
+    assert "corrigindo" in window.cat_tune_status.message
 
 
 def test_inflight_cat_worker_does_not_trigger_false_manual_adjustment(monkeypatch):
