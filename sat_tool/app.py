@@ -603,6 +603,10 @@ class MainWindow(QMainWindow):
             ["Satélite", "NORAD", "Inclinação", "Período", "Modos", "Downlink MHz", "Situação"])
         self.catalog_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.catalog_table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        # Favorito é marcado por cores persistentes, não pela seleção visual
+        # temporária do Qt. Não deixar uma linha desmarcada amarela só
+        # por continuar com o foco após o clique.
+        self.catalog_table.setSelectionMode(QAbstractItemView.NoSelection)
         self.catalog_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.catalog_table.setToolTip(
             "Clique uma vez na linha para marcar/desmarcar o favorito (amarelo). "
