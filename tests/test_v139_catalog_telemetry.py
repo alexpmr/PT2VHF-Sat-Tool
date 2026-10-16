@@ -40,7 +40,9 @@ def test_catalog_ui_uses_7_columns_yellow_black_rows_click_toggle():
     source=(ROOT/"sat_tool"/"app.py").read_text(encoding="utf-8")
     assert "self.catalog_table=QTableWidget(0, 7)" in source
     assert '"Selecionado", "Satélite"' not in source
-    assert 'self.catalog_table.cellClicked.connect(self.toggle_catalog_satellite_selection)' in source
+    assert 'self.catalog_table.cellClicked.connect(self.queue_catalog_single_click)' in source
+    assert 'self.catalog_table.cellDoubleClicked.connect(self.select_catalog_satellite)' in source
+    assert 'self.catalog_click_timer.timeout.connect(self.commit_catalog_single_click)' in source
     assert 'self.catalog_table.cellDoubleClicked.connect(self.select_catalog_satellite)' in source
     assert 'self.catalog_table.itemChanged.connect(self.catalog_satellite_checked)' not in source
     assert 'QColor("#ffe36a")' in source

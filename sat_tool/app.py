@@ -28,7 +28,8 @@ from . import __version__
 from .cat import TS2000, available_ports, decode_satellite_status
 from .catalog import refresh_orbits, load_orbits, refresh_transmitters, load_transmitters, age_hours, satellite_search_text, normalized_satellite_search, DEFAULT_GROUPS
 from .config import Config
-from .geolocation import GeoFix, lookup_approximate_ip, read_gps_serial
+from .geolocation import GeoFix
+from .maidenhead import maidenhead_to_latlon
 from .location_map import parse_coordinate_fields, sanitize_map_pick, valid_coordinates
 from .frequency import format_frequency,parse_mhz_input,frequency_label
 from .transponder import prioritized_transponders,cat_pair_diagnostic
@@ -147,6 +148,8 @@ class MainWindow(QMainWindow):
         self.aos_alarm_target = None
         self.cat_selection_generation = 0
         self.cat_autotune_requested_generation = -1
+        self.cat_retry_after = 0.0
+        self.cat_consecutive_failures = 0
         self.cat_tune_manual_request = False
         self.cat_tracking_armed = False
         self.cat_connecting = False
@@ -292,7 +295,8 @@ class MainWindow(QMainWindow):
         self.pass_progress.setTextVisible(False)
         self.pass_progress.setStyleSheet("QProgressBar{background:#10243c;border:0;border-radius:3px}QProgressBar::chunk{background:#35d9b6;border-radius:3px}")
         upcoming_layout.addWidget(self.pass_progress)
-        op.addWidget(upcoming)
+        # The next-pass countdown belongs to orbital telemetry, not a
+        # separate banner consuming the full width above the operation.
         splitter = QSplitter(Qt.Horizontal)
         splitter.setChildrenCollapsible(False)
         left = QWidget()
@@ -346,8 +350,11 @@ class MainWindow(QMainWindow):
         form.addWidget(label("Uplink · TX (MHz)"),2,0)
         form.addWidget(self.up_edit,3,0)
         self.down_edit.editingFinished.connect(self.pair_linear)
+        self.down_edit.editingFinished.connect(self.on_cat_operator_changed)
+        self.up_edit.editingFinished.connect(self.on_cat_operator_changed)
         self.rx_mode=QComboBox();self.tx_mode=QComboBox()
         for cb in (self.rx_mode,self.tx_mode):cb.addItems(["FM","USB","LSB","CW","AM","FSK"])
+        self.rx_mode.activated.connect(self.on_cat_operator_changed)
         form.addWidget(label("Modo RX"),4,0);form.addWidget(self.rx_mode,5,0)
         form.addWidget(label("Modo TX (referência)"),6,0);form.addWidget(self.tx_mode,7,0)
         fv.addLayout(form)
@@ -357,13 +364,8 @@ class MainWindow(QMainWindow):
         # Retire the competing legacy Doppler control; use Auto CAT as the single control.
         self.doppler_checkbox=QCheckBox()
         self.doppler_checkbox.setChecked(False)
-        self.frequency_apply=QPushButton("Aplicar RX/TX no TS-2000")
-        self.frequency_apply.setObjectName('primary')
-        self.frequency_apply.clicked.connect(self.apply_freqs)
-        fv.addWidget(self.frequency_apply)
-        self.apply_main_mode=QPushButton("Aplicar modo RX (MAIN)")
-        self.apply_main_mode.clicked.connect(self.apply_rx_mode)
-        fv.addWidget(self.apply_main_mode)
+        # The old manual apply/sync buttons are removed: Auto CAT is the sole
+        # user-authorized, continuously verified frequency/mode write path.
         lv.addWidget(freqs)
         lv.addStretch(1)
         # Old satellite editor moves to Settings without deleting its controls.
@@ -447,8 +449,15 @@ class MainWindow(QMainWindow):
         # A Chromium renderer crash may leave the GUI running, so record it.
         try:self.map.page().renderProcessTerminated.connect(self.web_renderer_terminated)
         except AttributeError:pass
-        self.map.setHtml(Path(__file__).with_name("map.html").read_text(encoding="utf-8"),
-                         QUrl("about:blank"))
+        map_file=Path(__file__).with_name("map.html")
+        self.map.setHtml(map_file.read_text(encoding="utf-8"),
+                         QUrl.fromLocalFile(str(map_file.resolve())))
+        # The built-in browser asks for geolocation only when the operator
+        # explicitly clicks Solicitar coordenadas ao navegador.
+        try:
+            self.map.page().featurePermissionRequested.connect(self.grant_browser_geo)
+        except (AttributeError,TypeError):
+            self.log("Geolocalização QtWebEngine não suportada nesta edição")
         mv.addWidget(self.map,1)
         self.map_radio_label=label("CAT desconectado · RX — MHz · TX — MHz · Modo —")
         self.map_radio_label.setStyleSheet("font-size:13px;color:#f0c186;font-weight:700")
@@ -468,6 +477,7 @@ class MainWindow(QMainWindow):
         self.visibility=label("Aguardando localização")
         self.visibility.setObjectName('metric')
         sv.addWidget(self.visibility)
+        sv.addWidget(upcoming)
         rv.addWidget(stat)
         nextpass,np=group("PASSAGENS DO SATÉLITE SELECIONADO · 36 H")
         nextpass.setMinimumWidth(520)
@@ -612,7 +622,12 @@ class MainWindow(QMainWindow):
             "Clique uma vez na linha para marcar/desmarcar o favorito (amarelo). "
             "Duplo clique abre a operação do satélite.")
         self.catalog_table.cellDoubleClicked.connect(self.select_catalog_satellite)
-        self.catalog_table.cellClicked.connect(self.toggle_catalog_satellite_selection)
+        self.catalog_table.cellClicked.connect(self.queue_catalog_single_click)
+        self.catalog_click_timer=QTimer(self)
+        self.catalog_click_timer.setSingleShot(True)
+        self.catalog_click_timer.timeout.connect(self.commit_catalog_single_click)
+        self.catalog_click_norad=None
+        self.catalog_ignore_clicks_until=0.0
         catalog_layout.addWidget(self.catalog_table)
         self.catalog_note=label("Dados orbitais: CelesTrak OMM/TLE · Frequências e modos: SatNOGS · Não confundir catálogo com atividade confirmada.")
         catalog_layout.addWidget(self.catalog_note)
@@ -633,41 +648,42 @@ class MainWindow(QMainWindow):
         for i,(txt,widget) in enumerate(fields):
             grid.addWidget(label(txt),i,0);grid.addWidget(widget,i,1)
         sg.addLayout(grid)
-        source_row=QHBoxLayout()
-        source_row.addWidget(label("Fonte de localização:"))
-        self.location_source=QComboBox()
-        self.location_source.addItems([
-            "Windows (se houver provedor de posição)",
-            "IP aproximado (cidade/região, com consentimento)",
-            "GPS USB / serial (NMEA)",
-            "Manual (sem consulta externa)",
-        ])
-        self.location_source.currentIndexChanged.connect(self.change_location_source)
-        source_row.addWidget(self.location_source,2)
-        self.gps_port=QComboBox();self.gps_port.setEditable(True)
-        self.gps_port.setToolTip("Porta COM do receptor GPS, diferente da porta CAT do TS-2000")
-        self.gps_port.setMinimumWidth(95)
-        self.gps_baud=QComboBox();self.gps_baud.addItems(["4800","9600","38400","115200"])
-        self.gps_baud.setCurrentText("9600")
-        source_row.addWidget(label("GPS COM:"));source_row.addWidget(self.gps_port)
-        source_row.addWidget(label("Baud:"));source_row.addWidget(self.gps_baud)
-        sg.addLayout(source_row)
+        locator_row=QHBoxLayout()
+        locator_row.addWidget(label("Grid Locator / QTH (Maidenhead):"))
+        self.grid_locator=QLineEdit()
+        self.grid_locator.setPlaceholderText("Ex.: GH64ab")
+        self.grid_locator.setToolTip(
+            "Informe um Grid Locator de 2, 4, 6, 8 ou 10 caracteres. "
+            "O centro da quadrícula preenche latitude/longitude; não é posição GPS exata.")
+        self.grid_locator.returnPressed.connect(self.apply_grid_locator)
+        self.grid_apply=QPushButton("Converter grid em coordenadas")
+        self.grid_apply.clicked.connect(self.apply_grid_locator)
+        locator_row.addWidget(self.grid_locator,1)
+        locator_row.addWidget(self.grid_apply)
+        sg.addLayout(locator_row)
         place=QHBoxLayout()
-        self.get_position=QPushButton("Obter localização da fonte selecionada")
+        self.get_position=QPushButton("Solicitar coordenadas ao navegador")
+        self.get_position.setToolTip(
+            "Solicita permissão explícita de localização ao navegador incorporado; "
+            "pode estar indisponível dependendo do Windows, permissões e QtWebEngine.")
         self.get_position.clicked.connect(self.geolocate)
         self.save_station_btn=QPushButton("Salvar estação")
-        self.save_station_btn.setObjectName('primary')
+        self.save_station_btn.setObjectName("primary")
         self.save_station_btn.clicked.connect(self.save_station)
-        self.station_map_button=QPushButton("Marcar estação no mapa")
-        self.station_map_button.clicked.connect(self.begin_station_map)
+        self.station_map_button=QPushButton()  # obsolete map-picker methods stay inert
+        self.station_map_button.hide()
         place.addWidget(self.get_position)
-        place.addWidget(self.station_map_button)
         place.addWidget(self.save_station_btn)
         sg.addLayout(place)
-        self.location_status=label("Sem consulta: escolha a fonte. IP é aproximado, GPS requer receptor, manual não usa rede.")
+        self.location_status=label(
+            "Escolha: latitude/longitude manual, Grid Locator, ou autorização de "
+            "geolocalização do navegador. Revise e salve a estação.")
         self.location_status.setStyleSheet("color:#a6cede;font-size:11px")
         sg.addWidget(self.location_status)
-        sg.addWidget(label("A latitude/longitude obtidas precisam ser conferidas e depois salvas manualmente. Consultar IP envia seu IP público ao provedor; nenhuma consulta é automática."))
+        sg.addWidget(label(
+            "Grid Locator preenche o centro da quadrícula, não uma posição exata. "
+            "A localização do navegador depende de autorização e suporte do sistema; "
+            "nada será salvo nem enviado ao rádio sem clicar em Salvar estação."))
         cfg.addWidget(station_group)
         profile_group,pg=group("PERFIL OPERACIONAL — MODOS E BANDAS")
         pg.addWidget(label("Modos selecionados determinam candidatos automáticos; as escolhas manuais permanecem salvas."))
@@ -801,7 +817,7 @@ class MainWindow(QMainWindow):
         ug.addWidget(self.update_minutes)
         self.include_prerelease=QCheckBox("Incluir versões de testes / pré-lançamentos")
         ug.addWidget(self.include_prerelease)
-        ug.addWidget(label("Nova versão: aviso na barra superior, changelog e download autenticado com SHA-256. A substituição só ocorre após sua confirmação e o fechamento seguro do aplicativo. Configurações preservadas."))
+        ug.addWidget(label("Novas versões são indicadas somente na barra superior, sem pop-up ou changelog automático. Clicar em Nova versão inicia o download com SHA-256 e a instalação externa após a verificação. Configurações preservadas."))
         self.save_update_btn=QPushButton("Salvar preferências de atualização")
         self.save_update_btn.clicked.connect(self.save_update_preferences)
         ug.addWidget(self.save_update_btn)
@@ -844,9 +860,6 @@ class MainWindow(QMainWindow):
         self.altitude.setValue(float(c['altitude_m']))
         self.min_el.setValue(float(c['min_elevation']))
         self.baud_combo.setCurrentText(str(c['baud']))
-        self.gps_baud.setCurrentText(str(c.get('gps_baud',9600)))
-        if c.get('gps_port'):self.gps_port.setCurrentText(str(c['gps_port']))
-        self.change_location_source()
         for name,w in self.station_modes.items():
             w.setChecked(name in c.get("radio_modes",["FM","SSB","CW"]))
         for name,w in self.station_bands.items():
@@ -953,7 +966,9 @@ class MainWindow(QMainWindow):
         self.config.values['include_prereleases']=self.include_prerelease.isChecked()
         self.config.save()
         self.log('Preferências de atualizações salvas')
-        self.manual_update_requested = True
+        # Saving preferences only refreshes the quiet top-menu indicator.
+        # It must never install a release without clicking the version button.
+        self.manual_update_requested = False
         self.check_for_updates(force=True)
 
     def check_for_updates(self, force=False):
@@ -1176,113 +1191,96 @@ class MainWindow(QMainWindow):
         self.map_edit_bar.setVisible(False)
         self.station_map_button.setEnabled(True)
 
-    def change_location_source(self,*args):
-        source=self.location_source.currentIndex()
-        gps=(source==2)
-        self.gps_port.setVisible(gps)
-        self.gps_baud.setVisible(gps)
-        # The serial settings are independent of the TS-2000 CAT port.
-        self.get_position.setText(
-            ("Solicitar coordenadas ao Windows",
-             "Consultar IP aproximado (pedir autorização)",
-             "Ler posição GPS por COM",
-             "Inserir coordenadas manualmente")[source])
-        if source==0:
-            self.location_status.setText("Windows: exige serviço/provedor de localização e permissões habilitadas.")
-        elif source==1:
-            self.location_status.setText("IP aproximado: será enviada uma consulta HTTPS a ipwho.is SOMENTE após sua autorização.")
-        elif source==2:
-            self.location_status.setText("GPS NMEA: receptor conectado e porta COM exclusiva; nenhuma solicitação à Internet.")
-        else:
-            self.location_status.setText("Manual: digite latitude e longitude, confira altitude e clique em Salvar estação.")
+    def apply_grid_locator(self):
+        """Preview the geometric center; only Salvar estação persists location."""
+        try:
+            lat,lon=maidenhead_to_latlon(self.grid_locator.text())
+        except ValueError as exc:
+            self.location_status.setText("Grid Locator inválido: "+str(exc))
+            self.grid_locator.setFocus()
+            return
+        self.lat.setText(f"{lat:.8f}")
+        self.lon.setText(f"{lon:.8f}")
+        self.location_status.setText(
+            f"Grid {self.grid_locator.text().strip().upper()}: centro da quadrícula "
+            f"{lat:.8f}, {lon:.8f} · confira e clique em Salvar estação.")
+        self.log("Grid Locator convertido para prévia; estação salva permanece inalterada")
 
     def geolocate(self):
-        choice=self.location_source.currentIndex()
-        if choice==3:
-            self.lat.setFocus()
-            self.location_status.setText("Digite as coordenadas da antena manualmente e clique em Salvar estação.")
-            return
-        if choice==1:
-            consent=QMessageBox.question(self,"Localização aproximada por IP",
-                "Quer consultar sua região aproximada em https://ipwho.is/?\n\n"
-                "O serviço externo receberá seu IP público e metadados normais da requisição HTTPS. "
-                "O resultado pode indicar apenas a cidade ou região, NÃO a posição exata da estação.\n\n"
-                "Nada será salvo nem enviado ao rádio automaticamente. Continuar?",
-                QMessageBox.Yes | QMessageBox.No,QMessageBox.No)
-            if consent!=QMessageBox.Yes:
-                self.location_status.setText("Consulta IP cancelada. Coordenadas anteriores preservadas.")
-                return
-            self.location_status.setText("Consultando localização aproximada por IP com autorização…")
-            self.background("geo-ip",lookup_approximate_ip)
-            return
-        if choice==2:
-            port=self.gps_port.currentText().strip()
-            if not port:
-                QMessageBox.warning(self,"GPS","Selecione ou digite a porta COM do receptor GPS.")
-                return
-            cat=(self.ports.currentText() or self.config.values.get("port","")).strip()
-            if port.casefold()==cat.casefold():
-                QMessageBox.warning(self,"Porta em uso",
-                    "A porta do GPS deve ser diferente da porta CAT do TS-2000. "
-                    "Não usaremos o rádio como fonte de GPS.")
-                return
-            baud=int(self.gps_baud.currentText())
-            self.config.values.update({"gps_port":port,"gps_baud":baud})
-            self.config.save()
-            self.location_status.setText("Aguardando posição válida do GPS NMEA (até 12 s)…")
-            self.background("geo-gps",lambda:read_gps_serial(port,baud=baud,timeout_s=12))
-            return
+        """Request browser-native geolocation on operator click, never via IP/GPS."""
+        self.location_waiting=True
+        self.browser_geo_started=time.monotonic()
+        self.get_position.setEnabled(False)
+        self.location_status.setText(
+            "Navegador: solicitando permissão de localização; nenhuma informação foi salva.")
         try:
-            source=QGeoPositionInfoSource.createDefaultSource(self)
-            if source is None:
-                self.location_status.setText(
-                    "Windows sem provedor de localização. Use coordenadas manuais, IP aproximado "
-                    "com consentimento ou GPS serial.")
-                self.log("QtPositioning: provedor de localização indisponível no sistema")
-                return
-            self.pos_source=source
-            source.positionUpdated.connect(self.position_found)
-            self.location_waiting=True
-            if getattr(self,"location_timer",None) is None:
-                self.location_timer=QTimer(self)
-                self.location_timer.setSingleShot(True)
-                self.location_timer.timeout.connect(self.location_timed_out)
-            self.location_timer.start(13000)
-            source.requestUpdate(12000)
-            self.location_status.setText("Aguardando serviço de localização do Windows (até 13 s)…")
+            self.map.page().runJavaScript(
+                "window.requestBrowserGeolocation && window.requestBrowserGeolocation()")
+            if not hasattr(self,"browser_geo_timer"):
+                self.browser_geo_timer=QTimer(self)
+                self.browser_geo_timer.timeout.connect(self.poll_browser_geolocation)
+            self.browser_geo_timer.start(700)
         except Exception as exc:
-            self.location_waiting=False
-            self.location_status.setText(
-                "Windows não forneceu localização. Tente manual, IP opcional ou GPS serial.")
-            self.log(f"Falha ao consultar localização do Windows: {exc}")
+            self.finish_browser_geolocation("Navegador não disponível: "+str(exc))
 
-    def location_timed_out(self):
-        if getattr(self,"location_waiting",False):
-            self.location_waiting=False
-            self.log("Localização Windows: sem resposta dentro de 13 s")
-            self.location_status.setText(
-                "Tempo excedido no Windows; use GPS serial, IP aproximado (opcional) ou digite as coordenadas.")
-
-    def position_found(self,info):
-        if not getattr(self,"location_waiting",False):
-            return
-        coord=info.coordinate()
-        if not coord.isValid():
-            self.location_status.setText("O Windows retornou uma posição inválida; nenhuma coordenada alterada.")
-            return
-        self.location_waiting=False
-        timer=getattr(self,"location_timer",None)
-        if timer is not None:timer.stop()
+    def grant_browser_geo(self,security_origin,feature):
+        """Grant only an explicitly requested geolocation permission."""
+        page=self.map.page()
         try:
-            lat=float(coord.latitude())
-            lon=float(coord.longitude())
-            altitude=float(coord.altitude())
-            fix=GeoFix(lat,lon,"Localização do Windows",
-                       altitude_m=altitude if math.isfinite(altitude) else None,
-                       description="Provedor Qt/Windows").validate()
-            self.apply_location_fix(fix)
-        except (ValueError,TypeError) as exc:
-            self.location_status.setText(f"Posição Windows rejeitada: {exc}. Dados anteriores preservados.")
+            from .qt_compat import QT_BINDING
+            if QT_BINDING=="PySide6":
+                from PySide6.QtWebEngineCore import QWebEnginePage
+            else:
+                from PySide2.QtWebEngineWidgets import QWebEnginePage
+            geo=getattr(QWebEnginePage,"Geolocation",None)
+            if geo is None:geo=QWebEnginePage.Feature.Geolocation
+            granted=getattr(QWebEnginePage,"PermissionGrantedByUser",None)
+            denied=getattr(QWebEnginePage,"PermissionDeniedByUser",None)
+            if granted is None:
+                granted=QWebEnginePage.PermissionPolicy.PermissionGrantedByUser
+                denied=QWebEnginePage.PermissionPolicy.PermissionDeniedByUser
+            page.setFeaturePermission(
+                security_origin,feature,
+                granted if self.location_waiting and feature==geo else denied)
+        except Exception as exc:
+            self.log("Navegador: serviço de permissão de localização indisponível: "+str(exc))
+
+    def finish_browser_geolocation(self,message):
+        self.location_waiting=False
+        self.get_position.setEnabled(True)
+        if hasattr(self,"browser_geo_timer"):self.browser_geo_timer.stop()
+        self.location_status.setText(message)
+
+    def poll_browser_geolocation(self):
+        if not self.location_waiting:return
+        if time.monotonic()-self.browser_geo_started>18:
+            self.finish_browser_geolocation(
+                "Tempo excedido ao solicitar localização do navegador. "
+                "Informe latitude/longitude ou Grid Locator.")
+            return
+        self.map.page().runJavaScript(
+            "window.takeBrowserGeolocation && window.takeBrowserGeolocation()",
+            self.browser_geolocation_result)
+
+    def browser_geolocation_result(self,reply):
+        if not self.location_waiting or not isinstance(reply,dict):return
+        if reply.get("pending"):return
+        if reply.get("error"):
+            self.finish_browser_geolocation(
+                "Navegador não forneceu coordenadas: "+str(reply["error"])+
+                ". Use inserção manual ou Grid Locator.")
+            return
+        try:
+            fix=GeoFix(
+                float(reply["lat"]),float(reply["lon"]),"Navegador (geolocalização autorizada)",
+                accuracy_m=float(reply["accuracy"]) if reply.get("accuracy") is not None else None
+            ).validate()
+        except (ValueError,TypeError,KeyError) as exc:
+            self.finish_browser_geolocation("Posição do navegador inválida: "+str(exc))
+            return
+        self.finish_browser_geolocation(
+            "Navegador retornou coordenadas; confirme a prévia antes de salvar.")
+        self.apply_location_fix(fix)
 
     def apply_location_fix(self,fix):
         """Explicit preview; applies to edit controls only after confirmation."""
@@ -1623,49 +1621,55 @@ class MainWindow(QMainWindow):
             f"{len(self.omm)} órbitas em cache · {len(checked)} selecionados. "
             "Pesquise por nome, NORAD ou apelido para refinar.")
 
-    def toggle_catalog_satellite_selection(self,row,col):
-        """Click anywhere in a row to toggle persistent favorite highlighting.
-
-        Not the Qt temporary/current selection: saved NORAD IDs determine
-        yellow/black row styling, independently of sorting and pagination.
-        """
-        if self._loading_catalog:return
+    def queue_catalog_single_click(self,row,col):
+        """Delay a single click so a double click does not toggle twice."""
+        if self._loading_catalog or time.monotonic()<self.catalog_ignore_clicks_until:return
         item=self.catalog_table.item(row,0)
         if item is None:return
-        ident=str(item.data(Qt.UserRole))
-        if ident not in self.omm:return
-        selected=set(self.enabled_satellite_ids())
-        updated,_=change_selection(self.omm,[ident],selected,
-                                   ident not in selected,True)
+        self.catalog_click_norad=str(item.data(Qt.UserRole))
+        self.catalog_click_timer.start(QApplication.doubleClickInterval()+40)
+
+    def commit_catalog_single_click(self):
+        ident=self.catalog_click_norad
+        self.catalog_click_norad=None
+        if ident:self.toggle_catalog_favorite(ident)
+
+    def toggle_catalog_satellite_selection(self,row,col):
+        """Compatible single-row action for programmatic use."""
+        item=self.catalog_table.item(row,0)
+        if item is not None:self.toggle_catalog_favorite(str(item.data(Qt.UserRole)))
+
+    def toggle_catalog_favorite(self,ident):
+        """Persist favorite state; repaint the row, stay on Satélites."""
+        if self._loading_catalog or ident not in self.omm:return
+        enabled=set(self.enabled_satellite_ids())
+        updated,_=change_selection(self.omm,[ident],enabled,ident not in enabled,True)
         self.config.values["satellite_selection"]=updated
         self.config.save()
-        now_selected=ident in updated
-        for col_index in range(self.catalog_table.columnCount()):
-            cell=self.catalog_table.item(row,col_index)
-            if cell is None:continue
-            cell.setBackground(QBrush(QColor("#ffe36a" if now_selected else "#0b1b2e")))
-            cell.setForeground(QBrush(QColor("#111111" if now_selected else "#e8edf5")))
+        selected=ident in updated
+        for row in range(self.catalog_table.rowCount()):
+            item=self.catalog_table.item(row,0)
+            if item is None or str(item.data(Qt.UserRole))!=ident:continue
+            for col in range(self.catalog_table.columnCount()):
+                cell=self.catalog_table.item(row,col)
+                if cell is not None:
+                    cell.setBackground(QBrush(QColor("#ffe36a" if selected else "#0b1b2e")))
+                    cell.setForeground(QBrush(QColor("#111111" if selected else "#e8edf5")))
+            break
         self.refresh_tracked_table()
         self.filter_sats(self.search.text())
         self.refresh_passes()
         self.catalog_progress.setText(
-            f"Seleção salva: {len(updated)} de {len(self.omm)} satélites · "
-            f"{ident} {'marcado' if now_selected else 'desmarcado'} (amarelo)")
+            f"NORAD {ident}: {'favorito marcado' if selected else 'favorito desmarcado'} · "
+            f"{len(updated)} de {len(self.omm)} satélites selecionados")
 
     def select_catalog_satellite(self,row,col):
-        cell=self.catalog_table.item(row,0)
-        if cell is None:return
-        ident=str(cell.data(Qt.UserRole))
-        if ident not in self.enabled_satellite_ids():
-            self.config.values["satellite_selection"]=list(dict.fromkeys(self.enabled_satellite_ids()+[ident]))
-            self.config.save()
-            self.refresh_satellite_table()
-            self.refresh_tracked_table()
-        self.search.clear()
-        self.filter_sats("")
-        idx=self.sat_combo.findData(ident)
-        if idx>=0:self.sat_combo.setCurrentIndex(idx)
-        self.centralWidget().setCurrentIndex(0)
+        """Double click toggles the favorite; never navigates to Operação."""
+        self.catalog_ignore_clicks_until=time.monotonic()+0.45
+        self.catalog_click_timer.stop()
+        self.catalog_click_norad=None
+        item=self.catalog_table.item(row,0)
+        if item is not None:self.toggle_catalog_favorite(str(item.data(Qt.UserRole)))
 
     def filter_sats(self,text):
         selected=self.sat_combo.currentData() or self.config.values.get('selected_norad')
@@ -1707,9 +1711,10 @@ class MainWindow(QMainWindow):
         ident=self.sat_combo.currentData()
         if ident==self._active_satellite_id and self.sat is not None:
             return  # The same satellite must not interrupt CAT.
-        self.suspend_cat_doppler("satélite selecionado mudou")
         self.last_freqs=(None,None)
         self.cat_autotune_requested_generation=-1
+        self.cat_retry_after=0.0
+        self.cat_consecutive_failures=0
         self.cat_last_requested=(None,None)
         self._mode_catalog_sat_id=None
         if self.aos_alarm_dialog is not None:
@@ -1783,13 +1788,17 @@ class MainWindow(QMainWindow):
         self.refresh_satellite_table()
 
     def choose_mode(self):
-        self.suspend_cat_doppler("transponder/modo mudou")
         self.last_freqs=(None,None)
         self.cat_autotune_requested_generation=-1
+        self.cat_retry_after=0.0
+        self.cat_consecutive_failures=0
         i=self.mode_combo.currentData()
         if not isinstance(i,int) or i<0 or i>=len(self.options):
             self.mode_note.setText("Modo manual: confira cada frequência e modo antes de usar.")
             self.preview_doppler()
+            self.cat_selection_generation+=1
+            if self.cat_tracking_armed:
+                self.auto_tune_selected_satellite()
             return
         opt=self.options[i]
         low,high=opt['downlink'],opt['downlink_high']
@@ -1810,6 +1819,15 @@ class MainWindow(QMainWindow):
         if self.cat_tracking_armed:
             self.auto_tune_selected_satellite()
 
+    def on_cat_operator_changed(self,*args):
+        """Explicit changes to RX mode/frequency must immediately rearm Auto CAT."""
+        if not self.config.values.get("cat_auto_select",False):
+            return
+        if not self.radio.connected or not self.sat:
+            return
+        self.cat_selection_generation+=1
+        self.arm_cat_tracking()
+
     def arm_cat_tracking(self,*args):
         """Called only for an explicit user selection, not session restoration."""
         if not self.config.values.get("cat_auto_select",True):
@@ -1818,6 +1836,8 @@ class MainWindow(QMainWindow):
         self.cat_tracking_armed=True
         self.last_freqs=(None,None)
         self.cat_autotune_requested_generation=-1
+        self.cat_retry_after=0.0
+        self.cat_consecutive_failures=0
         self.last_tracking_write=0.0
         self.cat_tune_status.setText("Auto CAT online · sintonizando seleção e acompanhando em tempo real…")
         self.auto_tune_selected_satellite()
@@ -1863,8 +1883,9 @@ class MainWindow(QMainWindow):
         if not self.sat or not self.last_pos or not self.omm_fresh():
             return
         if (self.last_freqs==(None,None)
-                and self.cat_autotune_requested_generation!=self.cat_selection_generation
-                and self.down_edit.text().strip()):
+                and time.monotonic()>=self.cat_retry_after
+                and self.down_edit.text().strip()
+                and "cat-autotune" not in self.pending_jobs):
             # When a saved/updated catalog becomes ready, initiate once.
             self.auto_tune_selected_satellite()
             return
@@ -1872,17 +1893,9 @@ class MainWindow(QMainWindow):
             return
         if any(k in self.pending_jobs for k in ("cat-autotune","cat-track","cat-connect","cat-diagnostic")):
             return
-        # A manual MAIN/SAT-Uplink dial change must not trigger a VFO tug-of-war.
-        # Pausing explicitly is safer than overwriting the operator\'s adjustment.
-        current=self.radio.state
-        if (self.last_freqs[0] is not None and self.last_freqs[1] is not None
-            and current.uplink is not None and current.downlink is not None
-            and max(abs(current.uplink-self.last_freqs[0]),
-                    abs(current.downlink-self.last_freqs[1])) > max(100,2*int(self.threshold.value()))):
-            self.cat_tracking_armed=False
-            self.cat_tune_status.setText("CAT: PAUSADO · ajuste manual detectado no TS-2000; selecione o satélite para retomar")
-            self.log("CAT: alteração manual de FA/FB detectada; Auto CAT pausado para preservar a sintonia do operador")
-            return
+        # Live synchronization is authoritative while Auto CAT is enabled.
+        # A changed FA/FB readback is a divergence to correct, not an
+        # unconfirmed "manual change" that silently disables tracking.
         if not cat_doppler_allowed(self.last_pos["visible"],
                 self.config.values.get("cat_doppler_out_of_view",True)):
             return
@@ -2025,6 +2038,8 @@ class MainWindow(QMainWindow):
             return blocked("OMM/TLE vencido; atualize elementos orbitais antes de sintonizar")
         if "cat-autotune" in self.pending_jobs:
             self.cat_tune_status.setText("CAT: nova seleção aguardando sintonia anterior…")
+            return False
+        if time.monotonic()<self.cat_retry_after:
             return False
         try:
             ul,dl=self.nominal_hz()
@@ -2577,6 +2592,8 @@ class MainWindow(QMainWindow):
             generation,state,ul,dl,elapsed=data
             if state is not None and generation==self.cat_selection_generation:
                 self.last_freqs=(ul,dl)
+                self.cat_consecutive_failures=0
+                self.cat_retry_after=0.0
                 self.last_cat_track_completed=time.monotonic()
                 self.cat_last_roundtrip_ms=round(elapsed*1000)
                 self.render_radio_state(state)
@@ -2597,6 +2614,8 @@ class MainWindow(QMainWindow):
             generation,state=data
             if generation==self.cat_selection_generation and state is not None:
                 self.last_freqs=(state.uplink,state.downlink)
+                self.cat_consecutive_failures=0
+                self.cat_retry_after=0.0
                 self.cat_last_requested=(state.uplink,state.downlink)
                 self.last_cat_track_completed=time.monotonic()
                 self.last_tracking_write=0.0
@@ -2722,11 +2741,19 @@ class MainWindow(QMainWindow):
                 QMessageBox.warning(self,"Falha de conexão CAT",message)
             return
         if key=="cat-track":
-            self.cat_tracking_armed=False
-            self.cat_tune_status.setText("CAT: rastreamento pausado · "+message)
-            self.log("CAT contínuo pausado após falha: "+message)
-            if self.radio.connected:
-                self.background("cat-poll",self.radio.poll)
+            # A CAT timeout/readback mismatch must not silently turn off
+            # automatic tracking forever. Back off, read current SAT/FA/FB
+            # and reinitialize with fresh satellite/mode if still authorized.
+            self.cat_consecutive_failures+=1
+            self.cat_retry_after=time.monotonic()+min(8.0,0.5*2**min(4,self.cat_consecutive_failures))
+            self.last_freqs=(None,None)
+            self.cat_autotune_requested_generation=-1
+            self.cat_tune_status.setText(
+                f"CAT: resposta não confirmada · nova tentativa automática em "
+                f"{max(1,round(self.cat_retry_after-time.monotonic()))} s · "+message[:110])
+            self.log("CAT contínuo: falha recuperável, reconsultando SAT/FA/FB: "+message)
+            if self.radio.connected and "cat-poll" not in self.pending_jobs:
+                self.background("cat-poll",self.radio.poll_tracking)
             return
         if key=="logs-export":
             self.export_logs.setEnabled(True)
@@ -2756,12 +2783,14 @@ class MainWindow(QMainWindow):
                                     "O rádio não confirmou a sintonia solicitada. "
                                     "Isso não significa, necessariamente, perda da conexão CAT.\n\n"
                                     +message+"\n\nVeja também LOGs / CAT.")
-            # Retry only when a NEW explicit, valid satellite selection exists.
-            # A stale/unconfigured selection must not erase the real CAT error.
-            if (self.config.values.get("cat_auto_select",False) and self.radio.connected
-                    and self.sat is not None and self.sat_combo.currentData()
-                    and self.cat_autotune_requested_generation!=self.cat_selection_generation):
-                self.auto_tune_selected_satellite()
+            self.cat_consecutive_failures+=1
+            self.cat_retry_after=time.monotonic()+min(
+                8.0,0.5*2**min(4,self.cat_consecutive_failures))
+            self.last_freqs=(None,None)
+            self.cat_autotune_requested_generation=-1
+            if self.cat_tracking_armed and self.radio.connected:
+                self.cat_tune_status.setText(
+                    "CAT: sintonia pendente · tentando novamente automaticamente · "+message[:110])
             return
         if key=="cat-diagnostic":
             self.cat_diagnose.setEnabled(self.radio.connected)

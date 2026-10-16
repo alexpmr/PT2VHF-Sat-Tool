@@ -89,9 +89,12 @@ def test_gps_serial_never_writes(monkeypatch):
 def test_app_requires_user_consent_and_never_auto_saves_geo_result():
     from pathlib import Path
     code=(Path(__file__).resolve().parents[1]/"sat_tool"/"app.py").read_text(encoding="utf-8")
-    assert 'QMessageBox.question(self,"Localização aproximada por IP"' in code
-    assert 'self.background("geo-ip",lookup_approximate_ip)' in code
-    assert 'self.background("geo-gps"' in code
+    assert 'self.get_position=QPushButton("Solicitar coordenadas ao navegador")' in code
+    assert 'self.map.page().runJavaScript(' in code
+    assert '"window.requestBrowserGeolocation && window.requestBrowserGeolocation()"' in code
+    assert "self.grid_locator=QLineEdit()" in code
+    assert "self.gps_port=QComboBox()" not in code
+    assert "IP aproximado (cidade/região, com consentimento)" not in code
     start=code.index("    def apply_location_fix(")
     end=code.index("    def update_ports(",start)
     assert "self.config.save()" not in code[start:end]

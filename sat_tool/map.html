@@ -153,4 +153,30 @@ root.addEventListener("pointerup",function(e){
 root.addEventListener("pointercancel",function(){drag=null;markerDrag=false;});
 root.addEventListener("wheel",function(e){e.preventDefault();zoom(e.deltaY<0?.85:1.18);},{passive:false});
 })();
+
+// Browser geolocation is requested only from the explicit Settings button.
+// A result is a preview for the operator and is never automatically persisted.
+window.__browserGeolocation=null;
+window.requestBrowserGeolocation=function(){
+  window.__browserGeolocation={pending:true};
+  if(!window.isSecureContext || !navigator.geolocation){
+    window.__browserGeolocation={error:"geolocalização não disponível nesta origem/edição do navegador"};
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(
+    function(pos){
+      window.__browserGeolocation={
+        lat:pos.coords.latitude,lon:pos.coords.longitude,
+        accuracy:pos.coords.accuracy||null
+      };
+    },
+    function(err){
+      window.__browserGeolocation={error:err.message || "permissão negada ou localização indisponível"};
+    },{enableHighAccuracy:true,timeout:14000,maximumAge:0});
+};
+window.takeBrowserGeolocation=function(){
+  let result=window.__browserGeolocation;
+  if(result && !result.pending)window.__browserGeolocation=null;
+  return result;
+};
 </script></body></html>

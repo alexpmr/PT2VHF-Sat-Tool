@@ -1,3 +1,13 @@
+## v1.3.10 — estação por Grid Locator/navegador, Auto CAT persistente e seleção de satélites (16/10/2026)
+- [x] Configurações → Estação: três métodos visíveis: latitude/longitude manuais, conversão Maidenhead Grid Locator (centro WGS-84 da quadrícula), solicitação explícita de localização do navegador incorporado; excluir opções GPS NMEA/COM, IP aproximado e botão de marcação de estação no mapa. A localização gerada somente preenche campos e precisa de Salvar estação.
+- [x] Satélites: um clique ou duplo clique alterna favorito/desfavorito sem navegar para Operação; debounce evita que o primeiro clique e o duplo clique revertam duas vezes. Cor amarela com letras pretas permanece.
+- [x] CAT: corrigir interrupção definitiva por divergência/readback serial, que deixava apenas a sintonia manual útil. Auto CAT autorizado permanece em execução, reconcilia FA/FB, reinicia modo/satélite após falha recuperável, respeita backoff de 1–8 segundos em caso de falhas, mantém lock serial e proíbe PTT; mudança manual dos campos RX/TX ou modo RX dispara sincronização, sem botão de sintonia.
+- [x] Layout: próxima passagem/contador deslocados do banner superior para Telemetria orbital, abaixo do bloco Passagens; tabela Passagens continua responsiva.
+- [x] Atualização: não exibir popup de nova versão/changelog; mostrar apenas indicador superior. Salvar preferências não inicia instalação/download (só o clique no botão superior o faz).
+- [x] Testes: grade Maidenhead, autorização de browser, clique/duplo clique, sem botão CAT, recuperação de falhas, layout, CI Win7 x86 e Win10/11 x64.
+- [ ] Teste físico: confirmar comandos FA/FB contínuos e tempos de resposta em TS-2000 real. Logs de erros/retentativas são importantes para verificar problemas de COM/firmware.
+- [ ] Melhorias futuras: proteção de TX ativo e mesma-banda ISS SPLIT separado, se exigido pelo transponder.
+
 ## v1.3.9 — Satélites, Passagens e telemetria CAT (16/10/2026)
 
 - [x] **Tabela Passagens:** ajustar colunas para aproveitamento total do painel: horários AOS/TCA/LOS e elevação máxima com largura pelo conteúdo; satélite e modos expandem proporcionalmente; horário/elevação centralizados e sem quebra.
