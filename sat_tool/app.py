@@ -37,7 +37,7 @@ from .i18n import LANGUAGES,translated
 from .satellite_info import orbital_characteristics, operational_characteristics, characteristics_text
 from .updater import check_for_update, download_update, install_flavor, launch_staged_update
 from .profile import choose_satellites, capability, render_service, CANDIDATES
-from .selection import change_selection, transmitter_batch_ids, cat_doppler_allowed
+from .selection import change_selection, transmitter_batch_ids
 from .alerts import eta_seconds, format_duration, selected_aos_alarm
 from .media import find_photo, photo_html
 from .operations import (select_next_pass, select_selected_satellite_pass,
@@ -720,7 +720,7 @@ class MainWindow(QMainWindow):
         cat_options.addWidget(self.enable_sat,1)
         rs.addLayout(cat_options)
         self.auto_cat=QCheckBox("Auto CAT contínuo · acompanhar Doppler a cada segundo")
-        self.auto_cat.setToolTip("Acompanha o satélite selecionado a cada segundo. Reprograma FA/FB somente quando a frequência Doppler muda. Sem PTT; exige SAT ON e crossband.")
+        self.auto_cat.setToolTip("Acompanha o Doppler acima e abaixo do horizonte. Reprograma FA/FB quando a previsão muda ou diverge da leitura CAT. Sem PTT; exige SAT ON e crossband.")
         self.auto_cat.toggled.connect(self.change_auto_cat)
         rs.addWidget(self.auto_cat)
         self.auto_cat_startup=QCheckBox("Conectar ao abrir e seguir satélite se Auto CAT estiver habilitado")
@@ -793,10 +793,7 @@ class MainWindow(QMainWindow):
         ag=QGridLayout();ag.addWidget(label("Intervalo de ajuste automático"),0,0);ag.addWidget(self.interval,0,1)
         ag.addWidget(label("Mínima variação para reprogramar CAT"),1,0);ag.addWidget(self.threshold,1,1)
         adv.addLayout(ag)
-        self.cat_outside=QCheckBox("Permitir CAT Doppler fora da visada (opcional)")
-        self.cat_outside.toggled.connect(self.change_cat_outside)
-        adv.addWidget(self.cat_outside)
-        adv.addWidget(label("Doppler calculado a cada segundo, inclusive fora da visada. CAT exige SAT, efeméride recente e autorização. Fora da visada, CAT bloqueado por padrão. Sem comandos PTT."))
+        adv.addWidget(label("Auto CAT acompanha o Doppler sempre, inclusive abaixo do horizonte, enquanto estiver habilitado e com CAT conectado. Requer SAT ON, efeméride recente e perfil crossband válido; nunca aciona PTT."))
         cfg.addWidget(advanced)
         local_group,lg=group("IDIOMA E FORMATO DE FREQUÊNCIA")
         local_row=QHBoxLayout()
@@ -886,9 +883,6 @@ class MainWindow(QMainWindow):
         self.stops_combo.setCurrentText(str(c['stopbits']))
         self.interval.setValue(float(c['update_interval_s']))
         self.threshold.setValue(float(c['tune_threshold_hz']))
-        self.cat_outside.blockSignals(True)
-        self.cat_outside.setChecked(bool(c.get('cat_doppler_out_of_view',False)))
-        self.cat_outside.blockSignals(False)
         self.update_minutes.setValue(float(c.get('version_check_minutes',15)))
         self.include_prerelease.setChecked(bool(c.get('include_prereleases', True)))
         self.language_combo.blockSignals(True)
@@ -1899,12 +1893,10 @@ class MainWindow(QMainWindow):
             return
         if any(k in self.pending_jobs for k in ("cat-autotune","cat-track","cat-readback","cat-connect","cat-diagnostic")):
             return
-        # Live synchronization is authoritative while Auto CAT is enabled.
-        # A changed FA/FB readback is a divergence to correct, not an
-        # unconfirmed "manual change" that silently disables tracking.
-        if not cat_doppler_allowed(self.last_pos["visible"],
-                self.config.values.get("cat_doppler_out_of_view",True)):
-            return
+        # Operator-enabled Auto CAT tracks Doppler regardless of elevation.
+        # The initial preset must not succeed below the horizon while later
+        # corrections are silently blocked by a legacy visibility preference.
+        # Readback FA/FB remains authoritative for hardware confirmation.
         if time.monotonic()-self.last_tracking_write < max(0.25,float(
                 self.interval.value())):
             return
@@ -1935,6 +1927,8 @@ class MainWindow(QMainWindow):
             self.cat_last_requested=(ul,dl)
             started=self.last_tracking_write
             self.cat_tune_status.setText("Auto CAT · corrigindo Doppler no TS-2000…")
+            self.log(f"Auto CAT Doppler · elevação {self.last_pos.get('elevation', float('nan')):+.1f}°"
+                     f" · RX {dl} Hz · TX {ul} Hz · diferença CAT {observed_delta} Hz")
             def task():
                 if generation!=self.cat_selection_generation or not self.radio.connected:
                     return generation,None,None,None,0.0
@@ -2235,24 +2229,15 @@ class MainWindow(QMainWindow):
             self.render_radio_state(self.radio.set_main_mode(self.rx_mode.currentText()))
         except Exception as exc:QMessageBox.warning(self,'CAT modo',str(exc))
 
-    def change_cat_outside(self,enabled):
-        self.config.values["cat_doppler_out_of_view"]=bool(enabled)
-        self.config.save()
-        if not enabled and self.doppler_checkbox.isChecked() and self.last_pos and not self.last_pos["visible"]:
-            self.suspend_cat_doppler("permissão fora da visada desativada")
-
     def doppler_state_changed(self):
         if self.doppler_checkbox.isChecked():
             try:
                 self.saved_station();self.corrected()
                 if not self.radio.connected or not self.radio.state.sat:
                     raise ValueError("Conecte ao TS-2000 e ative SAT antes de habilitar o Doppler")
-                if not cat_doppler_allowed(self.last_pos['visible'],self.config.values.get('cat_doppler_out_of_view',False)):
-                    raise ValueError('Satélite fora da visada; habilite CAT fora da visada em Configurações')
                 if not self.omm_fresh():
                     raise ValueError('OMM antigo: atualize antes de controlar o rádio automaticamente')
-                scope='inclusive fora da visada' if self.config.values.get('cat_doppler_out_of_view',False) else 'durante a passagem visível'
-                if QMessageBox.question(self,'Ativar Doppler',f'Permitir alterar periodicamente FA/FC {scope}?') != QMessageBox.Yes:
+                if QMessageBox.question(self,'Ativar Doppler','Permitir alterar periodicamente FA/FB, inclusive fora da visada?') != QMessageBox.Yes:
                     raise ValueError('Operação cancelada')
                 self.log('Doppler automático habilitado pelo operador')
             except Exception as exc:

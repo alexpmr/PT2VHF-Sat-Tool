@@ -43,6 +43,11 @@ class Config:
         if self.file.exists():
             data = json.loads(self.file.read_text(encoding="utf-8"))
             self.values.update({k:v for k,v in data.items() if k in DEFAULTS})
+            # Auto CAT always follows Doppler outside the horizon. Older
+            # versions could persist False and allow only the initial tune.
+            if self.values["cat_doppler_out_of_view"] is not True:
+                self.values["cat_doppler_out_of_view"] = True
+                self.save()
             # Migrate v1.3.6 default 2s/20Hz to responsive 1s/1Hz without
             # overriding custom intervals or a disabled Auto CAT preference.
             if not data.get("cat_live_v137_migrated",False):
