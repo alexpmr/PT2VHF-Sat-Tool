@@ -119,3 +119,29 @@ def test_radio_operation_displays_actual_cat_readback_separate_from_prediction()
     diag=text.split("    def diagnose_cat(self):",1)[1].split("    def tune_selected_now(self):",1)[0]
     assert 'self.background("cat-diagnostic",self.radio.read_diagnostics)' in diag
     assert '"FA"' in diag and '"FB"' in diag and '"FC"' in diag and '"SA"' in diag
+
+
+def test_radio_poll_tracks_sub_knob_using_fc_not_vfo_b():
+    radio,sim=rig_with_sim()
+    sim.up=145_860_000       # operator changes SUB on radio panel
+    sim.vfo_b=430_150_000    # unrelated memory/VFO B
+    state=radio.poll()
+    assert state.uplink==145_860_000
+    assert "FC;" in sim.writes
+    assert "FB;" not in sim.writes
+
+
+def test_cat_main_control_guard_does_not_send_any_frequency_or_mode_writes():
+    import pytest
+    radio,sim=rig_with_sim()
+    original=sim.write
+    def with_sub_control(raw):
+        if raw==b"SA;":
+            sim.writes.append("SA;")
+            sim.answer=b"SA1011000;"  # SAT ON, MAIN=downlink, CTRL on SUB
+        else:
+            original(raw)
+    sim.write=with_sub_control
+    with pytest.raises(RuntimeError,match="CTRL"):
+        radio.set_satellite_channel(436_795_000,145_850_000,"FM")
+    assert sim.writes==["SA;"]
