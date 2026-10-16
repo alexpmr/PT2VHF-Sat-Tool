@@ -80,7 +80,7 @@ jobs:
           $exe = (Resolve-Path 'dist/PT2VHF-Sat-Tool/PT2VHF-Sat-Tool.exe').Path
           $report = Join-Path $env:RUNNER_TEMP 'sattool-selftest-${{ matrix.target }}.json'
           $expected = if ('${{ matrix.target }}' -eq 'Win7-x86') { 'PySide2' } else { 'PySide6' }
-          $proc = Start-Process -FilePath $exe -ArgumentList @('--self-test', ('"' + $report + '"'), $expected) -Wait -PassThru
+          $proc = Start-Process -FilePath $exe -ArgumentList @('--self-test', $report, $expected) -Wait -PassThru
           if (-not (Test-Path $report)) { throw "EXE sem relatório de autoteste; exit: $($proc.ExitCode)" }
           $result = Get-Content $report -Raw | ConvertFrom-Json
           Get-Content $report
@@ -98,7 +98,7 @@ jobs:
           if (-not (Test-Path $portable)) { throw 'Portable EXE missing' }
           $report = Join-Path $env:RUNNER_TEMP 'portable-onefile-${{ matrix.target }}.json'
           $binding = if ('${{ matrix.target }}' -eq 'Win7-x86') { 'PySide2' } else { 'PySide6' }
-          $process = Start-Process -FilePath $portable -ArgumentList @('--self-test', ('"' + $report + '"'), $binding) -Wait -PassThru
+          $process = Start-Process -FilePath $portable -ArgumentList @('--self-test', $report, $binding) -Wait -PassThru
           if (-not (Test-Path $report)) { throw "Portable EXE nao iniciou: $($process.ExitCode)" }
           $diag = Get-Content $report -Raw | ConvertFrom-Json
           Get-Content $report
