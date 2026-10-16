@@ -113,7 +113,8 @@ def test_cat_writes_only_safe_commands_in_simulation():
     assert st.signal_main==18 and st.signal_sub==8
     assert st.power_set_w==25 and st.meter_type=='ALC' and st.meter_value==14
     assert 'FA00435799000;' in sim.writes
-    assert 'FC00145902000;' in sim.writes
-    assert not any(cmd.startswith('FB0') for cmd in sim.writes)
-    assert sim.fb==145900000  # VFO B untouched
+    assert 'FB00145902000;' in sim.writes
+    assert not any(cmd.startswith('FC0') for cmd in sim.writes)
+    assert sim.fb==145902000  # SAT uplink follows FB
+    assert sim.fc==145850000  # separate SUB VFO stays untouched
     assert not any(c.startswith(('TX','RX','MO')) for c in sim.writes)

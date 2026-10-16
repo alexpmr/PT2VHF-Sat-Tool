@@ -9,6 +9,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 def run_self_test(report_path: str, expected_qt: str = "") -> int:
+    import os, tempfile
+    debugpath = Path(os.environ.get("RUNNER_TEMP", tempfile.gettempdir()), "pt2vhf-selftest-phases.txt")
+    debugpath.write_text("entered selftest: {!r}\n".format(report_path), encoding="utf-8")
     result = {
         "schema": 1, "timestamp_utc": datetime.now(timezone.utc).isoformat(),
         "status": "failed", "frozen": bool(getattr(sys, "frozen", False)),
@@ -35,7 +38,6 @@ def run_self_test(report_path: str, expected_qt: str = "") -> int:
         result["checks"].append("qt_native")
         import sat_tool.app
         result["checks"].append("app_import")
-        from pathlib import Path
         root = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parents[1]))
         mapfile = root / "sat_tool" / "map.html"
         logo = root / "assets" / "branding" / "icon-256.png"
@@ -48,11 +50,24 @@ def run_self_test(report_path: str, expected_qt: str = "") -> int:
         result["status"] = "passed"
     except BaseException:
         result["error"] = traceback.format_exc()
+    with debugpath.open("a", encoding="utf-8") as stream:
+        stream.write("reached report; status={!r} path={!r}\n".format(result.get("status"), report_path))
     try:
+        # On Windows a launcher may pass a quoted argument literally.
+        # Strip only matching outer command-line quotes; the report remains local.
+        report_path = str(report_path).strip()
+        if len(report_path) >= 2 and report_path[0] == report_path[-1] == '"':
+            report_path = report_path[1:-1]
         destination = Path(report_path)
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
     except Exception:
+        try:
+            import os, tempfile
+            Path(os.environ.get("RUNNER_TEMP", tempfile.gettempdir()), "pt2vhf-selftest-error.txt").write_text(
+                "argv={!r}\nreport={!r}\n{}".format(sys.argv, report_path, traceback.format_exc()), encoding="utf-8")
+        except Exception:
+            pass
         traceback.print_exc()
         return 2
     return 0 if result["status"] == "passed" else 1

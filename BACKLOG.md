@@ -1,3 +1,12 @@
+## v1.3.5 — correção SAT FA/FB e prevenção de disputa VFO (16/10/2026)
+- [x] **Documentação CAT oficial conferida:** manual Kenwood TS-2000, apêndice p.135, estabelece FA=downlink SAT e FB=uplink SAT; FC é o VFO independente do sub-receptor. A interpretação FA/FC adotada nas v1.3.3/v1.3.4 foi corrigida.
+- [x] **Driver CAT:** leitura periódica de SA/FA/FB/FC/MD; no SAT ON o uplink é obtido de FB e o SUB VFO de FC, com campos distintos. Sintonia inicial e Doppler contínuo escrevem FA/FB e exigem readback; sem PTT, ativação de SAT ou inversão automática.
+- [x] **Interface e diagnóstico:** rótulos FA (RX SAT), FB (uplink SAT) e FC (SUB VFO independente), inclusive no popup de diagnóstico; manter falhas de sintonia separadas de conexão física.
+- [x] **Proteção manual:** quando o painel do TS-2000 muda FA/FB além do limiar, Auto CAT pausa e informa como retomar, sem disputar os VFOs com o operador.
+- [x] **Testes simulados:** distinguir valores FB e FC e confirmar que nenhuma escrita FC ou PTT ocorre na sintonia SAT; testes CI para Windows 7 x86 e Windows 10/11 x64.
+- [ ] **Homologação TS-2000 físico:** com SAT ON, SA P3=1 e CTRL MAIN, confirmar que FB corresponde ao uplink mostrado e que a escrita/readback altera corretamente o rádio no SO-50. Validar FW/mode/segurança TX com logs completos; a release permanece pré-lançamento até a confirmação.
+- [ ] **Não implementado:** TX ativo bloqueando escrita CAT, orientação inversa MAIN TX/SUB RX, modo SUB avançado, ISS V/V SPLIT, offset manual preservado ao rearmar. Manter separados do escopo v1.3.5.
+
 ## v1.3.4 — implementação parcial segura / pendências de campo (16/10/2026)
 - [x] **UI e conexão CAT:** indicador no topo vira botão clicável conectar/desconectar; conexão ao abrir com COM salva e preferência habilitada. A conexão inicial é somente leitura, em segundo plano, sem sintonia, SAT ou PTT; falha de sintonia não altera estado de conexão até polling real.
 - [x] **Auto CAT padrão:** ON para novos perfis, preservando configurações OFF existentes. Auto CAT contínuo arma exclusivamente após seleção explícita de satélite/transponder e depois atualiza frequência MAIN FA / SUB FC em worker, usando cadência/limiar ajustáveis, readback e proteção para perfis same-band em SAT; a opção CAT fora da visada permanece configurável e habilitada por padrão em perfis novos.

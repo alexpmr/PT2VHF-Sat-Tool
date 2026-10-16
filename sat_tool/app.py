@@ -515,7 +515,7 @@ class MainWindow(QMainWindow):
         quick_cat.addWidget(self.cat_tune_now)
         quick_cat.addWidget(self.connection)
         op.addLayout(quick_cat)
-        self.cat_live_label=label("RÁDIO REAL (CAT) · aguardando leitura de FA / FC / MD")
+        self.cat_live_label=label("RÁDIO REAL (CAT) · aguardando FA (RX SAT) / FB (TX SAT) / FC (SUB) / MD")
         self.cat_live_label.setStyleSheet("font-size:14px;font-weight:800;color:#d8f5c0")
         op.addWidget(self.cat_live_label)
         self.cat_sat_orientation=label("SAT: aguardando resposta SA do TS-2000")
@@ -1357,7 +1357,8 @@ class MainWindow(QMainWindow):
         self.cat_indicator.setStyleSheet("font-size:14px;font-weight:800;color:#67efb2")
         self.cat_live_label.setText(
             "RÁDIO REAL (CAT) · MAIN RX [FA] "+self.radio_freq(st.downlink)+
-            "  |  SUB TX [FC] "+self.radio_freq(st.uplink)+
+            "  |  SAT UPLINK [FB] "+self.radio_freq(st.uplink)+
+            "  |  SUB VFO [FC] "+self.radio_freq(st.sub_receiver)+
             "  |  MAIN "+str(st.mode))
         try:
             sat_status=decode_satellite_status(st.sat_raw)
@@ -1378,8 +1379,8 @@ class MainWindow(QMainWindow):
         self.cat_status.setText(f"● Conectado · {st.model} · SAT {'ON' if st.sat else 'OFF'}")
         self.cat_status.setStyleSheet("color:#69e3bc;font-size:12px")
         self.cat_rx.setText(f"MAIN RX / FA (CAT)\n{self.radio_freq(st.downlink)}")
-        self.cat_tx.setText(f"SUB TX / FC (CAT)\n{self.radio_freq(st.uplink)}")
-        self.cat_details.setText(f"SAT {'ON' if st.sat else 'OFF'} · MAIN {st.mode} · Última leitura {self.last_cat_success.astimezone():%H:%M:%S} local")
+        self.cat_tx.setText(f"SAT UPLINK / FB (CAT)\n{self.radio_freq(st.uplink)}")
+        self.cat_details.setText(f"SAT {'ON' if st.sat else 'OFF'} · MAIN {st.mode} · FC SUB independente {self.radio_freq(st.sub_receiver)} · Última leitura {self.last_cat_success.astimezone():%H:%M:%S} local")
         for widget,value,scale in ((self.smeter_main,st.signal_main,30),(self.smeter_sub,st.signal_sub,15)):
             widget.setValue(value if value is not None else 0)
             widget.setFormat(f"{value:02d}/{scale}" if value is not None else "sem leitura")
@@ -1748,6 +1749,17 @@ class MainWindow(QMainWindow):
             return
         if not self.sat or not self.last_pos or not self.omm_fresh():
             return
+        # A manual MAIN/SAT-Uplink dial change must not trigger a VFO tug-of-war.
+        # Pausing explicitly is safer than overwriting the operator\'s adjustment.
+        current=self.radio.state
+        if (self.last_freqs[0] is not None and self.last_freqs[1] is not None
+            and current.uplink is not None and current.downlink is not None
+            and max(abs(current.uplink-self.last_freqs[0]),
+                    abs(current.downlink-self.last_freqs[1])) > max(100,2*int(self.threshold.value()))):
+            self.cat_tracking_armed=False
+            self.cat_tune_status.setText("CAT: PAUSADO · ajuste manual detectado no TS-2000; selecione o satélite para retomar")
+            self.log("CAT: alteração manual de FA/FB detectada; Auto CAT pausado para preservar a sintonia do operador")
+            return
         if not cat_doppler_allowed(self.last_pos["visible"],
                 self.config.values.get("cat_doppler_out_of_view",True)):
             return
@@ -1817,9 +1829,9 @@ class MainWindow(QMainWindow):
         if "FA" in freq:
             parts.append("FA real: "+self.radio_freq(freq["FA"]))
         if "FB" in freq:
-            parts.append("FB · VFO B (NÃO é SUB): "+self.radio_freq(freq["FB"]))
+            parts.append("FB · uplink SAT / VFO B: "+self.radio_freq(freq["FB"]))
         if "FC" in freq:
-            parts.append("FC · SUB / uplink TX: "+self.radio_freq(freq["FC"]))
+            parts.append("FC · VFO do sub-receptor (não é uplink SAT): "+self.radio_freq(freq["FC"]))
         parts.append("Modo MAIN: "+str(diag["main_mode"] or "indisponível"))
         if errors:
             parts.extend(["","ERROS DE LEITURA:"]+[k+": "+v for k,v in errors.items()])
@@ -1829,7 +1841,7 @@ class MainWindow(QMainWindow):
             "CAT: diagnóstico com falhas · veja LOGs / CAT" if errors else
             ("CAT: SAT ON, orientação MAIN/SUB inversa · leia diagnóstico"
              if status.get("sat") and not status.get("main_downlink") else
-             "CAT: leitura FA/FC/MD concluída · veja LOGs / CAT"))
+             "CAT: leitura FA/FB/FC/MD concluída · veja LOGs / CAT"))
         QMessageBox.information(self,"Diagnóstico CAT · somente leitura",report)
 
     def tune_selected_now(self):
@@ -2564,7 +2576,10 @@ class MainWindow(QMainWindow):
                                     "O rádio não confirmou a sintonia solicitada. "
                                     "Isso não significa, necessariamente, perda da conexão CAT.\n\n"
                                     +message+"\n\nVeja também LOGs / CAT.")
+            # Retry only when a NEW explicit, valid satellite selection exists.
+            # A stale/unconfigured selection must not erase the real CAT error.
             if (self.config.values.get("cat_auto_select",False) and self.radio.connected
+                    and self.sat is not None and self.sat_combo.currentData()
                     and self.cat_autotune_requested_generation!=self.cat_selection_generation):
                 self.auto_tune_selected_satellite()
             return
