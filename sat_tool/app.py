@@ -13,13 +13,14 @@ import traceback
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from .qt_compat import Qt, QTimer, QObject, Signal, Slot, QUrl
-from .crash_diagnostics import heartbeat,report_event,report_exception
+from .crash_diagnostics import heartbeat,report_event,report_exception,diagnostic_dir
+from .log_journal import EventJournal
 from .qt_compat import QDoubleValidator, QFont, QIcon, QPixmap
 from .qt_compat import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
     QLabel, QPushButton, QLineEdit, QComboBox, QGroupBox, QTabWidget, QPlainTextEdit,
     QSplitter, QMessageBox, QCheckBox, QTableWidget, QTableWidgetItem, QHeaderView,
-    QDoubleSpinBox, QAbstractItemView, QProgressDialog, QScrollArea, QProgressBar,
+    QDoubleSpinBox, QAbstractItemView, QProgressDialog, QScrollArea, QProgressBar, QFileDialog,
 )
 from .qt_compat import QWebEngineView, QGeoPositionInfoSource, qt_exec, QT_BINDING
 from skyfield.api import load
@@ -101,6 +102,7 @@ class MainWindow(QMainWindow):
         self.resize(1650, 930)
         self.setMinimumSize(1120, 700)
         self.config = Config()
+        self.journal = EventJournal(self.config.dir / "logs")
         self.ts = load.timescale(builtin=True)
         self.radio = TS2000(self.log)
         self.events = Events()
@@ -143,6 +145,10 @@ class MainWindow(QMainWindow):
         self.cat_selection_generation = 0
         self.cat_autotune_requested_generation = -1
         self.cat_tune_manual_request = False
+        self.cat_tracking_armed = False
+        self.cat_connecting = False
+        self.cat_connect_was_startup = False
+        self.last_tracking_write = 0.0
         self._loading_satellites = False
         self._loading_catalog = False
         self._active_satellite_id = None
@@ -167,6 +173,8 @@ class MainWindow(QMainWindow):
         self.diagnostic_timer.start(30000)
         # Delay startup network I/O until the UI is visible.
         QTimer.singleShot(12000, self.check_for_updates)
+        if self.config.values.get("cat_auto_connect_startup",True) and self.config.values.get("port","").strip():
+            QTimer.singleShot(1200, self.startup_cat_connect)
 
     def log(self,message):
         """Qt widgets may only be modified from the GUI thread.
@@ -175,6 +183,7 @@ class MainWindow(QMainWindow):
         Posting their messages directly to QPlainTextEdit can crash PySide/Qt.
         """
         msg=str(message)
+        self.journal.append(msg)
         if not msg.startswith(("RX ","TX ")):
             report_event(msg)
         if threading.current_thread() is threading.main_thread():
@@ -229,7 +238,9 @@ class MainWindow(QMainWindow):
         self.summary = label("Dados orbitais não carregados")
         self.summary.setStyleSheet('color:#85aaba')
         header.addWidget(self.summary, 1)
-        self.cat_indicator=QLabel("● RÁDIO DESCONECTADO")
+        self.cat_indicator=QPushButton("● RÁDIO DESCONECTADO")
+        self.cat_indicator.setToolTip("Clique para conectar ou desconectar o TS-2000 pela porta CAT configurada")
+        self.cat_indicator.clicked.connect(self.toggle_connection)
         self.cat_indicator.setStyleSheet("font-size:14px;font-weight:800;color:#ef9a9a;padding:6px;background:#243143;border-radius:5px")
         header.addWidget(self.cat_indicator)
         self.utc = QLabel("DATA/HORA UTC —")
@@ -289,6 +300,7 @@ class MainWindow(QMainWindow):
         self.sat_combo = QComboBox()
         self.sat_combo.setMinimumWidth(190)
         self.sat_combo.currentIndexChanged.connect(self.choose_satellite)
+        self.sat_combo.activated.connect(self.arm_cat_tracking)
         self.sat_detail = label("Atualize o catálogo OMM")
         self.sat_detail.setStyleSheet("color:#a9c5d9")
         pv.addWidget(self.sat_detail)
@@ -301,6 +313,7 @@ class MainWindow(QMainWindow):
         pv.addWidget(self.refresh_omm_btn)
         self.mode_combo=QComboBox()
         self.mode_combo.currentIndexChanged.connect(self.choose_mode)
+        self.mode_combo.activated.connect(self.arm_cat_tracking)
         self.mode_combo.setMinimumWidth(220)
         self.refresh_tx_btn=QPushButton("Atualizar frequências / modos")
         self.refresh_tx_btn.clicked.connect(lambda:self.refresh_modes(force=True))
@@ -643,10 +656,13 @@ class MainWindow(QMainWindow):
         cat_options.addWidget(self.enable_sat,1)
         rs.addLayout(cat_options)
         self.auto_cat=QCheckBox("Sintonizar TS-2000 ao escolher satélite (CAT automático)")
-        self.auto_cat.setToolTip("Requer SAT ligado e dados válidos. Desativado por padrão; nunca envia PTT.")
+        self.auto_cat.setToolTip("Ativo por padrão em novas instalações; controla frequências após seleção explícita. Sem PTT.")
         self.auto_cat.toggled.connect(self.change_auto_cat)
         rs.addWidget(self.auto_cat)
-        rs.addWidget(label("Somente TS-2000; conectar não habilita SAT nem transmite."))
+        self.auto_cat_startup=QCheckBox("Conectar ao rádio automaticamente ao abrir (somente leitura)")
+        self.auto_cat_startup.toggled.connect(self.change_startup_connect)
+        rs.addWidget(self.auto_cat_startup)
+        rs.addWidget(label("O programa pode conectar ao abrir, mas só rastreia após escolha explícita do satélite. Não habilita SAT nem transmite."))
         rs.addWidget(catview)
         connect_btn=QPushButton("Conectar pela porta selecionada")
         connect_btn.clicked.connect(self.connect_from_settings)
@@ -756,10 +772,17 @@ class MainWindow(QMainWindow):
         logs=QWidget();ll=QVBoxLayout(logs)
         self.log_view=QPlainTextEdit();self.log_view.setReadOnly(True)
         self.log_view.document().setMaximumBlockCount(4000)
-        self.log_view.setToolTip("Exibe as últimas 4.000 linhas; relatórios de falha ficam em %LOCALAPPDATA%/PT2VHF/SatTool/diagnostics")
+        self.log_view.setToolTip("Últimas 4.000 linhas na tela; o histórico CAT persistido pode ser exportado localmente em ZIP.")
         ll.addWidget(self.log_view)
+        log_actions=QHBoxLayout()
         clear=QPushButton("Limpar logs da tela");clear.clicked.connect(self.log_view.clear)
-        ll.addWidget(clear)
+        self.export_logs=QPushButton("Baixar log completo (ZIP)")
+        self.export_logs.setToolTip("Salva CAT RX/TX, eventos SAT e arquivos de diagnóstico localmente")
+        self.export_logs.clicked.connect(self.save_complete_logs)
+        log_actions.addWidget(clear)
+        log_actions.addWidget(self.export_logs)
+        log_actions.addStretch(1)
+        ll.addLayout(log_actions)
         root.addTab(logs,"LOGs / CAT")
         about=QWidget();about_layout=QVBoxLayout(about)
         about_layout.addWidget(label(f"PT2VHF Sat Tool v{__version__} — Controle CAT do TS-2000"))
@@ -793,8 +816,11 @@ class MainWindow(QMainWindow):
         self.aos_enabled.setChecked(bool(c.get("aos_alarm_enabled",True)))
         self.aos_sound.setChecked(bool(c.get("aos_alarm_sound",True)))
         self.auto_cat.blockSignals(True)
-        self.auto_cat.setChecked(bool(c.get("cat_auto_select",False)))
+        self.auto_cat.setChecked(bool(c.get("cat_auto_select",True)))
         self.auto_cat.blockSignals(False)
+        self.auto_cat_startup.blockSignals(True)
+        self.auto_cat_startup.setChecked(bool(c.get("cat_auto_connect_startup",True)))
+        self.auto_cat_startup.blockSignals(False)
         self.cat_tune_status.setText("Auto CAT habilitado · conecte rádio com SAT ON" if self.auto_cat.isChecked() else "Auto CAT desligado · ative em Configurações para sintonizar ao selecionar")
         self.stops_combo.setCurrentText(str(c['stopbits']))
         self.interval.setValue(float(c['update_interval_s']))
@@ -1670,7 +1696,8 @@ class MainWindow(QMainWindow):
         self.mode_note.setText(f"SatNOGS · {'Inversor' if opt['inverted'] else 'Não inversor'} · {'somente recepção (sem TX CAT)' if opt['receive_only'] else 'uplink/downlink'} · confira a situação operacional do satélite")
         self.preview_doppler()
         self.cat_selection_generation+=1
-        self.auto_tune_selected_satellite()
+        if self.cat_tracking_armed:
+            self.auto_tune_selected_satellite()
 
     def diagnose_cat(self):
         """Operator-initiated read-only TS-2000 serial CAT probe."""
