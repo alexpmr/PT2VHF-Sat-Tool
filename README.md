@@ -24,9 +24,18 @@
 ---
 
 
-## Novidades v1.3.9 — SO-50 FM V/U e diagnóstico do bloqueio CAT
+## Novidades v1.3.9 — Satélites, Passagens e telemetria TS-2000
 
-## Ajustes adicionais v1.3.9 — CAT online e agenda automática
+- **Passagens:** colunas AOS/TCA/LOS e Max ° dimensionadas pelo conteúdo; colunas Satélite e Modos distribuem todo o espaço livre do painel. Cabeçalhos/valores alinhados e conteúdo integral disponível por tooltip.
+- **Satélites:** seleção do catálogo por clique na linha, sem coluna/checkbox “Selecionado”. Registros selecionados ficam com **fundo amarelo e letras pretas** (inclusive após nova pesquisa e reinício). Duplo clique mantém acesso à operação.
+- **Baixar/atualizar frequências:** inclui **todos os NORAD IDs do catálogo orbital carregado**, independentemente de favoritos, seleção individual ou filtro de pesquisa. O processo em lote continua cancelável, com progresso, resumo de falhas e confirmação antes de consultas numerosas.
+- **Cartões de frequência RX/TX:** exibir modo e frequência corrigida, removendo a linha de deslocamento Doppler desses cartões; a informação orbital/Doppler e o diagnóstico continuam disponíveis em outras seções.
+- **Informações reais do TS-2000:** telemetria CAT somente leitura a cada cerca de 2 segundos (enquanto Auto CAT está ativo), incluindo controle MAIN/SUB, TRACE, VFO/MEM, modo MAIN, SUB RX/FC, S-meter MAIN/SUB e potência configurada/medidor quando a resposta for válida. Leitura da potência **não significa medição da saída RF**. As leituras não enviam PTT e não substituem o loop rápido FA/FB de Doppler.
+- **Homologação pendente:** verificar a responsividade das leituras com TS-2000 físico e eventual limitação da porta COM; os testes CI usam emulação de protocolo.
+
+## Novidades v1.3.8 — SO-50 FM V/U e diagnóstico do bloqueio CAT
+
+## Ajustes adicionais v1.3.8 — CAT online e agenda automática
 
 - **Doppler CAT em tempo real:** motor CAT com timer independente de 250 ms, sem depender da atualização do mapa. Intervalo de escrita configurável entre **0,25 e 15 segundos**, respeitando a variação mínima em Hz; não promete confirmação subsegundo se a porta serial ou rádio forem mais lentos.
 - **Leitura real FA/FB:** cada ajuste usa readback rápido SA/FA/FB, evitando consultar FC/modo/medidores a cada escrita. Exibe diferença em Hz entre o destino CAT enviado e o confirmado, tempo de comando e status sincronizado/divergente; mantém consultas periódicas de telemetria separadas.
