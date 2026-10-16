@@ -61,7 +61,7 @@ def test_continuous_cat_armed_on_connection_and_user_selection():
     assert 'self.background("cat-track",task)' in source
     assert 'self.export_logs.clicked.connect(self.save_complete_logs)' in source
     assert 'self.journal.append(msg)' in source
-    assert 'self.is_safe_crossband(ul,dl)' in source
+    assert 'safe,reason=self.selected_cat_pair_info(ul,dl)' in source
     assert '"cat-auto_connect_startup"' not in source or True
 
 
