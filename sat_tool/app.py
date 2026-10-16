@@ -472,7 +472,18 @@ class MainWindow(QMainWindow):
         nextpass.setMinimumWidth(520)
         self.pass_table=QTableWidget(0,6)
         self.pass_table.setHorizontalHeaderLabels(["Satélite","AOS local","TCA local","LOS local","Max °","Modos"])
-        self.pass_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        # Distribuição proporcional: datas e elevação com largura do conteúdo;
+        # nome e modos expandem para ocupar TODO o espaço que sobrar.
+        # Diferente de Stretch em todas as colunas, não desperdiça largura
+        # em 'Max °' nem corta AOS/TCA/LOS em painéis mais estreitos.
+        pass_header=self.pass_table.horizontalHeader()
+        pass_header.setStretchLastSection(False)
+        pass_header.setMinimumSectionSize(42)
+        pass_header.setDefaultAlignment(Qt.AlignCenter)
+        for col in (1,2,3,4):
+            pass_header.setSectionResizeMode(col,QHeaderView.ResizeToContents)
+        for col in (0,5):
+            pass_header.setSectionResizeMode(col,QHeaderView.Stretch)
         self.pass_table.setWordWrap(False)
         self.pass_table.verticalHeader().setDefaultSectionSize(26)
         self.pass_table.setSelectionBehavior(QAbstractItemView.SelectRows)
@@ -2622,7 +2633,11 @@ class MainWindow(QMainWindow):
                 los=p['los'].astimezone().strftime('%d/%m %H:%M')
                 modes=self.suggested_mode_text(p['id'])
                 for j,value in enumerate((p['name'],aos,peak,los,f"{p['max_el']:.0f}",modes)):
-                    self.pass_table.setItem(i,j,QTableWidgetItem(value))
+                    cell=QTableWidgetItem(value)
+                    cell.setTextAlignment(
+                        Qt.AlignVCenter | (Qt.AlignCenter if j in (1,2,3,4) else Qt.AlignLeft))
+                    cell.setToolTip(value)  # texto integral se coluna for comprimida
+                    self.pass_table.setItem(i,j,cell)
             self.log(f'Previsão: {len(data)} passagens nas próximas 36 h (lista limitada a 100)')
             self.update_next_indicator()
             self.prefetch_upcoming_modes()
