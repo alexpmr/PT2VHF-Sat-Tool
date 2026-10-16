@@ -1,3 +1,13 @@
+## v1.3.8 — CAT HRD-like e passagens por satélite selecionado (16/10/2026)
+- [x] **Sintoma TS-2000:** v1.3.7 sintoniza uma vez mas não acompanha continuamente Doppler, e mudança de satélite/modo pode não refletir no rádio. O laço dependia do tick principal de 1 s (com cálculos e mapa), fazia leitura CAT completa com medidores/FC após cada escrita, sofria concorrência de polling, e mudanças por clique em tabela não rearmavam explicitamente Auto CAT.
+- [x] **CAT:** timer autônomo 250 ms, controle independente de desenho/mapa, intervalo CAT configurável desde 0,25 s, comando FA/FB seguido de leitura rápida SA/FA/FB; só reprograma ao ultrapassar limiar configurado, mantendo execução serial e readback. Reduzir polls secundários para cada 8 s durante Auto CAT.
+- [x] **Diagnóstico:** faixa de status com diferença entre frequência calculada e real (RX/TX em Hz), tempo do último comando CAT e confirmação do rádio. Nenhuma alteração automática de SAT, PTT ou transmissão.
+- [x] **Seleção:** clicar em satélite na tabela ou em passagem rearma CAT com perfil escolhido, respeitando opt-in; preservação de frações do intervalo na configuração.
+- [x] **Próxima passagem e lista de 36 h:** usar exclusivamente NORAD selecionado, respeitar modo/frequências selecionadas; contador de AOS/TCA/LOS atualizado no tick 1 s, reconstruir agenda somente quando satélite mudar ou a cada 5 min, sem botão de recálculo; painel lateral de passagens ampliado e textos sem quebra.
+- [x] **Regressões:** leitura CAT compacta sem metadados opcionais, pares FA/FB, fonte exclusiva, eventos em passagem/aguardando e atualização automática.
+- [ ] **Homologação física:** medir quantas escritas CAT por segundo o TS-2000 realmente confirma, comparando Hz calculado/confirmado e latência. Se a porta a 9600 baud não sustentar 250 ms, preservar fila serial e informar atraso, sem supor que o rádio realmente sintonizou.
+- [ ] **Próximos itens:** proteção de transmissão ativa, orientação inversa MAIN TX/SUB RX e perfil ISS mesma banda.
+
 ## v1.3.8 — seleção de canal SO-50 FM V/U e diagnóstico CAT (16/10/2026)
 - [x] **Relato:** SO-50 foi bloqueado como “transponder na mesma banda”, embora AMSAT confirme uplink 145,850 MHz (VHF/2m) e downlink 436,795 MHz (UHF/70cm). A regra de bandas no código aceita esse par: causa real provavelmente foi seleção automática de outro registro SatNOGS, ainda sem LOG da falha.
 - [x] **Correção:** prioridade ao perfil FM SO-50/NORAD 27607 respaldado pela AMSAT, sem remover os demais transponders. Para outros satélites, escolher primeiro um transponder RX/TX crossband quando disponível, evitando canais isolados de telemetria como padrão.
