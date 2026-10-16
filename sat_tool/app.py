@@ -31,6 +31,7 @@ from .config import Config
 from .geolocation import GeoFix, lookup_approximate_ip, read_gps_serial
 from .location_map import parse_coordinate_fields, sanitize_map_pick, valid_coordinates
 from .frequency import format_frequency,parse_mhz_input,frequency_label
+from .transponder import prioritized_transponders,cat_pair_diagnostic
 from .i18n import LANGUAGES,translated
 from .satellite_info import orbital_characteristics, operational_characteristics, characteristics_text
 from .updater import check_for_update, download_update, install_flavor, launch_staged_update
@@ -1671,13 +1672,29 @@ class MainWindow(QMainWindow):
             self.background('tx:'+str(ident),lambda:refresh_transmitters(self.config.dir,int(ident)))
 
     def choose_cached_modes(self,ident):
-        self.options=transponder_options(load_transmitters(self.config.dir,ident))
+        # The API might list telemetry/obsolete entries before FM voice.
+        # Preserve explicitly selected mode on background catalog refresh.
+        old_choice=self.mode_combo.currentData()
+        old_uuid=(self.options[old_choice].get("uuid")
+                  if isinstance(old_choice,int) and 0<=old_choice<len(self.options)
+                  else None)
+        manual_was_selected=(old_choice==-1 and bool(self.options))
+        self.options=prioritized_transponders(ident,
+                transponder_options(load_transmitters(self.config.dir,ident)))
         self.mode_combo.blockSignals(True);self.mode_combo.clear()
         self.mode_combo.addItem("Manual (frequências customizadas)",-1)
         for i, opt in enumerate(self.options):
             info='RX apenas' if opt['receive_only'] else 'RX/TX'
             self.mode_combo.addItem(f"{opt['name'][:43]} · {opt['mode']} · {info}",i)
-        self.mode_combo.setCurrentIndex(1 if self.options else 0)
+        index=1 if self.options else 0
+        if manual_was_selected:
+            index=0
+        elif old_uuid:
+            for pos,item in enumerate(self.options,1):
+                if item.get("uuid")==old_uuid:
+                    index=pos
+                    break
+        self.mode_combo.setCurrentIndex(index)
         self.mode_combo.blockSignals(False)
         self.choose_mode()
         self.refresh_satellite_table()
@@ -1733,13 +1750,22 @@ class MainWindow(QMainWindow):
             Path(path),visible_log=visible,diagnostics_dir=diagnostic_dir(),version=__version__))
 
     def is_safe_crossband(self,ul,dl):
-        """Avoid applying SAT crossband CAT to same-band ISS V/V or U/U modes."""
-        def band(hz):
-            if 144_000_000<=hz<=148_000_000:return "2m"
-            if 420_000_000<=hz<=450_000_000:return "70cm"
-            if 1_240_000_000<=hz<=1_300_000_000:return "23cm"
-            return None
-        return ul is not None and band(ul) is not None and band(dl) is not None and band(ul)!=band(dl)
+        """Validate the selected CAT channel rather than an assumed band pair."""
+        return cat_pair_diagnostic(ul,dl)[0]
+
+    def selected_cat_pair_info(self,ul,dl):
+        """Detailed evidence for CAT block, without writing any PTT commands."""
+        safe,reason=cat_pair_diagnostic(ul,dl)
+        norad=str(self.sat_combo.currentData() or "não selecionado")
+        selection=self.mode_combo.currentText()
+        rx="—" if dl is None else f"{dl/1e6:.6f}"
+        tx="—" if ul is None else f"{ul/1e6:.6f}"
+        self.log(f"CAT PERFIL: NORAD={norad}; transponder={selection}; "
+                 f"RX={rx} MHz; TX={tx} MHz; avaliação={reason}")
+        hint=(" Para SO-50, selecione 'SO-50 · repetidor FM V/U (AMSAT)' "
+              "e confira RX 436,795 / TX 145,850 MHz.") if norad=="27607" else ""
+        return safe,(f"{reason}. NORAD {norad} · transponder: {selection} · "
+                     f"RX {rx} MHz / TX {tx} MHz."+hint)
 
     def track_cat_frequencies(self,now):
         """A confirmed, operator-armed Auto CAT profile tracks Doppler via worker."""
@@ -1779,10 +1805,10 @@ class MainWindow(QMainWindow):
             return
         try:
             ul,dl=self.corrected()
-            if not self.is_safe_crossband(ul,dl):
+            safe,reason=self.selected_cat_pair_info(ul,dl)
+            if not safe:
                 self.cat_tracking_armed=False
-                self.cat_tune_status.setText("CAT: serviço mesma banda/incompatível com SAT; rastreio pausado")
-                self.log("CAT rastreio bloqueado: transponder não é crossband seguro")
+                self.cat_tune_status.setText("CAT: acompanhamento bloqueado · "+reason)
                 return
             threshold=max(1,int(self.threshold.value()))
             if (self.last_freqs[0] is not None and self.last_freqs[1] is not None
@@ -1879,8 +1905,9 @@ class MainWindow(QMainWindow):
             return False
         try:
             ul,dl=self.nominal_hz()
-            if ul is not None and not self.is_safe_crossband(ul,dl):
-                return blocked("transponder na mesma banda: perfil SPLIT/SAT separado ainda não disponível")
+            safe,reason=self.selected_cat_pair_info(ul,dl)
+            if not safe:
+                return blocked("Perfil não sintonizado: "+reason)
             station=self.saved_station()
             pos=position(self.sat,station,ts=self.ts)
             if ul is not None:
