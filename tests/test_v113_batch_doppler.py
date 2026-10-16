@@ -57,6 +57,7 @@ def test_gui_wires_batch_checkboxes_and_every_second_preview():
     assert "self.catalog_table.itemChanged.connect(self.catalog_satellite_checked)" in source
     assert "def catalog_satellite_checked(self,item):" in source
     assert "self.preview_doppler(pos=pos,when=now)" in source
-    assert "cat_doppler_allowed(pos['visible']" in source
+    assert "self.track_cat_frequencies(now)" in source
+    assert "cat_doppler_allowed(self.last_pos[\"visible\"]" in source
     assert "self.tick_timer.start(1000)" in source
     assert "FORA DA VISADA" in source
