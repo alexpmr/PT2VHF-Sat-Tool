@@ -1,24 +1,15 @@
 # Compila instalador e portatil com as dependencias do alvo na maquina Windows.
 # Executar no Windows 10/11 com Python Launcher, Inno Setup 6 e Internet.
-param([ValidateSet('Win7-x86','Win11-x64')][string]$Target = 'Win11-x64')
+param([ValidateSet('Win11-x64')][string]$Target = 'Win11-x64')
 $ErrorActionPreference = 'Stop'
 Set-Location (Split-Path -Parent $PSScriptRoot)
-$Version = '1.3.11'
-if ($Target -eq 'Win7-x86') {
-  $PythonSelector = '-3.8-32'
-  $Deps = 'requirements-win7.txt'
-  $PyInstaller = '5.13.2'
-  $Minimum = '6.1sp1'
-  $Arch = 'x86compatible'
-  $Bits = '32'
-} else {
-  $PythonSelector = '-3.11-64'
-  $Deps = 'requirements-win11.txt'
-  $PyInstaller = '6.13.0'
-  $Minimum = '10.0.17763'
-  $Arch = 'x64compatible'
-  $Bits = '64'
-}
+$Version = '1.3.12'
+$PythonSelector = '-3.11-64'
+$Deps = 'requirements-win11.txt'
+$PyInstaller = '6.13.0'
+$Minimum = '10.0.17763'
+$Arch = 'x64compatible'
+$Bits = '64'
 function Invoke-Checked([string]$Description, [string]$File, [string[]]$Arguments) {
   Write-Host "[BUILD] $Description" -ForegroundColor Cyan
   & $File @Arguments
@@ -40,7 +31,7 @@ Invoke-Checked 'Compilando executavel Windows' $Exe @('-m','PyInstaller','--noco
 $Bin = Join-Path $AppDir 'PT2VHF-Sat-Tool.exe'
 if (-not (Test-Path $Bin)) { throw "Arquivo ausente: $Bin" }
 $Report = Join-Path (Resolve-Path 'dist').Path ("sattool-selftest-$Target.json")
-$Expected = if ($Target -eq 'Win7-x86') { 'PySide2' } else { 'PySide6' }
+$Expected = 'PySide6'
 $Result = Start-Process -FilePath (Resolve-Path $Bin).Path -ArgumentList @('--self-test',('"' + $Report + '"'),$Expected) -PassThru -Wait
 if (-not (Test-Path $Report)) { throw "EXE nao gerou relatorio: $($Result.ExitCode)" }
 $Smoke = Get-Content $Report -Raw | ConvertFrom-Json

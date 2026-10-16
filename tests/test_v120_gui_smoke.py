@@ -45,8 +45,8 @@ def test_operator_window_constructs_with_new_layout():
             for col in (1,2,3,4):
                 assert header.sectionResizeMode(col)==gui.QHeaderView.ResizeToContents
             for col in (0,5):
-                assert header.sectionResizeMode(col)==gui.QHeaderView.Stretch
-            assert window.pass_table.wordWrap() is False
+                assert header.sectionResizeMode(col)==gui.QHeaderView.Interactive
+            assert window.pass_table.wordWrap() is True
             assert window.connection.text()=="Conectar"
             assert not hasattr(window,"cat_tune_now")
             assert window.auto_cat.text().startswith("Auto CAT contínuo")

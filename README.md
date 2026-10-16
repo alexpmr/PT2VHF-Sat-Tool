@@ -2,27 +2,27 @@
 
 # PT2VHF Sat Tool
 
-## Downloads — instaladores e portáteis
+## Downloads — Windows 10/11 x64
 
-**PT2VHF Sat Tool v1.3.11 — Windows 7 SP1, Windows 10 e Windows 11.** Os quatro downloads são arquivos `.exe` diretos. Links ficam disponíveis após aprovação dos builds Windows. Embora seja o marco 1.0 de funcionalidades, permanece em pré-lançamento até a homologação CAT com TS-2000 físico e Windows 7 real.
+**PT2VHF Sat Tool v1.3.12 — Windows 10 1809+ e Windows 11 (x64)**. O suporte a Windows 7 foi pausado por solicitação do mantenedor; versões históricas permanecem no GitHub, mas não receberão novos builds neste ciclo.
 
-| Windows | Instalável | Portátil |
-| --- | --- | --- |
-| **Windows 7 SP1** (x86; executável de 32 bits também para Win7 x64) | [Instalador Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.11/PT2VHF-Sat-Tool-v1.3.11-Win7-x86-Setup.exe) | [Portable Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.11/PT2VHF-Sat-Tool-v1.3.11-Win7-x86-Portable.exe) |
-| **Windows 10 (1809+)/11** (x64; arquivo `Win11-x64` para manter atualizador) | [Instalador Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.11/PT2VHF-Sat-Tool-v1.3.11-Win11-x64-Setup.exe) | [Portable Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.11/PT2VHF-Sat-Tool-v1.3.11-Win11-x64-Portable.exe) |
+| Edição | Download direto |
+| --- | --- |
+| **Instalável x64** | [Setup (.exe)](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.12/PT2VHF-Sat-Tool-v1.3.12-Win11-x64-Setup.exe) |
+| **Portátil x64** | [Portable (.exe)](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.12/PT2VHF-Sat-Tool-v1.3.12-Win11-x64-Portable.exe) |
 
-**Formato dos downloads:** tanto instaladores quanto portáteis são entregues diretamente como arquivos **`.exe`**. O portátil inclui as dependências dentro do mesmo EXE (PyInstaller onefile) e não requer descompactação.
+O sufixo `Win11-x64` é mantido para compatibilidade com o atualizador e também atende ao Windows 10 1809+. Arquivos SHA256 acompanham a release. [Todas as releases](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases) · [GitHub Actions](https://github.com/alexpmr/PT2VHF-Sat-Tool/actions).
 
-**[Todas as releases](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases)** · **[Acompanhar compilação](https://github.com/alexpmr/PT2VHF-Sat-Tool/actions)**
-
-- **Instalável:** instalação por usuário, atalho e desinstalação, atualização pelo aplicativo usando o Setup de sua edição.
-- **Portátil:** execute diretamente `PT2VHF-Sat-Tool-v1.3.11-*-Portable.exe` (um único arquivo). Configurações ficam em `data/` ao lado do EXE, preservadas após atualizações.
-- **Win7:** Python 3.8 x86 + PySide2/Qt5 + PyInstaller 5.13.2 (legado, precisa ser validado no Windows 7 real).
-- **Win10/11 x64:** Windows 10 1809+ ou Windows 11, Python 3.11 x64 + PySide6/Qt6 + PyInstaller 6.13.0.
-- Arquivos SHA256 acompanham cada compilação. A versão Windows 7 é experimental; não confundir sucesso do CI com homologação em campo.
+**Homologação física:** testes automatizados emulam CAT/TS-2000; a validação com rádio real, COM física e Windows de destino continua necessária.
 
 ---
 
+## Novidades v1.3.12 — Auto CAT e espaço útil
+
+- **Auto CAT contínuo:** corrige a prioridade de atualização, tentando aplicar novos destinos FA/FB antes da leitura periódica, com confirmação readback e sem transmitir/PTT. Continua ativo fora da visada quando habilitado.
+- **Diagnóstico:** registra bloqueios de acompanhamento, motivo, setpoints enviados e confirmações, permitindo investigar situações em que o CAT sintoniza só após o clique no satélite.
+- **Passagens compactas:** bloco lateral menos largo e menos alto, data/hora em duas linhas; nomes e modos com quebra de linha para evitar elipse e barras de rolagem quando necessário.
+- **Plataformas:** builds novos somente para Windows 10/11 x64 (Setup/Portable); Windows 7 temporariamente descontinuado.
 
 ## Novidades v1.3.11 — comparação contínua entre previsão e rádio real
 

@@ -75,14 +75,12 @@ def test_selected_pass_ui_no_manual_recalculate_button_and_periodic_refresh():
     assert "Recalcular passagens" not in app
     assert "refresh_passes_btn" not in app
     assert 'group("PASSAGENS DO SATÉLITE SELECIONADO · 36 H")' in app
-    assert "nextpass.setMinimumWidth(520)" in app
-    assert "self.pass_table.setWordWrap(False)" in app
-    # AOS/TCA/LOS/elevação recebem só a largura necessária; o espaço
-    # restante fica dividido entre nome do satélite e modos.
+    assert "nextpass.setMinimumWidth(0)" in app
+    assert "self.pass_table.setWordWrap(True)" in app
+    assert "self.pass_table.resizeRowsToContents()" in app
     assert "for col in (1,2,3,4):" in app
     assert "pass_header.setSectionResizeMode(col,QHeaderView.ResizeToContents)" in app
-    assert "for col in (0,5):" in app
-    assert "pass_header.setSectionResizeMode(col,QHeaderView.Stretch)" in app
+    assert "pass_header.setSectionResizeMode(col,QHeaderView.Interactive)" in app
     assert "cell.setToolTip(value)" in app
     assert "cell.setTextAlignment(" in app
     assert "self.refresh_passes()" in app.split("    def choose_satellite(self):",1)[1].split("    def refresh_modes(",1)[0]

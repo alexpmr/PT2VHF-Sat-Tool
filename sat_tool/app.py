@@ -161,6 +161,12 @@ class MainWindow(QMainWindow):
         self.cat_live_queued = False
         self.cat_last_requested = (None,None)
         self.cat_last_roundtrip_ms = None
+        self.last_cat_readback_requested = 0.0
+        self.cat_last_preview_time = 0.0
+        self.cat_last_gate = None
+        self.cat_last_gate_time = 0.0
+        self.cat_tracking_commands = 0
+        self.cat_tracking_confirmed = 0
         self._mode_catalog_sat_id = None
         self._loading_satellites = False
         self._loading_catalog = False
@@ -486,28 +492,34 @@ class MainWindow(QMainWindow):
         sv.addWidget(upcoming)
         rv.addWidget(stat)
         nextpass,np=group("PASSAGENS DO SATÉLITE SELECIONADO · 36 H")
-        nextpass.setMinimumWidth(520)
+        # Compact and readable in narrower windows: dates use two lines,
+        # long satellite/mode names wrap, with vertical scrolling if needed.
+        nextpass.setMinimumWidth(0)
         self.pass_table=QTableWidget(0,6)
-        self.pass_table.setHorizontalHeaderLabels(["Satélite","AOS local","TCA local","LOS local","Max °","Modos"])
-        # Distribuição proporcional: datas e elevação com largura do conteúdo;
-        # nome e modos expandem para ocupar TODO o espaço que sobrar.
-        # Diferente de Stretch em todas as colunas, não desperdiça largura
-        # em 'Max °' nem corta AOS/TCA/LOS em painéis mais estreitos.
+        self.pass_table.setHorizontalHeaderLabels(["Satélite","AOS\nlocal","TCA\nlocal","LOS\nlocal","Máx °","Modos"])
         pass_header=self.pass_table.horizontalHeader()
         pass_header.setStretchLastSection(False)
-        pass_header.setMinimumSectionSize(42)
+        pass_header.setMinimumSectionSize(36)
         pass_header.setDefaultAlignment(Qt.AlignCenter)
+        pass_header.setFixedHeight(36)
         for col in (1,2,3,4):
             pass_header.setSectionResizeMode(col,QHeaderView.ResizeToContents)
-        for col in (0,5):
-            pass_header.setSectionResizeMode(col,QHeaderView.Stretch)
-        self.pass_table.setWordWrap(False)
-        self.pass_table.verticalHeader().setDefaultSectionSize(26)
+        for col,width in ((0,110),(5,110)):
+            pass_header.setSectionResizeMode(col,QHeaderView.Interactive)
+            pass_header.resizeSection(col,width)
+        self.pass_table.setWordWrap(True)
+        self.pass_table.setTextElideMode(Qt.ElideNone)
+        self.pass_table.verticalHeader().setMinimumSectionSize(23)
+        self.pass_table.verticalHeader().setDefaultSectionSize(28)
+        self.pass_table.verticalHeader().hide()
+        self.pass_table.setMinimumHeight(110)
+        self.pass_table.setMaximumHeight(230)
+        self.pass_table.setStyleSheet("QTableWidget::item { padding: 1px 2px; }")
         self.pass_table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.pass_table.cellDoubleClicked.connect(self.select_pass_satellite)
         self.pass_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         np.addWidget(self.pass_table)
-        rv.insertWidget(0,nextpass,2)
+        rv.insertWidget(0,nextpass,1)
         catview,cv=group("RÁDIO / CAT  ·  KENWOOD TS-2000")
         self.cat_status=label("● Desconectado  ·  porta CAT indisponível")
         self.cat_status.setStyleSheet("color:#efc17b;font-size:12px")
@@ -847,7 +859,7 @@ class MainWindow(QMainWindow):
         root.addTab(logs,"LOGs / CAT")
         about=QWidget();about_layout=QVBoxLayout(about)
         about_layout.addWidget(label(f"PT2VHF Sat Tool v{__version__} — Controle CAT do TS-2000"))
-        about_layout.addWidget(label("Distribuição: Windows 7 / Windows 11; instalador Setup EXE e portátil EXE único."))
+        about_layout.addWidget(label("Distribuição: Windows 10/11 x64; instalador Setup EXE e portátil EXE único. Win7 pausado."))
         about_layout.addWidget(label("Elementos orbitais: CelesTrak OMM/TLE. Transponders e modos: SatNOGS (créditos e licenças nos provedores)."))
         about_layout.addWidget(label("Repositório: https://github.com/alexpmr/PT2VHF-Sat-Tool · Licença MIT"))
         btn=QPushButton("Verificar versão");btn.clicked.connect(lambda:self.request_update(manual=True))
@@ -1873,40 +1885,62 @@ class MainWindow(QMainWindow):
         return safe,(f"{reason}. NORAD {norad} · transponder: {selection} · "
                      f"RX {rx} MHz / TX {tx} MHz."+hint)
 
+    def cat_tracking_gate(self,reason):
+        """Journal only transitions/repeated diagnostics every 20 seconds."""
+        moment=time.monotonic()
+        if reason!=self.cat_last_gate or moment-self.cat_last_gate_time>=20.0:
+            self.cat_last_gate=reason
+            self.cat_last_gate_time=moment
+            self.log("Auto CAT ciclo · "+reason)
+
     def track_cat_frequencies(self,now):
-        """A confirmed, operator-armed Auto CAT profile tracks Doppler via worker."""
+        """Prioritize changed Doppler frequencies over optional CAT telemetry."""
+        note=getattr(self,"cat_tracking_gate",None)
         if not self.cat_tracking_armed or not self.config.values.get("cat_auto_select",True):
-            return
+            if callable(note):note("desabilitado")
+            return False
         if not self.radio.connected or not self.radio.state.sat:
+            if callable(note):note("desconectado ou SAT OFF")
             self.cat_tune_status.setText("CAT: rastreamento pausado · desconectado ou SAT OFF")
-            return
+            return False
         if not self.sat or not self.last_pos or not self.omm_fresh():
-            return
+            if callable(note):note("aguardando satélite/posição/OMM válido")
+            return False
         if (self.last_freqs==(None,None)
                 and time.monotonic()>=self.cat_retry_after
                 and self.down_edit.text().strip()
                 and "cat-autotune" not in self.pending_jobs):
             # When a saved/updated catalog becomes ready, initiate once.
+            if callable(note):note("sintonia inicial pendente")
             self.auto_tune_selected_satellite()
-            return
+            return False
         if self.last_freqs==(None,None):
-            return
-        if any(k in self.pending_jobs for k in ("cat-autotune","cat-track","cat-readback","cat-connect","cat-diagnostic")):
-            return
+            if callable(note):note("aguardando primeira confirmação CAT/backoff")
+            return False
+        busy=tuple(k for k in ("cat-autotune","cat-track","cat-readback","cat-connect","cat-diagnostic")
+                   if k in self.pending_jobs)
+        if busy:
+            if callable(note):note("worker pendente: "+",".join(busy))
+            return False
         # Operator-enabled Auto CAT tracks Doppler regardless of elevation.
         # The initial preset must not succeed below the horizon while later
         # corrections are silently blocked by a legacy visibility preference.
         # Readback FA/FB remains authoritative for hardware confirmation.
+        if time.monotonic()<getattr(self,"cat_retry_after",0.0):
+            if callable(note):note("aguardando backoff de falha CAT")
+            return False
         if time.monotonic()-self.last_tracking_write < max(0.25,float(
                 self.interval.value())):
-            return
+            if callable(note):note("aguardando intervalo de atualização CAT")
+            return False
         try:
             ul,dl=self.corrected()
             safe,reason=self.selected_cat_pair_info(ul,dl)
             if not safe:
                 self.cat_tracking_armed=False
                 self.cat_tune_status.setText("CAT: acompanhamento bloqueado · "+reason)
-                return
+                if callable(note):note("perfil CAT inseguro: "+reason)
+                return False
             threshold=max(1,int(self.threshold.value()))
             # v1.3.11: 'last_freqs' is only what this program previously
             # requested. Real FA/FB may change by physical tuning, another
@@ -1921,7 +1955,8 @@ class MainWindow(QMainWindow):
                 else None)
             if (last_request_delta<threshold
                     and observed_delta is not None and observed_delta<threshold):
-                return
+                if callable(note):note("Doppler dentro do limiar: "+str(threshold)+" Hz")
+                return False
             generation=self.cat_selection_generation
             self.last_tracking_write=time.monotonic()
             self.cat_last_requested=(ul,dl)
@@ -1934,9 +1969,14 @@ class MainWindow(QMainWindow):
                     return generation,None,None,None,0.0
                 state=self.radio.set_frequencies(ul,dl)
                 return generation,state,ul,dl,time.monotonic()-started
+            if callable(note):note("enviando novo setpoint Doppler FA/FB")
+            self.cat_tracking_commands=getattr(self,"cat_tracking_commands",0)+1
             self.background("cat-track",task)
+            return True
         except (ValueError,TypeError,KeyError) as exc:
             self.cat_tune_status.setText("CAT rastreio aguardando: "+str(exc))
+            if callable(note):note("falha no cálculo Doppler: "+str(exc))
+            return False
 
     def cat_live_tick(self):
         """High-priority CAT scheduler, independent of full GUI/map refresh.
@@ -1951,23 +1991,28 @@ class MainWindow(QMainWindow):
         try:
             now=now_utc()
             self.last_pos=position(self.sat,self.saved_station(),when=now,ts=self.ts)
-            # Update predicted RX/TX from the very same orbital fix as CAT.
-            self.preview_doppler(pos=self.last_pos,when=now)
-            if ("cat-readback" in self.pending_jobs
-                    or "cat-autotune" in self.pending_jobs
-                    or "cat-track" in self.pending_jobs
-                    or "cat-connect" in self.pending_jobs):
+            # Do not update Qt widgets at the 250 ms CAT scheduler cadence.
+            moment=time.monotonic()
+            if moment-getattr(self,"cat_last_preview_time",0.0)>=1.0:
+                self.preview_doppler(pos=self.last_pos,when=now)
+                self.cat_last_preview_time=moment
+            if any(k in self.pending_jobs for k in
+                   ("cat-readback","cat-autotune","cat-track","cat-connect","cat-diagnostic")):
                 return
-            # Independent frequency readback: telemetry/meter poll deliberately
-            # does not read FA/FB, so dial changes used to go unnoticed.
-            if (self.last_freqs!=(None,None)
-                    and time.monotonic()-self.last_cat_frequency_readback>=1.0):
-                self.last_cat_frequency_readback=time.monotonic()
-                self.background("cat-readback",self.radio.poll_tracking)
-                return
+            # A fresh prediction that differs from FA/FB has priority over a
+            # routine readback: the old readback-first path could delay writes.
             self.track_cat_frequencies(now)
+            if "cat-track" in self.pending_jobs or "cat-autotune" in self.pending_jobs:
+                return
+            if (self.last_freqs!=(None,None)
+                    and moment-max(getattr(self,"last_cat_readback_requested",0.0),
+                                   self.last_cat_frequency_readback)>=1.0):
+                self.last_cat_readback_requested=moment
+                self.background("cat-readback",self.radio.poll_tracking)
         except Exception as exc:
             self.cat_sync_status.setText("CAT SYNC · previsão indisponível: "+str(exc)[:105])
+            note=getattr(self,"cat_tracking_gate",None)
+            if callable(note):note("exceção no ciclo CAT: "+str(exc)[:100])
 
     def update_cat_sync_status(self,state):
         """Compare current Doppler calculation with read FA/FB, not old TX intent."""
@@ -2641,6 +2686,9 @@ class MainWindow(QMainWindow):
                 self.cat_consecutive_failures=0
                 self.cat_retry_after=0.0
                 self.last_cat_track_completed=time.monotonic()
+                self.cat_tracking_confirmed=getattr(self,"cat_tracking_confirmed",0)+1
+                self.log(f"Auto CAT confirmado · ajustes {self.cat_tracking_confirmed} · "
+                         f"RX {dl} Hz · TX {ul} Hz")
                 self.cat_last_roundtrip_ms=round(elapsed*1000)
                 self.render_radio_state(state)
                 self.update_cat_sync_status(state)
@@ -2753,9 +2801,9 @@ class MainWindow(QMainWindow):
             self.passes=data[:75]
             self.pass_table.setRowCount(len(self.passes))
             for i,p in enumerate(self.passes):
-                aos=p['aos'].astimezone().strftime('%d/%m %H:%M')
-                peak=p['tca'].astimezone().strftime('%d/%m %H:%M') if p.get('tca') else '—'
-                los=p['los'].astimezone().strftime('%d/%m %H:%M')
+                aos=p['aos'].astimezone().strftime('%d/%m\n%H:%M')
+                peak=p['tca'].astimezone().strftime('%d/%m\n%H:%M') if p.get('tca') else '—'
+                los=p['los'].astimezone().strftime('%d/%m\n%H:%M')
                 modes=self.suggested_mode_text(p['id'])
                 for j,value in enumerate((p['name'],aos,peak,los,f"{p['max_el']:.0f}",modes)):
                     cell=QTableWidgetItem(value)
@@ -2763,6 +2811,7 @@ class MainWindow(QMainWindow):
                         Qt.AlignVCenter | (Qt.AlignCenter if j in (1,2,3,4) else Qt.AlignLeft))
                     cell.setToolTip(value)  # texto integral se coluna for comprimida
                     self.pass_table.setItem(i,j,cell)
+            self.pass_table.resizeRowsToContents()
             self.log(f'Previsão: {len(data)} passagens nas próximas 36 h (lista limitada a 100)')
             self.update_next_indicator()
             self.prefetch_upcoming_modes()

@@ -86,17 +86,18 @@ def test_fast_cat_scheduler_polls_actual_radio_frequencies_independently(monkeyp
     )
     MainWindow.cat_live_tick(win)
     assert len(pos)==1 and pos[0]["pos"]["radial_m_s"]==130
-    assert requests==[("cat-readback","radio-readback")]
+    assert requests[0][0]=="track"
+    assert requests[1]==("cat-readback","radio-readback")
     win.last_cat_frequency_readback=100.0
     MainWindow.cat_live_tick(win)
-    assert requests[1][0]=="track"
+    assert requests[2][0]=="track"
 
 
 def test_radio_prediction_comparison_is_visible_near_top_cards():
     app=(ROOT/"sat_tool"/"app.py").read_text(encoding="utf-8")
     assert 'self.pred_cat_status=label("CAT · sem leitura recente FA/FB")' in app
     assert "ov.addWidget(self.pred_cat_status)" in app
-    assert '"cat-readback" in self.pending_jobs' in app
+    assert '"cat-readback","cat-autotune","cat-track"' in app
     assert 'self.background("cat-readback",self.radio.poll_tracking)' in app
     assert 'if key=="cat-readback":' in app
     assert 'self.update_cat_sync_status(data)' in app
