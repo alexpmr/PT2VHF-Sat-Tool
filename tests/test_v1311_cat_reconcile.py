@@ -9,6 +9,11 @@ from test_v137_live_auto_cat import Indicator,live_window
 ROOT=Path(__file__).resolve().parents[1]
 
 
+class StyledIndicator(Indicator):
+    def setStyleSheet(self,style):
+        self.style=style
+
+
 def test_real_radio_dial_change_is_corrected_even_if_prediction_did_not_change(monkeypatch):
     import sat_tool.app as gui
     monkeypatch.setattr(gui.time,"monotonic",lambda:100.0)
@@ -40,7 +45,7 @@ def test_cat_sync_uses_current_predicted_vs_readback_not_old_requested(monkeypat
     import sat_tool.app as gui
     clock=100.0
     monkeypatch.setattr(gui.time,"monotonic",lambda:clock)
-    status,top=Indicator(),Indicator()
+    status,top=Indicator(),StyledIndicator()
     win=SimpleNamespace(
         corrected=lambda: (145850125,436795900),
         cat_sync_status=status,pred_cat_status=top,
@@ -107,7 +112,7 @@ def test_catsync_never_claims_success_with_stale_radio_reads(monkeypatch):
     monkeypatch.setattr(gui.time,"monotonic",lambda:105.0)
     win=SimpleNamespace(
         corrected=lambda:(145850000,436795000),
-        cat_sync_status=Indicator(),pred_cat_status=Indicator(),
+        cat_sync_status=Indicator(),pred_cat_status=StyledIndicator(),
         cat_last_roundtrip_ms=20,last_cat_frequency_readback=100.0,
         threshold=SimpleNamespace(value=lambda:1)
     )
