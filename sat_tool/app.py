@@ -501,14 +501,14 @@ class MainWindow(QMainWindow):
         quick_cat.addWidget(self.cat_tune_now)
         quick_cat.addWidget(self.connection)
         op.addLayout(quick_cat)
-        self.cat_live_label=label("RÁDIO REAL (CAT) · aguardando leitura de FA / FB / MD")
+        self.cat_live_label=label("RÁDIO REAL (CAT) · aguardando leitura de FA / FC / MD")
         self.cat_live_label.setStyleSheet("font-size:14px;font-weight:800;color:#d8f5c0")
         op.addWidget(self.cat_live_label)
         self.cat_sat_orientation=label("SAT: aguardando resposta SA do TS-2000")
         self.cat_sat_orientation.setStyleSheet("font-size:12px;font-weight:700;color:#d8c399")
         op.addWidget(self.cat_sat_orientation)
         self.cat_diagnose=QPushButton("Diagnosticar comunicação CAT · somente leitura")
-        self.cat_diagnose.setToolTip("Consulta ID, SA, FA, FB e MD; sem alterar SAT, VFO ou PTT")
+        self.cat_diagnose.setToolTip("Consulta ID, SA, FA, FB, FC e MD; sem alterar SAT, VFO ou PTT")
         self.cat_diagnose.setEnabled(False)
         self.cat_diagnose.clicked.connect(self.diagnose_cat)
         op.addWidget(self.cat_diagnose)
@@ -1319,8 +1319,8 @@ class MainWindow(QMainWindow):
         self.cat_indicator.setText("● TS-2000 CONECTADO · "+self.ports.currentText())
         self.cat_indicator.setStyleSheet("font-size:14px;font-weight:800;color:#67efb2")
         self.cat_live_label.setText(
-            "RÁDIO REAL (CAT) · RX "+self.radio_freq(st.downlink)+
-            "  |  TX "+self.radio_freq(st.uplink)+
+            "RÁDIO REAL (CAT) · MAIN RX [FA] "+self.radio_freq(st.downlink)+
+            "  |  SUB TX [FC] "+self.radio_freq(st.uplink)+
             "  |  MAIN "+str(st.mode))
         try:
             sat_status=decode_satellite_status(st.sat_raw)
@@ -1340,8 +1340,8 @@ class MainWindow(QMainWindow):
         self.map_radio_label.setStyleSheet("font-size:13px;color:#69e3bc;font-weight:700")
         self.cat_status.setText(f"● Conectado · {st.model} · SAT {'ON' if st.sat else 'OFF'}")
         self.cat_status.setStyleSheet("color:#69e3bc;font-size:12px")
-        self.cat_rx.setText(f"RX / DOWNLINK (CAT)\n{self.radio_freq(st.downlink)}")
-        self.cat_tx.setText(f"TX / UPLINK (CAT)\n{self.radio_freq(st.uplink)}")
+        self.cat_rx.setText(f"MAIN RX / FA (CAT)\n{self.radio_freq(st.downlink)}")
+        self.cat_tx.setText(f"SUB TX / FC (CAT)\n{self.radio_freq(st.uplink)}")
         self.cat_details.setText(f"SAT {'ON' if st.sat else 'OFF'} · MAIN {st.mode} · Última leitura {self.last_cat_success.astimezone():%H:%M:%S} local")
         for widget,value,scale in ((self.smeter_main,st.signal_main,30),(self.smeter_sub,st.signal_sub,15)):
             widget.setValue(value if value is not None else 0)
@@ -1679,8 +1679,8 @@ class MainWindow(QMainWindow):
         if "cat-diagnostic" in self.pending_jobs:
             return
         self.cat_diagnose.setEnabled(False)
-        self.cat_tune_status.setText("CAT: consultando somente ID / SA / FA / FB / MD…")
-        self.log("Diagnóstico CAT: início da leitura de ID, SA, FA, FB e MD; sem comandos de escrita")
+        self.cat_tune_status.setText("CAT: consultando somente ID / SA / FA / FB / FC / MD…")
+        self.log("Diagnóstico CAT: início da leitura de ID, SA, FA, FB, FC e MD; sem comandos de escrita")
         self.background("cat-diagnostic",self.radio.read_diagnostics)
 
     def show_cat_diagnostic(self,diag):
@@ -1694,7 +1694,7 @@ class MainWindow(QMainWindow):
                "Nenhuma alteração de frequência, modo SAT ou PTT foi enviada.",
                "",
                "RESPOSTAS BRUTAS:"]
-        for command in ("ID","SA","FA","FB","MD"):
+        for command in ("ID","SA","FA","FB","FC","MD"):
             parts.append(command+"; → "+str(raw.get(command,"SEM RESPOSTA")))
         parts.append("")
         if status:
@@ -1710,7 +1710,9 @@ class MainWindow(QMainWindow):
         if "FA" in freq:
             parts.append("FA real: "+self.radio_freq(freq["FA"]))
         if "FB" in freq:
-            parts.append("FB real: "+self.radio_freq(freq["FB"]))
+            parts.append("FB · VFO B (NÃO é SUB): "+self.radio_freq(freq["FB"]))
+        if "FC" in freq:
+            parts.append("FC · SUB / uplink TX: "+self.radio_freq(freq["FC"]))
         parts.append("Modo MAIN: "+str(diag["main_mode"] or "indisponível"))
         if errors:
             parts.extend(["","ERROS DE LEITURA:"]+[k+": "+v for k,v in errors.items()])
@@ -1720,7 +1722,7 @@ class MainWindow(QMainWindow):
             "CAT: diagnóstico com falhas · veja LOGs / CAT" if errors else
             ("CAT: SAT ON, orientação MAIN/SUB inversa · leia diagnóstico"
              if status.get("sat") and not status.get("main_downlink") else
-             "CAT: leitura FA/FB/MD concluída · veja LOGs / CAT"))
+             "CAT: leitura FA/FC/MD concluída · veja LOGs / CAT"))
         QMessageBox.information(self,"Diagnóstico CAT · somente leitura",report)
 
     def tune_selected_now(self):
