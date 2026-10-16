@@ -58,6 +58,12 @@ def run_self_test(report_path: str, expected_qt: str = "") -> int:
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
     except Exception:
+        try:
+            import os, tempfile
+            Path(os.environ.get("RUNNER_TEMP", tempfile.gettempdir()), "pt2vhf-selftest-error.txt").write_text(
+                "argv={!r}\nreport={!r}\n{}".format(sys.argv, report_path, traceback.format_exc()), encoding="utf-8")
+        except Exception:
+            pass
         traceback.print_exc()
         return 2
     return 0 if result["status"] == "passed" else 1
