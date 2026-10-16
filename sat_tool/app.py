@@ -1137,7 +1137,7 @@ class MainWindow(QMainWindow):
         c=self.config.values
         c.update({"callsign":st.callsign,"lat":st.lat,"lon":st.lon,
                   "altitude_m":st.altitude_m,"min_elevation":st.min_elevation,
-                  "update_interval_s":int(self.interval.value()),"tune_threshold_hz":int(self.threshold.value())})
+                  "update_interval_s":float(self.interval.value()),"tune_threshold_hz":int(self.threshold.value())})
         self.config.save()
         self.log(f"Estação salva: {st.callsign} lat={st.lat:.5f} lon={st.lon:.5f}")
         self.track_cache_key=None
@@ -1642,6 +1642,7 @@ class MainWindow(QMainWindow):
     def select_list_satellite(self,row,column):
         if 0 <= row < self.sat_combo.count():
             self.sat_combo.setCurrentIndex(row)
+            self.arm_cat_tracking()  # table click is an explicit operator selection
 
     def choose_satellite(self):
         ident=self.sat_combo.currentData()
@@ -1757,6 +1758,7 @@ class MainWindow(QMainWindow):
         self.cat_tracking_armed=True
         self.last_freqs=(None,None)
         self.cat_autotune_requested_generation=-1
+        self.last_tracking_write=0.0
         self.cat_tune_status.setText("Auto CAT online · sintonizando seleção e acompanhando em tempo real…")
         self.auto_tune_selected_satellite()
 
@@ -2179,6 +2181,7 @@ class MainWindow(QMainWindow):
         index=self.sat_combo.findData(ident)
         if index<0:return
         self.sat_combo.setCurrentIndex(index)
+        self.arm_cat_tracking()
         ch=event["channel"]
         for i,option in enumerate(self.options):
             # Match the operating service without applying any CAT command.
@@ -2312,7 +2315,9 @@ class MainWindow(QMainWindow):
             ident=self.passes[row]['id']
             self.search.clear()
             index=self.sat_combo.findData(ident)
-            if index>=0:self.sat_combo.setCurrentIndex(index)
+            if index>=0:
+                self.sat_combo.setCurrentIndex(index)
+                self.arm_cat_tracking()
 
     @Slot(object,int)
     def web_renderer_terminated(self,status,exit_code):
