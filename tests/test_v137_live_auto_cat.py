@@ -63,6 +63,7 @@ def live_window():
         last_tracking_write=0.0,
         corrected=lambda: (145850012, 436800030),
         is_safe_crossband=lambda up,down: True,
+        selected_cat_pair_info=lambda up,down: (True,"crossband válido"),
         auto_tune_selected_satellite=lambda: (_ for _ in ()).throw(AssertionError("unexpected reinitialization")),
         log=lambda message: None,
     )
