@@ -2576,7 +2576,10 @@ class MainWindow(QMainWindow):
                                     "O rádio não confirmou a sintonia solicitada. "
                                     "Isso não significa, necessariamente, perda da conexão CAT.\n\n"
                                     +message+"\n\nVeja também LOGs / CAT.")
+            # Retry only when a NEW explicit, valid satellite selection exists.
+            # A stale/unconfigured selection must not erase the real CAT error.
             if (self.config.values.get("cat_auto_select",False) and self.radio.connected
+                    and self.sat is not None and self.sat_combo.currentData()
                     and self.cat_autotune_requested_generation!=self.cat_selection_generation):
                 self.auto_tune_selected_satellite()
             return
