@@ -2371,9 +2371,22 @@ class MainWindow(QMainWindow):
             self.catalog_progress.setText("SatNOGS: falha, cache anterior preservado")
             return
         if key=="cat-autotune":
-            self.cat_tune_status.setText("Auto CAT falhou: "+message)
-            self.cat_indicator.setText("! FALHA DE SINTONIA CAT")
-            self.cat_indicator.setStyleSheet("color:#ffbf6f;font-size:14px;font-weight:800")
+            # A failed write/readback is not a failed *connection*.  The radio
+            # can still answer ID/SA/FA/FC after rejecting a requested tune.
+            # Keep the connection indicator independent of tune status.
+            self.cat_tune_status.setText("SINTONIA NÃO APLICADA: "+message)
+            self.cat_tune_status.setToolTip(
+                "O erro de sintonia não significa que a porta CAT desconectou. "
+                "Detalhes: "+message)
+            if self.radio.connected:
+                self.log("CAT: verificando comunicação após falha de sintonia (somente leitura)")
+                # Verify an actual response before changing any connection LED.
+                # background() safely coalesces requests if polling is in progress.
+                self.background("cat-poll",self.radio.poll)
+            else:
+                self.last_cat_success=None
+                self.cat_indicator.setText("● RÁDIO DESCONECTADO")
+                self.cat_indicator.setStyleSheet("font-size:14px;font-weight:800;color:#ff9595")
             if (self.config.values.get("cat_auto_select",False) and self.radio.connected
                     and self.cat_autotune_requested_generation!=self.cat_selection_generation):
                 self.auto_tune_selected_satellite()
