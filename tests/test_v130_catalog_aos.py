@@ -55,7 +55,8 @@ def test_ui_source_limits_large_catalog_and_keeps_cat_opt_in():
     assert "rows=rows[:350]" in source
     assert 'if self._loading_catalog:return' in source
     assert 'self.catalog_table.cellClicked.connect(self.toggle_catalog_satellite_selection)' in source
-    assert 'self.catalog_table.setItem(row,0,box)' in source
+    assert 'self.catalog_table.setItem(row,column,cell)' in source
+    assert 'cell.setBackground(QBrush(QColor("#ffe36a")))' in source
     assert 'self.auto_cat=QCheckBox(' in source
     assert 'self.cat_selection_generation+=1' in source
     assert 'self.check_selected_aos_alarm(now)' in source
