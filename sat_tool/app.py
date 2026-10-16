@@ -1631,37 +1631,72 @@ class MainWindow(QMainWindow):
         self.cat_selection_generation+=1
         self.auto_tune_selected_satellite()
 
-    def auto_tune_selected_satellite(self):
-        """Opt-in CAT tune, coalescing stale selections on the GUI event loop."""
-        if not self.config.values.get("cat_auto_select",False) or not self.radio.connected:
+    def tune_selected_now(self):
+        """Explicit operator-triggered CAT tune; usable without enabling Auto CAT."""
+        if not self.radio.connected:
+            QMessageBox.warning(self,"CAT","Conecte o TS-2000 antes de sintonizar.")
             return
-        if not self.sat or not self.radio.state.sat or not self.omm_fresh():
-            self.radio_label.setText("Auto CAT requer SAT ativo e OMM recente")
+        if QMessageBox.question(self,"Sintonizar TS-2000",
+                "Aplicar as frequências do satélite selecionado e o modo MAIN de RX?\n"
+                "O modo SUB precisa ser conferido. Nenhum PTT será enviado.",
+                QMessageBox.Yes|QMessageBox.No,QMessageBox.No)!=QMessageBox.Yes:
             return
+        self.auto_tune_selected_satellite(force=True)
+
+    def auto_tune_selected_satellite(self,force=False):
+        """Automatic only with explicit consent, plus an explicitly confirmed manual retry.
+
+        This must also be invoked on connect, after SAT activation and when the
+        Auto CAT preference is enabled; a selection-change signal alone is not enough.
+        """
+        if not force and not self.config.values.get("cat_auto_select",False):
+            return False
+        def blocked(reason):
+            self.radio_label.setText("CAT: "+reason)
+            self.log("CAT não sintonizado: "+reason)
+            if force:
+                QMessageBox.warning(self,"Sintonia CAT indisponível",reason)
+            return False
+        if not self.radio.connected:
+            return blocked("rádio desconectado")
+        if not self.sat or not self.sat_combo.currentData():
+            return blocked("selecione um satélite no menu superior")
+        if not self.radio.state.sat:
+            return blocked("SAT está OFF no TS-2000; ative em Configurações → Conexão CAT")
+        if not self.omm_fresh():
+            return blocked("OMM/TLE vencido; atualize elementos orbitais antes de sintonizar")
+        if not force and (not isinstance(self.mode_combo.currentData(),int)
+                          or self.mode_combo.currentData()<0):
+            return blocked("sem transponder selecionado; baixe frequências SatNOGS em Satélites")
         if "cat-autotune" in self.pending_jobs:
-            return
+            self.radio_label.setText("CAT: nova seleção aguardando término da sintonia anterior…")
+            return False
         try:
             ul,dl=self.nominal_hz()
-            site=self.saved_station()
-            pos=position(self.sat,site,ts=self.ts)
+            station=self.saved_station()
+            pos=position(self.sat,station,ts=self.ts)
             if ul is not None:
                 ul_new,dl_new=doppler_frequencies(ul,dl,pos["radial_m_s"])
             else:
                 ul_new=None
-                dl_new=frequency_prediction({"downlink_hz":dl,"uplink_hz":None},pos["radial_m_s"])["rx_hz"]
+                dl_new=frequency_prediction(
+                    {"downlink_hz":dl,"uplink_hz":None},pos["radial_m_s"])["rx_hz"]
             mode=self.rx_mode.currentText()
             if mode not in ("FM","USB","LSB","CW","AM","FSK"):
-                raise ValueError("Modo RX não suportado")
+                return blocked("modo RX não suportado pelo TS-2000")
             generation=self.cat_selection_generation
-            self.radio_label.setText("CAT: sintonizando…")
+            self.cat_autotune_requested_generation=generation
+            self.radio_label.setText("CAT: sintonizando RX/TX e modo MAIN…")
+            self.log(f"Auto CAT: solicitação NORAD {self.sat_combo.currentData()} "
+                     f"RX {dl_new} TX {ul_new or 'somente RX'} MAIN {mode}")
             def task():
-                if generation!=self.cat_selection_generation:
+                if generation!=self.cat_selection_generation or not self.radio.connected:
                     return generation,None
                 return generation,self.radio.set_satellite_channel(dl_new,ul_new,mode)
             self.background("cat-autotune",task)
+            return True
         except Exception as exc:
-            self.radio_label.setText("Auto CAT indisponível: "+str(exc))
-            self.log("Auto CAT protegido: "+str(exc))
+            return blocked(str(exc))
 
     def pair_linear(self):
         i=self.mode_combo.currentData()
@@ -2143,7 +2178,8 @@ class MainWindow(QMainWindow):
                 self.last_freqs=(state.uplink,state.downlink)
                 self.render_radio_state(state)
                 self.radio_label.setText("CAT: sintonizado · MAIN "+state.mode+" (SUB conferir)")
-            elif self.config.values.get("cat_auto_select",False):
+            elif (self.config.values.get("cat_auto_select",False) and self.radio.connected
+                  and generation!=self.cat_selection_generation):
                 self.auto_tune_selected_satellite()
             return
         if key=="tx-batch":
@@ -2165,7 +2201,8 @@ class MainWindow(QMainWindow):
                 self.catalog_progress.text()+"\nDetalhes das falhas na aba LOGs / CAT.")
             return
         if key=='cat-poll':
-            if self.radio.connected:self.render_radio_state(data)
+            if self.radio.connected and "cat-autotune" not in self.pending_jobs:
+                self.render_radio_state(data)
             return
         if key=='update-check':
             self.manual_update_requested = False
@@ -2234,8 +2271,11 @@ class MainWindow(QMainWindow):
             return
         if key=="cat-autotune":
             self.radio_label.setText("Auto CAT falhou: "+message)
-            self.cat_indicator.setText("! CAT SEM RESPOSTA")
+            self.cat_indicator.setText("! FALHA DE SINTONIA CAT")
             self.cat_indicator.setStyleSheet("color:#ffbf6f;font-size:14px;font-weight:800")
+            if (self.config.values.get("cat_auto_select",False) and self.radio.connected
+                    and self.cat_autotune_requested_generation!=self.cat_selection_generation):
+                self.auto_tune_selected_satellite()
             return
         if key=="cat-poll":
             self.cat_indicator.setText("! ERRO DE LEITURA CAT")
