@@ -33,7 +33,8 @@ def test_cat_frequency_encoding():
 
 
 def test_cat_rejects_wrong_channel():
-    with pytest.raises(ValueError):frequency_command('FC',145_900_000)
+    assert frequency_command('FC',145_900_000)=='FC00145900000;'
+    with pytest.raises(ValueError):frequency_command('FX',145_900_000)
 
 
 def test_cat_sat_mode_keeps_memory_channel():
@@ -74,7 +75,8 @@ def test_cat_writes_only_safe_commands_in_simulation():
         def __init__(self):
             self.writes=[]
             self.fa=435800000
-            self.fb=145900000
+            self.fb=145900000  # legacy VFO B, not satellite SUB
+            self.fc=145850000  # actual satellite SUB
             self.sat='SA1010000        ;'
             self.answer=b''
         def reset_input_buffer(self):pass
@@ -87,10 +89,13 @@ def test_cat_writes_only_safe_commands_in_simulation():
                 self.sat=cmd[:-1]+'        ;';self.answer=b''
             elif cmd=='FA;':self.answer=f'FA{self.fa:011d};'.encode()
             elif cmd=='FB;':self.answer=f'FB{self.fb:011d};'.encode()
+            elif cmd=='FC;':self.answer=f'FC{self.fc:011d};'.encode()
             elif cmd.startswith('FA'):
                 self.fa=int(cmd[2:-1]);self.answer=b''
             elif cmd.startswith('FB'):
                 self.fb=int(cmd[2:-1]);self.answer=b''
+            elif cmd.startswith('FC'):
+                self.fc=int(cmd[2:-1]);self.answer=b''
             elif cmd=='MD;':self.answer=b'MD4;'
             elif cmd=='ID;':self.answer=b'ID019;'
             elif cmd=='SM0;':self.answer=b'SM00018;'
@@ -108,5 +113,7 @@ def test_cat_writes_only_safe_commands_in_simulation():
     assert st.signal_main==18 and st.signal_sub==8
     assert st.power_set_w==25 and st.meter_type=='ALC' and st.meter_value==14
     assert 'FA00435799000;' in sim.writes
-    assert 'FB00145902000;' in sim.writes
+    assert 'FC00145902000;' in sim.writes
+    assert not any(cmd.startswith('FB0') for cmd in sim.writes)
+    assert sim.fb==145900000  # VFO B untouched
     assert not any(c.startswith(('TX','RX','MO')) for c in sim.writes)
