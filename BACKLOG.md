@@ -1,3 +1,11 @@
+## v1.3.2 — diagnóstico da sincronização CAT real (15/10/2026)
+- [x] **Leitura CAT real retornou ao topo da Operação:** RX real/FA, TX real/FB, modo MAIN/MD, distinguindo claramente da previsão Doppler. Estado expirado/falha não se confunde com frequência atual.
+- [x] **SAT com orientação explícita:** decodificador de resposta `SA;` P1 (SAT), P2 (memória), P3 (direção MAIN/SUB), P4–P7; exibe alerta em SAT ON com MAIN=UPLINK/SUB=DOWNLINK. Sem inversões automáticas ou CAT PTT.
+- [x] **Botão Diagnosticar comunicação CAT (somente leitura):** ID/SA/FA/FB/MD independentes, resultados brutos e mensagens de erro preservados nos LOGs / CAT. Qt via worker e serial lock; status persistente.
+- [x] **Testes por simulador:** consulta exclusivamente `ID; SA; FA; FB; MD;`, FA/FB real, modo, detecção de orientação reversa e UI do diagnóstico.
+- [ ] **Não resolvido sem aparelho:** confirmar no TS-2000 real se as respostas diferem das simuladas, se SA P3 está inverso, se FA/FB seguem as frequências mostradas no display, qual comando de escrita falha, permissões reais de Auto CAT e atualização após comando. O diagnóstico identifica a causa, mas não prova que APP→RÁDIO já funciona.
+- [ ] **Homologação SAT e modo SUB** e Windows 7 físico pendentes.
+
 ## v1.3.1 — corrigir CAT conectado sem aplicar frequências/modos (15/10/2026)
 - [x] **Causa reproduzida em revisão de código:** a v1.3.0 acionava Auto CAT somente no evento `choose_mode`. Conectar o TS-2000 após ter selecionado o satélite ou habilitar Auto CAT com seleção existente **não** iniciava a sintonia; re-selecionar o mesmo satélite também podia ser ignorado pela proteção contra comandos duplicados.
 - [x] **Correção v1.3.1:** após conexão CAT válida, autorização Auto CAT ou ativação explícita do modo SAT, tentar sintonizar imediatamente o satélite/transponder selecionado, se houver órbita recente, frequências válidas e MAIN=RX/SUB=TX confirmados pelo driver. Seleções rápidas são coalescidas após concluir a transação anterior. Nada se aplica enquanto desconectado, com SAT OFF ou sem autorização.

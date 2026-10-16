@@ -24,7 +24,7 @@ from .qt_compat import (
 from .qt_compat import QWebEngineView, QGeoPositionInfoSource, qt_exec, QT_BINDING
 from skyfield.api import load
 from . import __version__
-from .cat import TS2000, available_ports
+from .cat import TS2000, available_ports, decode_satellite_status
 from .catalog import refresh_orbits, load_orbits, refresh_transmitters, load_transmitters, age_hours, satellite_search_text, normalized_satellite_search, DEFAULT_GROUPS
 from .config import Config
 from .geolocation import GeoFix, lookup_approximate_ip, read_gps_serial
@@ -501,6 +501,17 @@ class MainWindow(QMainWindow):
         quick_cat.addWidget(self.cat_tune_now)
         quick_cat.addWidget(self.connection)
         op.addLayout(quick_cat)
+        self.cat_live_label=label("RÁDIO REAL (CAT) · aguardando leitura de FA / FB / MD")
+        self.cat_live_label.setStyleSheet("font-size:14px;font-weight:800;color:#d8f5c0")
+        op.addWidget(self.cat_live_label)
+        self.cat_sat_orientation=label("SAT: aguardando resposta SA do TS-2000")
+        self.cat_sat_orientation.setStyleSheet("font-size:12px;font-weight:700;color:#d8c399")
+        op.addWidget(self.cat_sat_orientation)
+        self.cat_diagnose=QPushButton("Diagnosticar comunicação CAT · somente leitura")
+        self.cat_diagnose.setToolTip("Consulta ID, SA, FA, FB e MD; sem alterar SAT, VFO ou PTT")
+        self.cat_diagnose.setEnabled(False)
+        self.cat_diagnose.clicked.connect(self.diagnose_cat)
+        op.addWidget(self.cat_diagnose)
         self.cat_tune_status=label("Auto CAT desligado · ative em Configurações para acompanhar a seleção")
         self.cat_tune_status.setStyleSheet("font-size:12px;font-weight:700;color:#b4d7e7")
         op.addWidget(self.cat_tune_status)
@@ -1244,6 +1255,9 @@ class MainWindow(QMainWindow):
             self.radio.disconnect()
             self.cat_selection_generation+=1
             self.cat_tune_now.setEnabled(False)
+            self.cat_diagnose.setEnabled(False)
+            self.cat_live_label.setText("RÁDIO REAL (CAT) · desconectado")
+            self.cat_sat_orientation.setText("SAT: rádio desconectado")
             self.last_cat_success=None
             self.cat_indicator.setText("● RÁDIO DESCONECTADO")
             self.cat_indicator.setStyleSheet("font-size:14px;font-weight:800;color:#ff9595")
@@ -1275,9 +1289,13 @@ class MainWindow(QMainWindow):
             self.config.save()
             self.connection.setText("Desconectar")
             self.cat_tune_now.setEnabled(True)
+            self.cat_diagnose.setEnabled(True)
             self.render_radio_state(st)
             self.auto_tune_selected_satellite()
         except Exception as exc:
+            self.cat_diagnose.setEnabled(False)
+            self.cat_live_label.setText("RÁDIO REAL (CAT) · erro de comunicação")
+            self.cat_sat_orientation.setText("SAT: sem confirmação CAT")
             self.cat_indicator.setText("! ERRO DE CONEXÃO")
             self.cat_indicator.setStyleSheet("font-size:14px;font-weight:800;color:#ff9595")
             QMessageBox.warning(self,"Erro de conexão CAT",
@@ -1300,6 +1318,24 @@ class MainWindow(QMainWindow):
         self.last_cat_success=now_utc()
         self.cat_indicator.setText("● TS-2000 CONECTADO · "+self.ports.currentText())
         self.cat_indicator.setStyleSheet("font-size:14px;font-weight:800;color:#67efb2")
+        self.cat_live_label.setText(
+            "RÁDIO REAL (CAT) · RX "+self.radio_freq(st.downlink)+
+            "  |  TX "+self.radio_freq(st.uplink)+
+            "  |  MAIN "+str(st.mode))
+        try:
+            sat_status=decode_satellite_status(st.sat_raw)
+            if sat_status["sat"] and not sat_status["main_downlink"]:
+                orientation="SAT ON · MAIN=UPLINK / SUB=DOWNLINK (orientação inversa)"
+                self.cat_sat_orientation.setStyleSheet("font-size:12px;font-weight:800;color:#ffbd73")
+            elif sat_status["sat"]:
+                orientation="SAT ON · MAIN=DOWNLINK (RX) / SUB=UPLINK (TX)"
+                self.cat_sat_orientation.setStyleSheet("font-size:12px;font-weight:800;color:#85f2c2")
+            else:
+                orientation="SAT OFF no retorno CAT"
+                self.cat_sat_orientation.setStyleSheet("font-size:12px;font-weight:800;color:#ffbd73")
+            self.cat_sat_orientation.setText(orientation)
+        except ValueError as exc:
+            self.cat_sat_orientation.setText("SA não interpretável: "+str(exc))
         self.map_radio_label.setText(f"CAT · {st.model} · SAT {'ON' if st.sat else 'OFF'} · RX {self.radio_freq(st.downlink)} · TX {self.radio_freq(st.uplink)} · Modo {st.mode} · {self.last_cat_success.astimezone():%H:%M:%S}")
         self.map_radio_label.setStyleSheet("font-size:13px;color:#69e3bc;font-weight:700")
         self.cat_status.setText(f"● Conectado · {st.model} · SAT {'ON' if st.sat else 'OFF'}")
@@ -1634,6 +1670,58 @@ class MainWindow(QMainWindow):
         self.preview_doppler()
         self.cat_selection_generation+=1
         self.auto_tune_selected_satellite()
+
+    def diagnose_cat(self):
+        """Operator-initiated read-only TS-2000 serial CAT probe."""
+        if not self.radio.connected:
+            QMessageBox.warning(self,"Diagnóstico CAT","Rádio não conectado.")
+            return
+        if "cat-diagnostic" in self.pending_jobs:
+            return
+        self.cat_diagnose.setEnabled(False)
+        self.cat_tune_status.setText("CAT: consultando somente ID / SA / FA / FB / MD…")
+        self.log("Diagnóstico CAT: início da leitura de ID, SA, FA, FB e MD; sem comandos de escrita")
+        self.background("cat-diagnostic",self.radio.read_diagnostics)
+
+    def show_cat_diagnostic(self,diag):
+        """Show exact protocol evidence without claiming hardware compatibility."""
+        raw=diag["raw"]
+        errors=diag["errors"]
+        status=diag["sat"]
+        freq=diag["frequency_hz"]
+        parts=["TESTE CAT SOMENTE LEITURA · TS-2000",
+               "Porta COM: "+self.ports.currentText().strip(),
+               "Nenhuma alteração de frequência, modo SAT ou PTT foi enviada.",
+               "",
+               "RESPOSTAS BRUTAS:"]
+        for command in ("ID","SA","FA","FB","MD"):
+            parts.append(command+"; → "+str(raw.get(command,"SEM RESPOSTA")))
+        parts.append("")
+        if status:
+            parts.append("SAT: "+("ON" if status["sat"] else "OFF"))
+            parts.append("Direção: "+("MAIN=RX/downlink · SUB=TX/uplink" if status["main_downlink"]
+                                     else "MAIN=TX/uplink · SUB=RX/downlink (inverso)"))
+            parts.append("Canal SAT: "+str(status["channel"]))
+            parts.append("TRACE: "+("ON" if status["trace"] else "OFF"))
+            if status["sat"] and not status["main_downlink"]:
+                parts.append("ALERTA: SA P3=0; Auto CAT bloqueado por orientação inversa.")
+        else:
+            parts.append("SA não interpretável; conferir comunicação CAT.")
+        if "FA" in freq:
+            parts.append("FA real: "+self.radio_freq(freq["FA"]))
+        if "FB" in freq:
+            parts.append("FB real: "+self.radio_freq(freq["FB"]))
+        parts.append("Modo MAIN: "+str(diag["main_mode"] or "indisponível"))
+        if errors:
+            parts.extend(["","ERROS DE LEITURA:"]+[k+": "+v for k,v in errors.items()])
+        report="\n".join(parts)
+        self.log("CAT diagnóstico resultado:\n"+report)
+        self.cat_tune_status.setText(
+            "CAT: diagnóstico com falhas · veja LOGs / CAT" if errors else
+            ("CAT: SAT ON, orientação MAIN/SUB inversa · leia diagnóstico"
+             if status.get("sat") and not status.get("main_downlink") else
+             "CAT: leitura FA/FB/MD concluída · veja LOGs / CAT"))
+        QMessageBox.information(self,"Diagnóstico CAT · somente leitura",report)
 
     def tune_selected_now(self):
         """Explicit operator-triggered CAT tune; usable without enabling Auto CAT."""
@@ -2127,6 +2215,8 @@ class MainWindow(QMainWindow):
                 self.cat_status.setText(f"● CAT desatualizado há {age:.0f}s")
                 self.cat_status.setStyleSheet("color:#efc17b;font-size:12px")
                 self.cat_details.setText("Leitura CAT vencida · conferir cabo e porta COM")
+                self.cat_live_label.setText(f"RÁDIO REAL (CAT) · última leitura há {age:.0f}s, não confirmada")
+                self.cat_sat_orientation.setText("SAT: resposta CAT desatualizada")
                 self.cat_telemetry.setText("Potência/medidores: dados desatualizados")
                 for widget in (self.smeter_main,self.smeter_sub):
                     widget.setValue(0);widget.setFormat("sem leitura")
@@ -2203,6 +2293,11 @@ class MainWindow(QMainWindow):
             for error in data["failed"][:20]:self.log("SatNOGS: "+error)
             QMessageBox.information(self,"Atualização de frequências concluída",
                 self.catalog_progress.text()+"\nDetalhes das falhas na aba LOGs / CAT.")
+            return
+        if key=='cat-diagnostic':
+            self.cat_diagnose.setEnabled(self.radio.connected)
+            if self.radio.connected:
+                self.show_cat_diagnostic(data)
             return
         if key=='cat-poll':
             if self.radio.connected and "cat-autotune" not in self.pending_jobs:
@@ -2281,7 +2376,14 @@ class MainWindow(QMainWindow):
                     and self.cat_autotune_requested_generation!=self.cat_selection_generation):
                 self.auto_tune_selected_satellite()
             return
+        if key=="cat-diagnostic":
+            self.cat_diagnose.setEnabled(self.radio.connected)
+            self.cat_tune_status.setText("CAT: diagnóstico falhou · "+message)
+            QMessageBox.warning(self,"Falha no diagnóstico CAT",message)
+            return
         if key=="cat-poll":
+            self.cat_live_label.setText("RÁDIO REAL (CAT) · erro de leitura")
+            self.cat_sat_orientation.setText("SAT: sem resposta atual")
             self.cat_indicator.setText("! ERRO DE LEITURA CAT")
             self.cat_indicator.setStyleSheet("font-size:14px;font-weight:800;color:#ffbf6f")
             self.map_radio_label.setText("CAT erro de leitura · dados desatualizados")
