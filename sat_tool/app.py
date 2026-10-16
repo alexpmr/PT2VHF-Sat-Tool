@@ -2305,17 +2305,6 @@ class MainWindow(QMainWindow):
                 if (self.last_map_time is None or (now-self.last_map_time).total_seconds()>=12):
                     self.update_map();self.last_map_time=now
                 self.track_cat_frequencies(now)
-                if False and self.doppler_checkbox.isChecked() and not self.cat_tracking_armed:
-                    if not cat_doppler_allowed(pos['visible'],self.config.values.get('cat_doppler_out_of_view',False)) or not self.omm_fresh() or not self.radio.connected or not self.radio.state.sat:
-                        self.doppler_checkbox.setChecked(False)
-                        self.log('Doppler CAT parado: visada, OMM antigo, SAT desligado ou CAT desconectado')
-                    else:
-                        interval=int(self.interval.value())
-                        if int(now.timestamp())%interval == 0:
-                            ul,dl=self.corrected()
-                            threshold=int(self.threshold.value())
-                            if self.last_freqs[0] is None or max(abs(ul-self.last_freqs[0]),abs(dl-self.last_freqs[1]))>=threshold:
-                                self.apply_freqs(silent=True)
             except Exception:
                 self.visibility.setText('Cadastre a estação')
         if self.radio.connected and not self.doppler_checkbox.isChecked():
