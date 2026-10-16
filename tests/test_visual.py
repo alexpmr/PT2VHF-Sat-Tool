@@ -25,8 +25,9 @@ def test_branded_all_windows_build_flavors():
     assert script.count("'assets/branding/icon-256.png;assets/branding'") == 2
     assert "Generate and verify Windows brand icons" in script
     assert "Portable ONEFILE EXE" in script
-    assert "Win7-x86" in script and "Win11-x64" in script
-    assert "v1.3.11" in script
+    assert "Win11-x64" in script
+    assert "target: Win7-x86" not in script  # Windows 7 temporarily discontinued
+    assert "v1.3.12" in script
 
 
 def test_installation_icon_and_brand_assets_exist():
