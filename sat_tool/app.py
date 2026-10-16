@@ -962,7 +962,9 @@ class MainWindow(QMainWindow):
         self.config.values['include_prereleases']=self.include_prerelease.isChecked()
         self.config.save()
         self.log('Preferências de atualizações salvas')
-        self.manual_update_requested = True
+        # Saving preferences only refreshes the quiet top-menu indicator.
+        # It must never install a release without clicking the version button.
+        self.manual_update_requested = False
         self.check_for_updates(force=True)
 
     def check_for_updates(self, force=False):
@@ -1706,6 +1708,8 @@ class MainWindow(QMainWindow):
             return  # The same satellite must not interrupt CAT.
         self.last_freqs=(None,None)
         self.cat_autotune_requested_generation=-1
+        self.cat_retry_after=0.0
+        self.cat_consecutive_failures=0
         self.cat_last_requested=(None,None)
         self._mode_catalog_sat_id=None
         if self.aos_alarm_dialog is not None:
@@ -1781,6 +1785,8 @@ class MainWindow(QMainWindow):
     def choose_mode(self):
         self.last_freqs=(None,None)
         self.cat_autotune_requested_generation=-1
+        self.cat_retry_after=0.0
+        self.cat_consecutive_failures=0
         i=self.mode_combo.currentData()
         if not isinstance(i,int) or i<0 or i>=len(self.options):
             self.mode_note.setText("Modo manual: confira cada frequência e modo antes de usar.")
@@ -1816,6 +1822,8 @@ class MainWindow(QMainWindow):
         self.cat_tracking_armed=True
         self.last_freqs=(None,None)
         self.cat_autotune_requested_generation=-1
+        self.cat_retry_after=0.0
+        self.cat_consecutive_failures=0
         self.last_tracking_write=0.0
         self.cat_tune_status.setText("Auto CAT online · sintonizando seleção e acompanhando em tempo real…")
         self.auto_tune_selected_satellite()
