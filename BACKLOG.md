@@ -11,6 +11,13 @@
 
 **Constatação prévia:** `config.py` já tem `cat_auto_select=True`, `trail_period="2 h"` e `trail_direction="Futuro"`; a aba Satélites já tem `catalog_category` de categoria única. Portanto são **correções de funcionamento/UX**, não recursos integralmente ausentes. Até homologação, não declarar Auto CAT contínuo corrigido.
 
+### Teste físico adicional — Auto CAT só volta a corrigir após reconexão (16/10/2026)
+
+- [ ] **P0 | Defeito reproduzido no TS-2000 real:** com Auto CAT ligado, conectar a porta sintoniza a frequência corrigida; durante a conexão as frequências não acompanham continuamente o Doppler; **desconectar/reconectar** produz um bip no rádio e força nova atualização, que novamente não prossegue de forma contínua. Bip não substitui readback FA/FB e não prova qual VFO atualizou.
+- [ ] **Foco de diagnóstico:** comparar o caminho da sintonia inicial/reconexão com o laço contínuo (`cat_live_tick` em 250 ms, `track_cat_frequencies`, `cat-readback`, `cat-track`, `cat-poll`, `cat_tracking_armed`, `pending_jobs`, `last_freqs`, frequência prevista/efetiva FA/FB, limites, stale readback e `cat_retry_after`). Instrumentar todos os *retornos antecipados* do laço com causa e contadores; investigar starvation de escrita por readback/telemetria e erros recuperáveis, **sem supor causa definitiva**.
+- [ ] **Aceite reforçado:** conectado continuamente por pelo menos 10 minutos, com correções Doppler acima do limiar, rádio deve receber **múltiplas** atualizações FA/FB com readback confirmado sem qualquer reconexão. Simular serial lenta/readback concorrente, mudança de satélite/transponder e recuperação de erro; finalizar com TS-2000 físico, sem PTT automático.
+- [ ] **Coleta de prova:** exportar ZIP de LOGs/CAT durante sessão estática com Doppler mudando e logo após reconectar, contendo timestamps TX/RX SA/FA/FB, jobs e bloqueios; correlacionar previsão Doppler e frequência real.
+
 ## v1.3.11 — reconciliação da frequência CAT real com a previsão Doppler (16/10/2026)
 
 - [x] **Relato TS-2000:** painel CAT abaixo do mapa reflete alterações manuais no rádio, mas cartões superiores RX/TX calculados com Doppler não acompanham FA/FB; Auto CAT às vezes sintoniza uma única vez. Constatado no código: o limite para um novo comando comparava a previsão atual só à última frequência solicitada, não à FA/FB realmente lida; telemetria periódica não consultava FA/FB.
