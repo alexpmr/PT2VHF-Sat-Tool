@@ -501,6 +501,9 @@ class MainWindow(QMainWindow):
         quick_cat.addWidget(self.cat_tune_now)
         quick_cat.addWidget(self.connection)
         op.addLayout(quick_cat)
+        self.cat_tune_status=label("Auto CAT desligado · ative em Configurações para acompanhar a seleção")
+        self.cat_tune_status.setStyleSheet("font-size:12px;font-weight:700;color:#b4d7e7")
+        op.addWidget(self.cat_tune_status)
         root.addTab(operation,"Operação")
         catalog_page=QWidget(); catalog_layout=QVBoxLayout(catalog_page)
         catalog_layout.addWidget(label("Satélites atuais no catálogo orbital CelesTrak. 'Canal publicado' não comprova serviço ativo nem autoriza TX. Clique duas vezes para selecionar."))
@@ -780,6 +783,7 @@ class MainWindow(QMainWindow):
         self.auto_cat.blockSignals(True)
         self.auto_cat.setChecked(bool(c.get("cat_auto_select",False)))
         self.auto_cat.blockSignals(False)
+        self.cat_tune_status.setText("Auto CAT habilitado · conecte rádio com SAT ON" if self.auto_cat.isChecked() else "Auto CAT desligado · ative em Configurações para sintonizar ao selecionar")
         self.stops_combo.setCurrentText(str(c['stopbits']))
         self.interval.setValue(float(c['update_interval_s']))
         self.threshold.setValue(float(c['tune_threshold_hz']))
@@ -1652,7 +1656,7 @@ class MainWindow(QMainWindow):
         if not force and not self.config.values.get("cat_auto_select",False):
             return False
         def blocked(reason):
-            self.radio_label.setText("CAT: "+reason)
+            self.cat_tune_status.setText("CAT: "+reason)
             self.log("CAT não sintonizado: "+reason)
             if force:
                 QMessageBox.warning(self,"Sintonia CAT indisponível",reason)
@@ -1669,7 +1673,7 @@ class MainWindow(QMainWindow):
                           or self.mode_combo.currentData()<0):
             return blocked("sem transponder selecionado; baixe frequências SatNOGS em Satélites")
         if "cat-autotune" in self.pending_jobs:
-            self.radio_label.setText("CAT: nova seleção aguardando término da sintonia anterior…")
+            self.cat_tune_status.setText("CAT: nova seleção aguardando sintonia anterior…")
             return False
         try:
             ul,dl=self.nominal_hz()
@@ -1686,7 +1690,7 @@ class MainWindow(QMainWindow):
                 return blocked("modo RX não suportado pelo TS-2000")
             generation=self.cat_selection_generation
             self.cat_autotune_requested_generation=generation
-            self.radio_label.setText("CAT: sintonizando RX/TX e modo MAIN…")
+            self.cat_tune_status.setText("CAT: sintonizando RX/TX e modo MAIN…")
             self.log(f"Auto CAT: solicitação NORAD {self.sat_combo.currentData()} "
                      f"RX {dl_new} TX {ul_new or 'somente RX'} MAIN {mode}")
             def task():
@@ -2177,7 +2181,7 @@ class MainWindow(QMainWindow):
             if generation==self.cat_selection_generation and state is not None:
                 self.last_freqs=(state.uplink,state.downlink)
                 self.render_radio_state(state)
-                self.radio_label.setText("CAT: sintonizado · MAIN "+state.mode+" (SUB conferir)")
+                self.cat_tune_status.setText("CAT: sintonizado · MAIN "+state.mode+" (SUB conferir)")
             elif (self.config.values.get("cat_auto_select",False) and self.radio.connected
                   and generation!=self.cat_selection_generation):
                 self.auto_tune_selected_satellite()
@@ -2270,7 +2274,7 @@ class MainWindow(QMainWindow):
             self.catalog_progress.setText("SatNOGS: falha, cache anterior preservado")
             return
         if key=="cat-autotune":
-            self.radio_label.setText("Auto CAT falhou: "+message)
+            self.cat_tune_status.setText("Auto CAT falhou: "+message)
             self.cat_indicator.setText("! FALHA DE SINTONIA CAT")
             self.cat_indicator.setStyleSheet("color:#ffbf6f;font-size:14px;font-weight:800")
             if (self.config.values.get("cat_auto_select",False) and self.radio.connected
@@ -2443,7 +2447,7 @@ class MainWindow(QMainWindow):
             self.auto_tune_selected_satellite()
         else:
             self.cat_selection_generation+=1
-            self.radio_label.setText("Auto CAT desligado · sintonia somente por comando manual")
+            self.cat_tune_status.setText("Auto CAT desligado · sintonia somente por comando manual")
 
     def save_tle_settings(self):
         self.config.values["tle_update_hours"]=int(self.tle_hours.value())
