@@ -53,9 +53,9 @@ def test_cat_out_of_view_setting_defaults_off_and_persists(tmp_path):
 
 def test_gui_wires_batch_checkboxes_and_every_second_preview():
     source=(Path(__file__).resolve().parents[1]/"sat_tool"/"app.py").read_text(encoding="utf-8")
-    assert "self.catalog_refresh_scope.setCurrentIndex(1)" in source
-    assert "self.catalog_table.itemChanged.connect(self.catalog_satellite_checked)" in source
-    assert "def catalog_satellite_checked(self,item):" in source
+    assert "ids=transmitter_batch_ids(3,None,[],[],self.omm)" in source
+    assert "self.catalog_table.cellClicked.connect(self.toggle_catalog_satellite_selection)" in source
+    assert "def toggle_catalog_satellite_selection(self,row,col):" in source
     assert "self.preview_doppler(pos=pos,when=now)" in source
     assert "self.cat_live_timer.timeout.connect(self.cat_live_tick)" in source
     assert "cat_doppler_allowed(self.last_pos[\"visible\"]" in source
