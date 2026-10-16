@@ -1276,58 +1276,67 @@ class MainWindow(QMainWindow):
             self.gps_port.clear();self.gps_port.addItems(ports)
             if old_gps:self.gps_port.setCurrentText(old_gps)
 
-    def toggle_connection(self):
-        if self.radio.connected:
-            self.doppler_checkbox.setChecked(False)
-            self.radio.disconnect()
-            self.cat_selection_generation+=1
-            self.cat_tune_now.setEnabled(False)
-            self.cat_diagnose.setEnabled(False)
-            self.cat_live_label.setText("RÁDIO REAL (CAT) · desconectado")
-            self.cat_sat_orientation.setText("SAT: rádio desconectado")
-            self.last_cat_success=None
-            self.cat_indicator.setText("● RÁDIO DESCONECTADO")
-            self.cat_indicator.setStyleSheet("font-size:14px;font-weight:800;color:#ff9595")
-            self.connection.setText("Conectar")
-            self.radio_label.setText("Desconectado")
-            self.map_radio_label.setText("CAT desconectado · RX — MHz · TX — MHz · Modo —")
-            self.cat_status.setText("● Desconectado · CAT inativo")
-            self.cat_status.setStyleSheet("color:#efc17b;font-size:12px")
-            self.cat_rx.setText("RX / DOWNLINK (CAT)\n— MHz")
-            self.cat_tx.setText("TX / UPLINK (CAT)\n— MHz")
-            self.cat_details.setText("SAT — · MAIN — · sem leitura atual")
-            self.cat_telemetry.setText("Potência: — · Medidor: — · RX/TX: sem leitura CAT")
-            for widget in (self.smeter_main,self.smeter_sub):
-                widget.setValue(0);widget.setFormat("sem leitura")
-            self.log("CAT desconectado")
+    def change_startup_connect(self,enabled):
+        self.config.values["cat_auto_connect_startup"]=bool(enabled)
+        self.config.save()
+
+    def startup_cat_connect(self):
+        """Automatic startup is read-only and never triggers Auto CAT tuning."""
+        if not self.radio.connected and self.config.values.get("port","").strip():
+            self.request_cat_connection(startup=True)
+
+    def request_cat_connection(self,startup=False):
+        if self.cat_connecting or "cat-connect" in self.pending_jobs:
             return
-        port=self.ports.currentText().strip()
+        port=self.config.values.get("port","").strip() if startup else self.ports.currentText().strip()
         if not port:
-            QMessageBox.warning(self,"CAT não configurado",
-                "Selecione uma porta COM em Configurações → Conexão CAT antes de conectar.")
-            self.tabs.setCurrentIndex(2)
+            if not startup:
+                QMessageBox.warning(self,"CAT não configurado",
+                    "Configure uma porta COM em Configurações → Conexão CAT antes de conectar.")
+                self.tabs.setCurrentIndex(2)
             return
-        try:
-            self.cat_indicator.setText("◌ CONECTANDO AO RÁDIO…")
-            self.cat_indicator.setStyleSheet("font-size:14px;font-weight:800;color:#f2c16b")
-            st=self.radio.connect(port, int(self.baud_combo.currentText()), int(self.stops_combo.currentText()))
-            self.config.values.update({"port":self.ports.currentText(),"baud":int(self.baud_combo.currentText()),
-                                       "stopbits":int(self.stops_combo.currentText())})
-            self.config.save()
-            self.connection.setText("Desconectar")
-            self.cat_tune_now.setEnabled(True)
-            self.cat_diagnose.setEnabled(True)
-            self.render_radio_state(st)
-            self.auto_tune_selected_satellite()
-        except Exception as exc:
-            self.cat_diagnose.setEnabled(False)
-            self.cat_live_label.setText("RÁDIO REAL (CAT) · erro de comunicação")
-            self.cat_sat_orientation.setText("SAT: sem confirmação CAT")
-            self.cat_indicator.setText("! ERRO DE CONEXÃO")
-            self.cat_indicator.setStyleSheet("font-size:14px;font-weight:800;color:#ff9595")
-            QMessageBox.warning(self,"Erro de conexão CAT",
-                f"{exc}\n\nVerifique porta COM, baud e stop bits em Configurações → Conexão CAT.")
-            self.log(f"ERRO CAT: {exc}")
+        baud=int(self.baud_combo.currentText())
+        stopbits=int(self.stops_combo.currentText())
+        self.cat_connecting=True
+        self.cat_connect_was_startup=bool(startup)
+        self.cat_indicator.setText("◌ CONECTANDO AO RÁDIO…")
+        self.cat_indicator.setStyleSheet("font-size:14px;font-weight:800;color:#f2c16b")
+        self.cat_indicator.setEnabled(False)
+        self.connection.setEnabled(False)
+        self.cat_tune_status.setText("CAT: conectando "+port+" (somente leitura inicial)…")
+        self.log("CAT: iniciando conexão "+port+"; auto="+str(startup))
+        self.background("cat-connect",lambda:self.radio.connect(port,baud,stopbits))
+
+    def toggle_connection(self):
+        if self.cat_connecting or "cat-connect" in self.pending_jobs:
+            return
+        if not self.radio.connected:
+            self.request_cat_connection(startup=False)
+            return
+        self.cat_tracking_armed=False
+        self.doppler_checkbox.setChecked(False)
+        self.radio.disconnect()
+        self.cat_selection_generation+=1
+        self.cat_tune_now.setEnabled(False)
+        self.cat_diagnose.setEnabled(False)
+        self.cat_live_label.setText("RÁDIO REAL (CAT) · desconectado")
+        self.cat_sat_orientation.setText("SAT: rádio desconectado")
+        self.last_cat_success=None
+        self.cat_indicator.setText("● RÁDIO DESCONECTADO")
+        self.cat_indicator.setStyleSheet("font-size:14px;font-weight:800;color:#ff9595")
+        self.connection.setText("Conectar")
+        self.radio_label.setText("Desconectado")
+        self.map_radio_label.setText("CAT desconectado · RX — MHz · TX — MHz · Modo —")
+        self.cat_status.setText("● Desconectado · CAT inativo")
+        self.cat_status.setStyleSheet("color:#efc17b;font-size:12px")
+        self.cat_rx.setText("RX / DOWNLINK (CAT)\\n— MHz")
+        self.cat_tx.setText("TX / UPLINK (CAT)\\n— MHz")
+        self.cat_details.setText("SAT — · MAIN — · sem leitura atual")
+        self.cat_telemetry.setText("Potência: — · Medidor: — · RX/TX: sem leitura CAT")
+        for widget in (self.smeter_main,self.smeter_sub):
+            widget.setValue(0);widget.setFormat("sem leitura")
+        self.cat_tune_status.setText("CAT desconectado · rastreamento pausado")
+        self.log("CAT desconectado pelo operador")
 
     def enable_satellite(self):
         try:
@@ -1698,6 +1707,75 @@ class MainWindow(QMainWindow):
         self.cat_selection_generation+=1
         if self.cat_tracking_armed:
             self.auto_tune_selected_satellite()
+
+    def arm_cat_tracking(self,*args):
+        """Called only for an explicit user selection, not session restoration."""
+        if not self.config.values.get("cat_auto_select",True):
+            self.cat_tune_status.setText("Auto CAT desativado pelo operador")
+            return
+        self.cat_tracking_armed=True
+        self.cat_tune_status.setText("CAT: rastreamento armado · verificando condições…")
+        self.auto_tune_selected_satellite()
+
+    def save_complete_logs(self):
+        """Export retained CAT and SAT logs to an operator-chosen local ZIP."""
+        suggested="PT2VHF-Sat-Tool-LOGs-"+datetime.now().strftime("%Y-%m-%d_%H-%M-%S")+".zip"
+        path,_=QFileDialog.getSaveFileName(self,"Baixar log completo",
+                        str(Path.home()/suggested),"Arquivo ZIP (*.zip)")
+        if not path:return
+        self.export_logs.setEnabled(False)
+        self.log("Exportação local solicitada: "+str(path))
+        visible=self.log_view.toPlainText()
+        self.background("logs-export",lambda:self.journal.export(
+            Path(path),visible_log=visible,diagnostics_dir=diagnostic_dir(),version=__version__))
+
+    def is_safe_crossband(self,ul,dl):
+        """Avoid applying SAT crossband CAT to same-band ISS V/V or U/U modes."""
+        def band(hz):
+            if 144_000_000<=hz<=148_000_000:return "2m"
+            if 420_000_000<=hz<=450_000_000:return "70cm"
+            if 1_240_000_000<=hz<=1_300_000_000:return "23cm"
+            return None
+        return ul is not None and band(ul) is not None and band(dl) is not None and band(ul)!=band(dl)
+
+    def track_cat_frequencies(self,now):
+        """A confirmed, operator-armed Auto CAT profile tracks Doppler via worker."""
+        if not self.cat_tracking_armed or not self.config.values.get("cat_auto_select",True):
+            return
+        if not self.radio.connected or not self.radio.state.sat:
+            self.cat_tune_status.setText("CAT: rastreamento pausado · desconectado ou SAT OFF")
+            return
+        if not self.sat or not self.last_pos or not self.omm_fresh():
+            return
+        if not cat_doppler_allowed(self.last_pos["visible"],
+                self.config.values.get("cat_doppler_out_of_view",True)):
+            return
+        if any(k in self.pending_jobs for k in ("cat-autotune","cat-track","cat-connect","cat-diagnostic")):
+            return
+        if time.monotonic()-self.last_tracking_write < max(1.0,float(
+                self.config.values.get("cat_tracking_interval_s",2))):
+            return
+        try:
+            ul,dl=self.corrected()
+            if not self.is_safe_crossband(ul,dl):
+                self.cat_tracking_armed=False
+                self.cat_tune_status.setText("CAT: serviço mesma banda/incompatível com SAT; rastreio pausado")
+                self.log("CAT rastreio bloqueado: transponder não é crossband seguro")
+                return
+            threshold=max(1,int(self.threshold.value()))
+            if (self.last_freqs[0] is not None and self.last_freqs[1] is not None
+                and max(abs(ul-self.last_freqs[0]),abs(dl-self.last_freqs[1]))<threshold):
+                return
+            generation=self.cat_selection_generation
+            self.last_tracking_write=time.monotonic()
+            def task():
+                if generation!=self.cat_selection_generation or not self.radio.connected:
+                    return generation,None,None,None
+                state=self.radio.set_frequencies(ul,dl)
+                return generation,state,ul,dl
+            self.background("cat-track",task)
+        except (ValueError,TypeError,KeyError) as exc:
+            self.cat_tune_status.setText("CAT rastreio aguardando: "+str(exc))
 
     def diagnose_cat(self):
         """Operator-initiated read-only TS-2000 serial CAT probe."""
