@@ -38,6 +38,9 @@ def test_operator_window_constructs_with_new_layout():
             assert window.cat_rx.parent() is not None
             assert window.tracked_search.parent() is not None
             assert window.connection.text()=="Conectar"
+            assert window.cat_tune_now.text()=="Sintonizar agora"
+            assert not window.cat_tune_now.isEnabled()
+            assert window.cat_tune_status.text().startswith("Auto CAT")
             window.tracked_search.setText("ISS")
             assert window.tracked_search_summary.text().startswith("0 resultados")
             window.tick_timer.stop()
