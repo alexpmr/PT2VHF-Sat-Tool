@@ -41,6 +41,24 @@ def test_operator_window_constructs_with_new_layout():
             assert window.cat_tune_now.text()=="Sintonizar agora"
             assert not window.cat_tune_now.isEnabled()
             assert window.cat_tune_status.text().startswith("Auto CAT")
+            # A write/readback error must not re-label a responsive CAT link
+            # as disconnected; the link is verified with a read-only poll.
+            class FakePort:
+                is_open=True
+                def close(self):self.is_open=False
+            window.radio.port=FakePort()
+            window.cat_indicator.setText("● TS-2000 CONECTADO · COM1")
+            observed_jobs=[]
+            window.background=lambda key, fn: observed_jobs.append(key)
+            window.background_error("cat-autotune","Rádio não confirmou frequências FA/FC")
+            assert "CONECTADO" in window.cat_indicator.text()
+            assert "SINTONIA NÃO APLICADA" in window.cat_tune_status.text()
+            assert "FA/FC" in window.cat_tune_status.text()
+            assert "cat-poll" in observed_jobs
+            # A *real* closed port may be marked disconnected.
+            window.radio.port=None
+            window.background_error("cat-autotune","TS-2000 desconectado")
+            assert "DESCONECTADO" in window.cat_indicator.text()
             window.tracked_search.setText("ISS")
             assert window.tracked_search_summary.text().startswith("0 resultados")
             window.tick_timer.stop()
