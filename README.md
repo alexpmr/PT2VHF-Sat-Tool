@@ -4,24 +4,32 @@
 
 ## Downloads — instaladores e portáteis
 
-**PT2VHF Sat Tool v1.3.2 — Windows 7 SP1, Windows 10 e Windows 11.** Os quatro downloads são arquivos `.exe` diretos. Links ficam disponíveis após aprovação dos builds Windows. Embora seja o marco 1.0 de funcionalidades, permanece em pré-lançamento até a homologação CAT com TS-2000 físico e Windows 7 real.
+**PT2VHF Sat Tool v1.3.3 — Windows 7 SP1, Windows 10 e Windows 11.** Os quatro downloads são arquivos `.exe` diretos. Links ficam disponíveis após aprovação dos builds Windows. Embora seja o marco 1.0 de funcionalidades, permanece em pré-lançamento até a homologação CAT com TS-2000 físico e Windows 7 real.
 
 | Windows | Instalável | Portátil |
 | --- | --- | --- |
-| **Windows 7 SP1** (x86; executável de 32 bits também para Win7 x64) | [Instalador Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.2/PT2VHF-Sat-Tool-v1.3.2-Win7-x86-Setup.exe) | [Portable Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.2/PT2VHF-Sat-Tool-v1.3.2-Win7-x86-Portable.exe) |
-| **Windows 10 (1809+)/11** (x64; arquivo `Win11-x64` para manter atualizador) | [Instalador Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.2/PT2VHF-Sat-Tool-v1.3.2-Win11-x64-Setup.exe) | [Portable Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.2/PT2VHF-Sat-Tool-v1.3.2-Win11-x64-Portable.exe) |
+| **Windows 7 SP1** (x86; executável de 32 bits também para Win7 x64) | [Instalador Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.3/PT2VHF-Sat-Tool-v1.3.3-Win7-x86-Setup.exe) | [Portable Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.3/PT2VHF-Sat-Tool-v1.3.3-Win7-x86-Portable.exe) |
+| **Windows 10 (1809+)/11** (x64; arquivo `Win11-x64` para manter atualizador) | [Instalador Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.3/PT2VHF-Sat-Tool-v1.3.3-Win11-x64-Setup.exe) | [Portable Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.3/PT2VHF-Sat-Tool-v1.3.3-Win11-x64-Portable.exe) |
 
 **Formato dos downloads:** tanto instaladores quanto portáteis são entregues diretamente como arquivos **`.exe`**. O portátil inclui as dependências dentro do mesmo EXE (PyInstaller onefile) e não requer descompactação.
 
 **[Todas as releases](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases)** · **[Acompanhar compilação](https://github.com/alexpmr/PT2VHF-Sat-Tool/actions)**
 
 - **Instalável:** instalação por usuário, atalho e desinstalação, atualização pelo aplicativo usando o Setup de sua edição.
-- **Portátil:** execute diretamente `PT2VHF-Sat-Tool-v1.3.2-*-Portable.exe` (um único arquivo). Configurações ficam em `data/` ao lado do EXE, preservadas após atualizações.
+- **Portátil:** execute diretamente `PT2VHF-Sat-Tool-v1.3.3-*-Portable.exe` (um único arquivo). Configurações ficam em `data/` ao lado do EXE, preservadas após atualizações.
 - **Win7:** Python 3.8 x86 + PySide2/Qt5 + PyInstaller 5.13.2 (legado, precisa ser validado no Windows 7 real).
 - **Win10/11 x64:** Windows 10 1809+ ou Windows 11, Python 3.11 x64 + PySide6/Qt6 + PyInstaller 6.13.0.
 - Arquivos SHA256 acompanham cada compilação. A versão Windows 7 é experimental; não confundir sucesso do CI com homologação em campo.
 
 ---
+
+## Correção de controle CAT v1.3.3 — **sub-receptor FC em vez de VFO B FB**
+
+- O protocolo CAT do TS-2000 distingue **FA** (VFO A/MAIN), **FB** (VFO B principal) e **FC** (VFO da sub-banda). Nas versões até v1.3.2, o Sat Tool programava o uplink SUB com `FB`, portanto podia alterar um VFO diferente do usado pelo satélite.
+- O driver agora lê `FA` como RX MAIN e `FC` como TX SUB a cada polling; programa `FA` e `FC` com **confirmação obrigatória por leitura de retorno**. Para mudar modo MAIN, exige SAT P3=1 e CTRL MAIN (P4=0); recusa em silêncio apenas se faltarem requisitos, com mensagem no painel CAT. **Não envia PTT**.
+- O diagnóstico somente leitura consulta **ID, SA, FA, FB, FC, MD**, exibindo `FB = VFO B` separado de `FC = sub-receptor / uplink`. O operador deve comparar `FC` com o display da sub-banda do TS-2000 antes de autorizar sintonia.
+- Testes de simulação usam frequências propositalmente diferentes entre FB e FC para detectar qualquer regressão de VFO. O CI Windows 7 e Windows 10/11 valida o software, **não substitui homologação CAT em rádio físico**.
+- Teste real sugerido: SAT ON, SO-50, **primeiro** diagnóstico somente leitura, gire manualmente SUB e observe `FC`; com autorização, clique **Sintonizar agora** e compare os retornos `FA` e `FC`.
 
 ## Diagnóstico CAT v1.3.2 — leitura TS-2000 e SAT/MAIN/SUB
 
