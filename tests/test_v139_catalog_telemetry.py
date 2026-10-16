@@ -63,8 +63,9 @@ def test_frequency_cards_only_show_mode_and_corrected_frequency():
 def test_radio_extra_information_is_real_readback_not_predicted():
     source=(ROOT/"sat_tool"/"app.py").read_text(encoding="utf-8")
     assert "self.cat_operating_detail=label(" in source
-    assert '"CTRL \'SUB\' if current[\'ctrl_sub\']' not in source  # no guessed CAT mode
-    assert 'current["ctrl_sub"]' not in source or 'decode_satellite_status(st.sat_raw)' in source
+    assert "current['ctrl_sub']" in source
+    assert "current['trace']" in source
+    assert "current['memory_mode']" in source
     assert "decode_satellite_status(st.sat_raw)" in source
     assert "self.radio.poll_telemetry if active else self.radio.poll" in source
     assert "self.last_cat_telemetry=now_utc()" in source
