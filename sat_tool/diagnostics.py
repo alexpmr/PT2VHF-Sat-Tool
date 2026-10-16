@@ -9,6 +9,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 def run_self_test(report_path: str, expected_qt: str = "") -> int:
+    import os, tempfile
+    debugpath = Path(os.environ.get("RUNNER_TEMP", tempfile.gettempdir()), "pt2vhf-selftest-phases.txt")
+    debugpath.write_text("entered selftest: {!r}\n".format(report_path), encoding="utf-8")
     result = {
         "schema": 1, "timestamp_utc": datetime.now(timezone.utc).isoformat(),
         "status": "failed", "frozen": bool(getattr(sys, "frozen", False)),
@@ -48,6 +51,8 @@ def run_self_test(report_path: str, expected_qt: str = "") -> int:
         result["status"] = "passed"
     except BaseException:
         result["error"] = traceback.format_exc()
+    with debugpath.open("a", encoding="utf-8") as stream:
+        stream.write("reached report; status={!r} path={!r}\n".format(result.get("status"), report_path))
     try:
         # On Windows a launcher may pass a quoted argument literally.
         # Strip only matching outer command-line quotes; the report remains local.
