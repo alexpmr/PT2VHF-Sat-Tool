@@ -1754,7 +1754,7 @@ class MainWindow(QMainWindow):
         if any(k in self.pending_jobs for k in ("cat-autotune","cat-track","cat-connect","cat-diagnostic")):
             return
         if time.monotonic()-self.last_tracking_write < max(1.0,float(
-                self.interval.value()))):
+                self.interval.value())):
             return
         try:
             ul,dl=self.corrected()
