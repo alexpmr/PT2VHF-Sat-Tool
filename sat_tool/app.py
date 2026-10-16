@@ -1745,7 +1745,8 @@ class MainWindow(QMainWindow):
         if mode in ('USB','LSB','FM','CW','AM','FSK'):
             self.rx_mode.setCurrentText(mode)
             self.tx_mode.setCurrentText('LSB' if mode=='USB' and opt['inverted'] else 'USB' if mode=='LSB' and opt['inverted'] else mode)
-        self.mode_note.setText(f"SatNOGS · {'Inversor' if opt['inverted'] else 'Não inversor'} · {'somente recepção (sem TX CAT)' if opt['receive_only'] else 'uplink/downlink'} · confira a situação operacional do satélite")
+        source=opt.get("source","SatNOGS")
+        self.mode_note.setText(f"{source} · {'Inversor' if opt['inverted'] else 'Não inversor'} · {'somente recepção (sem TX CAT)' if opt['receive_only'] else 'uplink/downlink'} · confira a situação operacional do satélite")
         self.preview_doppler()
         self.cat_selection_generation+=1
         if self.cat_tracking_armed:
@@ -2537,6 +2538,7 @@ class MainWindow(QMainWindow):
             generation,state=data
             if generation==self.cat_selection_generation and state is not None:
                 self.last_freqs=(state.uplink,state.downlink)
+                self.cat_last_requested=(state.uplink,state.downlink)
                 self.last_cat_track_completed=time.monotonic()
                 self.last_tracking_write=0.0
                 self.render_radio_state(state)
