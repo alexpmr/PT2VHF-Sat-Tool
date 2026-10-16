@@ -67,7 +67,7 @@ def test_favorite_doubleclick_reverses_row_without_navigation():
 
 def test_auto_cat_recovers_after_cat_readback_mismatch_without_button():
     app=(ROOT/"sat_tool"/"app.py").read_text(encoding="utf-8")
-    failure=app.split('if key=="cat-track":',1)[1].split('if key=="logs-export":',1)[0]
+    failure=app.split('    def background_error(self,key,message):',1)[1].split('if key=="cat-track":',1)[1].split('if key=="logs-export":',1)[0]
     assert 'self.cat_tracking_armed=False' not in failure
     assert "self.cat_retry_after=time.monotonic()" in failure
     assert "self.last_freqs=(None,None)" in failure
