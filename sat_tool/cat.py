@@ -1,4 +1,9 @@
-"""Conservative Kenwood TS-2000 CAT interface: never sends PTT."""
+"""Conservative Kenwood TS-2000 CAT interface: never sends PTT.
+
+Kenwood TS-2000 manual, appendix p.135: in SA satellite mode FA controls
+satellite downlink and FB controls satellite uplink. FC is the independent
+SUB receiver VFO and MUST NOT be treated as SAT uplink by the CAT driver.
+"""
 from __future__ import annotations
 from dataclasses import dataclass
 import threading
@@ -107,6 +112,8 @@ class RadioState:
     sat: bool = False
     downlink: int | None = None
     uplink: int | None = None
+    vfo_b: int | None = None  # SAT uplink when SA P1=1 and P3=1
+    sub_receiver: int | None = None  # FC is not the SAT uplink register
     mode: str = "?"
     sat_raw: str = ""
     signal_main: int | None = None
@@ -174,12 +181,15 @@ class TS2000:
         with self.lock:
             sa=self._exchange("SA;","SA")
             fa=self._exchange("FA;","FA")
-            fc=self._exchange("FC;","FC")
+            fb=self._exchange("FB;","FB")  # dedicated SAT uplink (Kenwood SA manual)
+            fc=self._exchange("FC;","FC")  # SUB receiver VFO, diagnostic only
             md=self._exchange("MD;","MD")
             self.state.sat_raw=sa
-            self.state.sat=sa.startswith("SA1")
+            self.state.sat=decode_satellite_status(sa)["sat"]
             self.state.downlink=parse_frequency(fa,"FA")
-            self.state.uplink=parse_frequency(fc,"FC")
+            self.state.vfo_b=parse_frequency(fb,"FB")
+            self.state.sub_receiver=parse_frequency(fc,"FC")
+            self.state.uplink=self.state.vfo_b if self.state.sat else None
             self.state.mode=MODES_REV.get(md[2:3],"?")
             # Optional meters run at most once every 5 seconds. Commands are read-only.
             if time.monotonic()-self._last_optional_poll>=5:
@@ -236,7 +246,9 @@ class TS2000:
             else:
                 errors["MD"]="Resposta MD inválida: "+repr(raw)
         return {"raw":responses,"errors":errors,"sat":status,
-                "frequency_hz":frequency,"main_mode":mode}
+                "frequency_hz":frequency,"main_mode":mode,
+                "sat_uplink_hz":frequency.get("FB") if status.get("sat") else None,
+                "sub_receiver_hz":frequency.get("FC")}
 
     def enable_satellite_mode(self):
         sa = self._exchange("SA;", "SA")
@@ -254,14 +266,14 @@ class TS2000:
             if len(sa)<5 or sa[4]!="1":
                 raise RuntimeError("A seleção MAIN RX / SUB TX não está configurada")
             self._exchange(frequency_command("FA",downlink_hz))
-            self._exchange(frequency_command("FC",uplink_hz))
+            self._exchange(frequency_command("FB",uplink_hz))
             state=self.poll()
             if state.downlink!=downlink_hz or state.uplink!=uplink_hz:
                 raise RuntimeError("TS-2000 não confirmou as frequências por CAT")
             return state
 
     def set_satellite_channel(self,downlink_hz:int,uplink_hz:int|None,rx_mode:str):
-        """Operator-authorized SAT preset: FA=RX MAIN, FC=TX SUB, MD=MAIN.
+        """Operator-authorized SAT preset: FA=SAT downlink, FB=SAT uplink, MD=MAIN.
         
         The SUB TX demodulation mode is not silently guessed: TS-2000 CAT MD
         operates MAIN only in this driver. Never send PTT/TX/RX commands.
@@ -269,7 +281,7 @@ class TS2000:
         if rx_mode not in MODES:
             raise ValueError("Modo RX não suportado pelo driver CAT")
         frequency_command("FA",downlink_hz)
-        if uplink_hz is not None:frequency_command("FC",uplink_hz)
+        if uplink_hz is not None:frequency_command("FB",uplink_hz)
         with self.lock:
             sa=self._exchange("SA;","SA")
             if not sa.startswith("SA1") or len(sa)<6 or sa[4]!="1":
@@ -278,7 +290,7 @@ class TS2000:
                 raise RuntimeError("CTRL está na SUB; selecione CTRL MAIN para alterar o modo de RX")
             self._exchange(frequency_command("FA",downlink_hz))
             if uplink_hz is not None:
-                self._exchange(frequency_command("FC",uplink_hz))
+                self._exchange(frequency_command("FB",uplink_hz))
             self._exchange("MD"+MODES[rx_mode]+";")
             st=self.poll()
             if st.downlink!=downlink_hz or (uplink_hz is not None and st.uplink!=uplink_hz):
