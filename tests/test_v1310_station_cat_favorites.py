@@ -72,7 +72,9 @@ def test_auto_cat_recovers_after_cat_readback_mismatch_without_button():
     assert "self.cat_retry_after=time.monotonic()" in failure
     assert "self.last_freqs=(None,None)" in failure
     loop=app.split('    def track_cat_frequencies(self,now):',1)[1].split('    def cat_live_tick(',1)[0]
-    assert "self.cat_tracking_armed=False" not in loop
+    # Unsupported same-band transponder is still a deliberate safety block;
+    # CAT transport/readback errors must NOT permanently disarm.
+    assert 'CAT: PAUSADO · ajuste manual detectado' not in loop
     assert "self.cat_retry_after" in loop
     assert "self.auto_tune_selected_satellite()" in loop
     assert "Sintonizar agora" not in app
