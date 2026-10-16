@@ -135,6 +135,7 @@ class MainWindow(QMainWindow):
         self.last_freqs = (None, None)
         self.last_radio_poll = 0
         self.last_cat_success = None
+        self.last_cat_telemetry = None
         self.selected_cat_target = None
         self.freq_update_cancel = False
         self.freq_update_stats = None
@@ -507,6 +508,9 @@ class MainWindow(QMainWindow):
         self.cat_details=label("SAT: —  ·  MAIN: —  ·  Leitura CAT: —")
         self.cat_details.setStyleSheet("color:#a8cee0;font-size:12px")
         cv.addWidget(self.cat_details)
+        self.cat_operating_detail=label("CTRL — · TRACE — · VFO/MEM — · TS-2000 sem telemetria CAT")
+        self.cat_operating_detail.setStyleSheet("color:#bce4e1;font-size:12px")
+        cv.addWidget(self.cat_operating_detail)
         meter=QHBoxLayout()
         self.smeter_main=QProgressBar();self.smeter_main.setRange(0,30);self.smeter_main.setTextVisible(True)
         self.smeter_sub=QProgressBar();self.smeter_sub.setRange(0,15);self.smeter_sub.setTextVisible(True)
@@ -1367,7 +1371,9 @@ class MainWindow(QMainWindow):
         self.cat_rx.setText("RX / DOWNLINK (CAT)\\n— MHz")
         self.cat_tx.setText("TX / UPLINK (CAT)\\n— MHz")
         self.cat_details.setText("SAT — · MAIN — · sem leitura atual")
-        self.cat_telemetry.setText("Potência: — · Medidor: — · RX/TX: sem leitura CAT")
+        self.cat_telemetry.setText("Potência: — · Medidor: — · sem leitura CAT")
+        self.cat_operating_detail.setText("CTRL — · TRACE — · VFO/MEM — · CAT desconectado")
+        self.last_cat_telemetry=None
         for widget in (self.smeter_main,self.smeter_sub):
             widget.setValue(0);widget.setFormat("sem leitura")
         self.cat_tune_status.setText("CAT desconectado · rastreamento pausado")
@@ -1421,7 +1427,26 @@ class MainWindow(QMainWindow):
             widget.setFormat(f"{value:02d}/{scale}" if value is not None else "sem leitura")
         watts=f"{st.power_set_w} W (ajuste)" if st.power_set_w is not None else "—"
         meter=f"{st.meter_type} {st.meter_value}/30" if st.meter_value is not None else "—"
-        self.cat_telemetry.setText(f"Potência: {watts} · Medidor {meter} · RX/TX real: não confirmado (CAT)")
+        telemetry_age=(
+            (now_utc()-self.last_cat_telemetry).total_seconds()
+            if self.last_cat_telemetry is not None else None)
+        telemetry_status=(
+            f"há {telemetry_age:.0f} s" if telemetry_age is not None
+            else "aguardando leitura periódica CAT")
+        self.cat_telemetry.setText(
+            f"Potência configurada: {watts} · Medidor CAT: {meter} · "
+            f"Telemetria {telemetry_status}")
+        try:
+            current=decode_satellite_status(st.sat_raw)
+            self.cat_operating_detail.setText(
+                f"CTRL {'SUB' if current['ctrl_sub'] else 'MAIN'} · "
+                f"TRACE {'ON' if current['trace'] else 'OFF'} · "
+                f"{'MEMÓRIA' if current['memory_mode'] else 'VFO'} · "
+                f"SUB RX [FC] {self.radio_freq(st.sub_receiver)} · "
+                f"MD MAIN {st.mode}")
+        except (TypeError,ValueError):
+            self.cat_operating_detail.setText(
+                "Estado operacional SA/MD: aguardando leitura válida do rádio")
 
     def refresh_catalog(self,force=False):
         groups=self.config.values.get("orbit_groups",list(DEFAULT_GROUPS))
@@ -2074,9 +2099,9 @@ class MainWindow(QMainWindow):
             rx_mode=self.rx_mode.currentText()
             tx_mode=self.tx_mode.currentText()
             self.pred_rx.setText(
-                f"RX / DOWNLINK · {rx_mode}\n{self.radio_freq(calc['rx_hz'])}\nDoppler {calc['rx_offset_hz']:+d} Hz")
+                f"RX / DOWNLINK · {rx_mode}\n{self.radio_freq(calc['rx_hz'])}")
             self.pred_tx.setText(
-                f"TX / UPLINK · {tx_mode}\n{self.radio_freq(calc['tx_hz'])}\nDoppler {calc['tx_offset_hz']:+d} Hz"
+                f"TX / UPLINK · {tx_mode}\n{self.radio_freq(calc['tx_hz'])}"
                 if ul is not None else "TX / UPLINK\nSOMENTE RECEPÇÃO\nSem frequência TX")
             self.pred_rx.setToolTip("Frequência nominal: "+self.radio_freq(dl))
             self.pred_tx.setToolTip("Frequência nominal: "+self.radio_freq(ul) if ul is not None else "Canal somente recepção")
@@ -2455,12 +2480,12 @@ class MainWindow(QMainWindow):
         # independent and must not interleave with the live tuning loop.
         if self.radio.connected:
             active=self.cat_tracking_armed and self.config.values.get("cat_auto_select",False)
-            interval=8.0 if active else max(1,int(self.config.values.get("poll_interval_s",1)))
+            interval=2.0 if active else max(1,int(self.config.values.get("poll_interval_s",1)))
             if (time.monotonic()-self.last_cat_poll_started>=interval
                     and not any(k in self.pending_jobs for k in (
                         "cat-connect","cat-autotune","cat-track","cat-diagnostic","cat-poll"))):
                 self.last_cat_poll_started=time.monotonic()
-                self.background("cat-poll",self.radio.poll_tracking if active else self.radio.poll)
+                self.background("cat-poll",self.radio.poll_telemetry if active else self.radio.poll)
         if self.radio.connected and self.last_cat_success:
             age=(now-self.last_cat_success).total_seconds()
             if age>10:
@@ -2528,6 +2553,7 @@ class MainWindow(QMainWindow):
             self.connection.setEnabled(True)
             self.connection.setText("Desconectar")
             self.cat_diagnose.setEnabled(True)
+            self.last_cat_telemetry=now_utc()
             self.render_radio_state(data)
             self.cat_tune_status.setText("CAT conectado · verificando Auto CAT online")
             self.config.values.update({"port":self.radio.port.port,
@@ -2605,6 +2631,7 @@ class MainWindow(QMainWindow):
         if key=='cat-poll':
             if self.radio.connected and not any(
                     k in self.pending_jobs for k in ("cat-autotune","cat-track")):
+                self.last_cat_telemetry=now_utc()
                 self.render_radio_state(data)
                 self.update_cat_sync_status(data)
             return
