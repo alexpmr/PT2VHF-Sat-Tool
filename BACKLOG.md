@@ -1,3 +1,12 @@
+## v1.3.11 — reconciliação da frequência CAT real com a previsão Doppler (16/10/2026)
+
+- [x] **Relato TS-2000:** painel CAT abaixo do mapa reflete alterações manuais no rádio, mas cartões superiores RX/TX calculados com Doppler não acompanham FA/FB; Auto CAT às vezes sintoniza uma única vez. Constatado no código: o limite para um novo comando comparava a previsão atual só à última frequência solicitada, não à FA/FB realmente lida; telemetria periódica não consultava FA/FB.
+- [x] **Heartbeat FA/FB:** nova leitura serial read-only de SA/FA/FB a cada ~1 segundo com rádio ligado e Auto CAT autorizado, por worker independente, sem consultas simultâneas com escritor.
+- [x] **Reconciliação:** calcular previsão Doppler orbital atualizada e sintonizar rádio quando diferença prevista versus real lida exceder limite, mesmo se a previsão não mudou desde a última escrita. Preservar trava SAT ON, banda cruzada válida, readback e ausência de PTT.
+- [x] **Interface:** exibir diferença Previsto versus Rádio perto dos cartões superiores sem falsificar o cálculo copiando VFO, estado de leitura desatualizada, diferença RX/TX em Hz; sincronismo somente após readback atual.
+- [x] **Regressões:** CAT emulado com dial manual e previsão imóvel, rádio já sincronizado sem escrita redundante, heartbeat periódico, leitura vencida e divergência detectada.
+- [ ] **Teste físico:** confirmar TS-2000 real, taxa de consultas e atualização FA/FB sob latência serial. Obter LOG CAT se ainda houver atraso.
+
 ## v1.3.10 — estação por Grid Locator/navegador, Auto CAT persistente e seleção de satélites (16/10/2026)
 - [x] Configurações → Estação: três métodos visíveis: latitude/longitude manuais, conversão Maidenhead Grid Locator (centro WGS-84 da quadrícula), solicitação explícita de localização do navegador incorporado; excluir opções GPS NMEA/COM, IP aproximado e botão de marcação de estação no mapa. A localização gerada somente preenche campos e precisa de Salvar estação.
 - [x] Satélites: um clique ou duplo clique alterna favorito/desfavorito sem navegar para Operação; debounce evita que o primeiro clique e o duplo clique revertam duas vezes. Cor amarela com letras pretas permanece.
