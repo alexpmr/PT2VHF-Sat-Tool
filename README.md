@@ -4,25 +4,33 @@
 
 ## Downloads — instaladores e portáteis
 
-**PT2VHF Sat Tool v1.3.10 — Windows 7 SP1, Windows 10 e Windows 11.** Os quatro downloads são arquivos `.exe` diretos. Links ficam disponíveis após aprovação dos builds Windows. Embora seja o marco 1.0 de funcionalidades, permanece em pré-lançamento até a homologação CAT com TS-2000 físico e Windows 7 real.
+**PT2VHF Sat Tool v1.3.11 — Windows 7 SP1, Windows 10 e Windows 11.** Os quatro downloads são arquivos `.exe` diretos. Links ficam disponíveis após aprovação dos builds Windows. Embora seja o marco 1.0 de funcionalidades, permanece em pré-lançamento até a homologação CAT com TS-2000 físico e Windows 7 real.
 
 | Windows | Instalável | Portátil |
 | --- | --- | --- |
-| **Windows 7 SP1** (x86; executável de 32 bits também para Win7 x64) | [Instalador Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.10/PT2VHF-Sat-Tool-v1.3.10-Win7-x86-Setup.exe) | [Portable Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.10/PT2VHF-Sat-Tool-v1.3.10-Win7-x86-Portable.exe) |
-| **Windows 10 (1809+)/11** (x64; arquivo `Win11-x64` para manter atualizador) | [Instalador Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.10/PT2VHF-Sat-Tool-v1.3.10-Win11-x64-Setup.exe) | [Portable Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.10/PT2VHF-Sat-Tool-v1.3.10-Win11-x64-Portable.exe) |
+| **Windows 7 SP1** (x86; executável de 32 bits também para Win7 x64) | [Instalador Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.11/PT2VHF-Sat-Tool-v1.3.11-Win7-x86-Setup.exe) | [Portable Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.11/PT2VHF-Sat-Tool-v1.3.11-Win7-x86-Portable.exe) |
+| **Windows 10 (1809+)/11** (x64; arquivo `Win11-x64` para manter atualizador) | [Instalador Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.11/PT2VHF-Sat-Tool-v1.3.11-Win11-x64-Setup.exe) | [Portable Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.11/PT2VHF-Sat-Tool-v1.3.11-Win11-x64-Portable.exe) |
 
 **Formato dos downloads:** tanto instaladores quanto portáteis são entregues diretamente como arquivos **`.exe`**. O portátil inclui as dependências dentro do mesmo EXE (PyInstaller onefile) e não requer descompactação.
 
 **[Todas as releases](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases)** · **[Acompanhar compilação](https://github.com/alexpmr/PT2VHF-Sat-Tool/actions)**
 
 - **Instalável:** instalação por usuário, atalho e desinstalação, atualização pelo aplicativo usando o Setup de sua edição.
-- **Portátil:** execute diretamente `PT2VHF-Sat-Tool-v1.3.10-*-Portable.exe` (um único arquivo). Configurações ficam em `data/` ao lado do EXE, preservadas após atualizações.
+- **Portátil:** execute diretamente `PT2VHF-Sat-Tool-v1.3.11-*-Portable.exe` (um único arquivo). Configurações ficam em `data/` ao lado do EXE, preservadas após atualizações.
 - **Win7:** Python 3.8 x86 + PySide2/Qt5 + PyInstaller 5.13.2 (legado, precisa ser validado no Windows 7 real).
 - **Win10/11 x64:** Windows 10 1809+ ou Windows 11, Python 3.11 x64 + PySide6/Qt6 + PyInstaller 6.13.0.
 - Arquivos SHA256 acompanham cada compilação. A versão Windows 7 é experimental; não confundir sucesso do CI com homologação em campo.
 
 ---
 
+
+## Novidades v1.3.11 — comparação contínua entre previsão e rádio real
+
+- O CAT não depende mais apenas da última frequência enviada: compara as frequências Doppler calculadas com as **FA e FB lidas do TS-2000**. Mudanças no dial ou feitas por outro programa serão percebidas em consulta read-only independente, aproximadamente a cada segundo, enquanto Auto CAT estiver habilitado.
+- Se as frequências reais divergirem, o Auto CAT tentará reconciliar automaticamente o rádio para a previsão corrente, mesmo quando a variação Doppler desde o último comando estiver abaixo do limiar. É necessário rádio conectado, SAT ON e transponder crossband suportado.
+- Cartões superiores continuam mostrando frequências previstas a partir da órbita, com a diferença em Hz em relação ao CAT efetivo logo abaixo. A interface não informa SINCRONIZADO com leitura desatualizada.
+- A previsão é atualizada usando o mesmo instante orbital do ciclo rápido CAT.
+- Não aciona PTT; mantém segurança SAT e confirmação por FA/FB. **Validação física obrigatória:** os testes automatizados emulam o rádio e não comprovam a taxa da COM real.
 
 ## Novidades v1.3.10 — Grid Locator, Auto CAT e favoritos
 - **Localização:** coordenadas manuais, Grid Locator Maidenhead (centro da quadrícula com validação 2–10 caracteres) ou solicitação explícita de coordenadas ao navegador incorporado. GPS serial, consulta IP aproximada e botão Marcar estação no mapa não estão mais visíveis. A estação só muda após Salvar estação.

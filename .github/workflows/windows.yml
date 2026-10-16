@@ -100,10 +100,10 @@ jobs:
       - name: Portable ONEFILE EXE (sem ZIP)
         shell: pwsh
         run: |
-          python -m PyInstaller --noconfirm --clean --windowed --onefile --name 'PT2VHF-Sat-Tool-v1.3.10-${{ matrix.target }}-Portable' `
+          python -m PyInstaller --noconfirm --clean --windowed --onefile --name 'PT2VHF-Sat-Tool-v1.3.11-${{ matrix.target }}-Portable' `
             --icon 'assets/branding/app-icon.ico' --add-data 'sat_tool/map.html;sat_tool' --add-data 'assets/branding/icon-256.png;assets/branding' --add-data 'scripts/apply-update.ps1;scripts' --hidden-import sat_tool.app --hidden-import sat_tool.cat --collect-all skyfield --collect-binaries numpy `
             run.py
-          $portable = (Resolve-Path 'dist/PT2VHF-Sat-Tool-v1.3.10-${{ matrix.target }}-Portable.exe').Path
+          $portable = (Resolve-Path 'dist/PT2VHF-Sat-Tool-v1.3.11-${{ matrix.target }}-Portable.exe').Path
           if (-not (Test-Path $portable)) { throw 'Portable EXE missing' }
           $report = Join-Path $env:RUNNER_TEMP 'portable-onefile-${{ matrix.target }}.json'
           $binding = if ('${{ matrix.target }}' -eq 'Win7-x86') { 'PySide2' } else { 'PySide6' }
@@ -127,12 +127,12 @@ jobs:
           if (-not (Test-Path $iscc)) { throw 'Inno Setup compiler missing' }
           & $iscc '/DBuildFlavor=${{ matrix.target }}' '/DMinTarget=${{ matrix.min_windows }}' '/DTargetArch=${{ matrix.inno_arch }}' installer/setup.iss
           if ($LASTEXITCODE -ne 0) { throw 'Inno Setup build failed' }
-          if (-not (Test-Path 'dist/PT2VHF-Sat-Tool-v1.3.10-${{ matrix.target }}-Setup.exe')) { throw 'Installer missing' }
+          if (-not (Test-Path 'dist/PT2VHF-Sat-Tool-v1.3.11-${{ matrix.target }}-Setup.exe')) { throw 'Installer missing' }
       - name: Verify standalone EXEs and icon resources
         shell: pwsh
         run: |
           $target = '${{ matrix.target }}'
-          $base = "dist/PT2VHF-Sat-Tool-v1.3.10-$target"
+          $base = "dist/PT2VHF-Sat-Tool-v1.3.11-$target"
           if (-not (Test-Path "$base-Setup.exe" -PathType Leaf)) { throw 'Installer must be EXE' }
           if (-not (Test-Path "$base-Portable.exe" -PathType Leaf)) { throw 'Portable must be EXE onefile' }
           if (Get-ChildItem -Path dist -Filter '*.zip' -File) { throw 'No ZIP distribution permitted' }
@@ -140,17 +140,17 @@ jobs:
       - name: Checksums
         shell: pwsh
         run: |
-          $items = Get-ChildItem 'dist/PT2VHF-Sat-Tool-v1.3.10-${{ matrix.target }}-*' -File
+          $items = Get-ChildItem 'dist/PT2VHF-Sat-Tool-v1.3.11-${{ matrix.target }}-*' -File
           $lines = foreach ($item in $items) {
             $hash = (Get-FileHash $item.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
             "$hash  $($item.Name)"
           }
-          $lines | Set-Content -Path 'dist/PT2VHF-Sat-Tool-v1.3.10-${{ matrix.target }}-SHA256.txt' -Encoding Ascii
+          $lines | Set-Content -Path 'dist/PT2VHF-Sat-Tool-v1.3.11-${{ matrix.target }}-SHA256.txt' -Encoding Ascii
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: PT2VHF-Sat-Tool-v1.3.10-${{ matrix.target }}
-          path: dist/PT2VHF-Sat-Tool-v1.3.10-${{ matrix.target }}-*
+          name: PT2VHF-Sat-Tool-v1.3.11-${{ matrix.target }}
+          path: dist/PT2VHF-Sat-Tool-v1.3.11-${{ matrix.target }}-*
           if-no-files-found: error
           retention-days: 90
   release:
@@ -162,7 +162,7 @@ jobs:
       - name: Download compiled Windows binaries
         uses: actions/download-artifact@v4
         with:
-          pattern: PT2VHF-Sat-Tool-v1.3.10-*
+          pattern: PT2VHF-Sat-Tool-v1.3.11-*
           merge-multiple: true
           path: release
       - name: Verify 4 deliverables
@@ -170,14 +170,14 @@ jobs:
         run: |
           set -euo pipefail
           for target in Win7-x86 Win11-x64; do
-            test -s "release/PT2VHF-Sat-Tool-v1.3.10-${target}-Setup.exe"
-            test -s "release/PT2VHF-Sat-Tool-v1.3.10-${target}-Portable.exe"
-            test -s "release/PT2VHF-Sat-Tool-v1.3.10-${target}-SHA256.txt"
+            test -s "release/PT2VHF-Sat-Tool-v1.3.11-${target}-Setup.exe"
+            test -s "release/PT2VHF-Sat-Tool-v1.3.11-${target}-Portable.exe"
+            test -s "release/PT2VHF-Sat-Tool-v1.3.11-${target}-SHA256.txt"
           done
       - name: Resolve release tag
         shell: bash
         run: |
-          if [[ "$GITHUB_REF" == refs/heads/main ]]; then echo 'RELEASE_TAG=v1.3.10' >> "$GITHUB_ENV"; else echo "RELEASE_TAG=$GITHUB_REF_NAME" >> "$GITHUB_ENV"; fi
+          if [[ "$GITHUB_REF" == refs/heads/main ]]; then echo 'RELEASE_TAG=v1.3.11' >> "$GITHUB_ENV"; else echo "RELEASE_TAG=$GITHUB_REF_NAME" >> "$GITHUB_ENV"; fi
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -190,6 +190,6 @@ jobs:
           gh release view "$RELEASE_TAG" --repo '${{ github.repository }}' >/dev/null 2>&1 || \
             gh release create "$RELEASE_TAG" --target '${{ github.sha }}' --repo '${{ github.repository }}' \
               --title "PT2VHF Sat Tool $RELEASE_TAG - Win7 + Win10/11" \
-              --notes 'v1.3.10: Auto CAT online com canal FM SO-50 V/U prioritário, diagnóstico RX/TX real e ajuste Doppler a cada segundo no TS-2000, sem botão Sintonizar agora; inicia com rádio conectado, SAT ON e satélite válido, readback FA/FB e pausa por ajuste manual; inclui parser CAT com recomposição serial e preserva FC separado, bloqueio crossband/mesma banda, falha de sintonia independente de conexão, log CAT TX/RX persistido em disco e botão de exportação ZIP local. Preserva Win7 x86 e Win10/11 x64; orientação MAIN TX/SUB RX e validação física seguem pendentes.' \
+              --notes 'v1.3.11: Auto CAT online com canal FM SO-50 V/U prioritário, diagnóstico RX/TX real e ajuste Doppler a cada segundo no TS-2000, sem botão Sintonizar agora; inicia com rádio conectado, SAT ON e satélite válido, readback FA/FB e pausa por ajuste manual; inclui parser CAT com recomposição serial e preserva FC separado, bloqueio crossband/mesma banda, falha de sintonia independente de conexão, log CAT TX/RX persistido em disco e botão de exportação ZIP local. Preserva Win7 x86 e Win10/11 x64; orientação MAIN TX/SUB RX e validação física seguem pendentes.' \
               --prerelease
           gh release upload "$RELEASE_TAG" release/* --repo '${{ github.repository }}' --clobber
