@@ -53,7 +53,7 @@ def test_ui_source_limits_large_catalog_and_keeps_cat_opt_in():
     source=(Path(__file__).resolve().parents[1]/"sat_tool"/"app.py").read_text(encoding="utf-8")
     assert "ids[:350]" in source
     assert "rows=rows[:350]" in source
-    assert 'if self._loading_catalog:return' in source
+    assert 'if self._loading_catalog or ident not in self.omm:return' in source
     assert 'self.catalog_table.cellClicked.connect(self.queue_catalog_single_click)' in source
     assert 'self.catalog_table.setItem(row,column,cell)' in source
     assert 'cell.setBackground(QBrush(QColor("#ffe36a")))' in source
