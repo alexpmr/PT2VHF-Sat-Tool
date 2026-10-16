@@ -37,6 +37,10 @@ def test_operator_window_constructs_with_new_layout():
             assert window.ports.parent() is not None
             assert window.cat_rx.parent() is not None
             assert window.tracked_search.parent() is not None
+            assert window.catalog_table.columnCount()==7
+            assert "Selecionado" not in [window.catalog_table.horizontalHeaderItem(i).text()
+                                          for i in range(window.catalog_table.columnCount())]
+            assert window.cat_operating_detail.parent() is not None
             header=window.pass_table.horizontalHeader()
             for col in (1,2,3,4):
                 assert header.sectionResizeMode(col)==gui.QHeaderView.ResizeToContents
