@@ -4,24 +4,33 @@
 
 ## Downloads — instaladores e portáteis
 
-**PT2VHF Sat Tool v1.3.0 — Windows 7 SP1, Windows 10 e Windows 11.** Os quatro downloads são arquivos `.exe` diretos. Links ficam disponíveis após aprovação dos builds Windows. Embora seja o marco 1.0 de funcionalidades, permanece em pré-lançamento até a homologação CAT com TS-2000 físico e Windows 7 real.
+**PT2VHF Sat Tool v1.3.1 — Windows 7 SP1, Windows 10 e Windows 11.** Os quatro downloads são arquivos `.exe` diretos. Links ficam disponíveis após aprovação dos builds Windows. Embora seja o marco 1.0 de funcionalidades, permanece em pré-lançamento até a homologação CAT com TS-2000 físico e Windows 7 real.
 
 | Windows | Instalável | Portátil |
 | --- | --- | --- |
-| **Windows 7 SP1** (x86; executável de 32 bits também para Win7 x64) | [Instalador Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.0/PT2VHF-Sat-Tool-v1.3.0-Win7-x86-Setup.exe) | [Portable Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.0/PT2VHF-Sat-Tool-v1.3.0-Win7-x86-Portable.exe) |
-| **Windows 10 (1809+)/11** (x64; arquivo `Win11-x64` para manter atualizador) | [Instalador Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.0/PT2VHF-Sat-Tool-v1.3.0-Win11-x64-Setup.exe) | [Portable Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.0/PT2VHF-Sat-Tool-v1.3.0-Win11-x64-Portable.exe) |
+| **Windows 7 SP1** (x86; executável de 32 bits também para Win7 x64) | [Instalador Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.1/PT2VHF-Sat-Tool-v1.3.1-Win7-x86-Setup.exe) | [Portable Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.1/PT2VHF-Sat-Tool-v1.3.1-Win7-x86-Portable.exe) |
+| **Windows 10 (1809+)/11** (x64; arquivo `Win11-x64` para manter atualizador) | [Instalador Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.1/PT2VHF-Sat-Tool-v1.3.1-Win11-x64-Setup.exe) | [Portable Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.1/PT2VHF-Sat-Tool-v1.3.1-Win11-x64-Portable.exe) |
 
 **Formato dos downloads:** tanto instaladores quanto portáteis são entregues diretamente como arquivos **`.exe`**. O portátil inclui as dependências dentro do mesmo EXE (PyInstaller onefile) e não requer descompactação.
 
 **[Todas as releases](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases)** · **[Acompanhar compilação](https://github.com/alexpmr/PT2VHF-Sat-Tool/actions)**
 
 - **Instalável:** instalação por usuário, atalho e desinstalação, atualização pelo aplicativo usando o Setup de sua edição.
-- **Portátil:** execute diretamente `PT2VHF-Sat-Tool-v1.3.0-*-Portable.exe` (um único arquivo). Configurações ficam em `data/` ao lado do EXE, preservadas após atualizações.
+- **Portátil:** execute diretamente `PT2VHF-Sat-Tool-v1.3.1-*-Portable.exe` (um único arquivo). Configurações ficam em `data/` ao lado do EXE, preservadas após atualizações.
 - **Win7:** Python 3.8 x86 + PySide2/Qt5 + PyInstaller 5.13.2 (legado, precisa ser validado no Windows 7 real).
 - **Win10/11 x64:** Windows 10 1809+ ou Windows 11, Python 3.11 x64 + PySide6/Qt6 + PyInstaller 6.13.0.
 - Arquivos SHA256 acompanham cada compilação. A versão Windows 7 é experimental; não confundir sucesso do CI com homologação em campo.
 
 ---
+
+## Correção v1.3.1 — sintonia automática CAT ao conectar (15/10/2026)
+
+- Corrigido o caminho em que o TS-2000 **já estava conectado** ao habilitar Auto CAT, ou em que o usuário conectava o rádio **depois** de selecionar satélite/transponder: agora inicia sintonia automaticamente se a opção estiver autorizada, o rádio estiver em SAT e houver TLE recente/frequências válidas.
+- Após ativar SAT em **Configurações → Conexão CAT**, a seleção corrente também é aplicada quando Auto CAT está habilitado.
+- Botão **Sintonizar agora** junto ao botão de conexão: confirmação explícita mesmo quando Auto CAT está desabilitado; feedback persistente informa “SAT OFF”, “OMM antigo”, “sem transponder” ou erro CAT.
+- Troca rápida de satélites: aguarda a transação anterior e aplica a seleção mais recente quando Auto CAT estiver habilitado. Sem PTT, sem habilitar SAT automaticamente.
+- **Limite do driver:** controla FA/FB e modo **MAIN (RX)**. O modo SUB (TX) requer conferência manual até implementação e validação específica no TS-2000 real.
+- Mantém instaladores Win7 x86 e Win10 1809+/Win11 x64; validação física com o rádio permanece pendente.
 
 ## Novidades v1.3.0 — catálogo ampliado, AOS e CAT inteligente (15/10/2026)
 
