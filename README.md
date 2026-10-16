@@ -24,7 +24,15 @@
 ---
 
 
-## Novidades v1.3.11 — Grid Locator, Auto CAT e favoritos
+## Novidades v1.3.11 — comparação contínua entre previsão e rádio real
+
+- O CAT não depende mais apenas da última frequência enviada: compara as frequências Doppler calculadas com as **FA e FB lidas do TS-2000**. Mudanças no dial ou feitas por outro programa serão percebidas em consulta read-only independente, aproximadamente a cada segundo, enquanto Auto CAT estiver habilitado.
+- Se as frequências reais divergirem, o Auto CAT tentará reconciliar automaticamente o rádio para a previsão corrente, mesmo quando a variação Doppler desde o último comando estiver abaixo do limiar. É necessário rádio conectado, SAT ON e transponder crossband suportado.
+- Cartões superiores continuam mostrando frequências previstas a partir da órbita, com a diferença em Hz em relação ao CAT efetivo logo abaixo. A interface não informa SINCRONIZADO com leitura desatualizada.
+- A previsão é atualizada usando o mesmo instante orbital do ciclo rápido CAT.
+- Não aciona PTT; mantém segurança SAT e confirmação por FA/FB. **Validação física obrigatória:** os testes automatizados emulam o rádio e não comprovam a taxa da COM real.
+
+## Novidades v1.3.10 — Grid Locator, Auto CAT e favoritos
 - **Localização:** coordenadas manuais, Grid Locator Maidenhead (centro da quadrícula com validação 2–10 caracteres) ou solicitação explícita de coordenadas ao navegador incorporado. GPS serial, consulta IP aproximada e botão Marcar estação no mapa não estão mais visíveis. A estação só muda após Salvar estação.
 - **CAT contínuo:** quando Auto CAT está autorizado e SAT está ON, acompanha RX/FA e TX/FB automaticamente, mesmo após reconfiguração de satélite/modo e erros temporários; leituras divergentes são reprocessadas com backoff sem desligar Auto CAT silenciosamente. Se o rádio não responder, o painel mostra a falha — não informa sincronismo sem confirmação. Os botões manuais Aplicar RX/TX e Aplicar modo RX foram retirados.
 - **Satélites:** clique simples e duplo clique marcam/desmarcam favoritos na própria tabela, sem abrir a página principal; nenhuma marcação dupla acidental.
