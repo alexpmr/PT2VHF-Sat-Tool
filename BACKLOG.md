@@ -1,3 +1,11 @@
+## v1.3.12 — distribuição Windows 10/11 x64 e diagnóstico contínuo Auto CAT (16/10/2026)
+
+- [x] **Pausa Win7:** novos builds de Windows 7 x86 suspensos por solicitação do mantenedor, preservando releases históricas; distribuição somente **Windows 10/11 x64, Setup e Portable .exe**.
+- [x] **Auto CAT:** scheduler periódico tenta aplicar a próxima correção FA/FB antes do readback periódico; fluxo de seleção inicial e acompanhamento contínuo preservados, independente do horizonte.
+- [x] **Visibilidade de falhas:** log com causas de espera/bloqueio do scheduler, setpoints e confirmações.
+- [x] **Passagens compactas:** coluna lateral sem largura mínima arbitrária de 520 px; data/hora em 2 linhas, nomes e modos completos com wrap; tabela com menor altura e scroll.
+- [ ] **Homologação P0 pendente:** testar TS-2000 físico por ≥10 min para confirmar múltiplas correções FA/FB sem segundo clique ou reconexão, preferencialmente com LOGs completos. Não afirmar bug de campo resolvido antes desse teste.
+
 ### P0 — Evidência adicional: seleção manual provoca sintonia única (16/10/2026)
 
 - **Relato em TS-2000 físico:** duplo clique no satélite na tabela **Passagens do Satélite Selecionado** ou escolha no campo **Satélite** provoca sinal sonoro no rádio e atualiza suas frequências **uma única vez**, para o instante da seleção. Sem novos cliques, o rádio não acompanha continuamente as correções Doppler observadas.

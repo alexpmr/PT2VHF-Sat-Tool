@@ -86,10 +86,11 @@ def test_fast_cat_scheduler_polls_actual_radio_frequencies_independently(monkeyp
     )
     MainWindow.cat_live_tick(win)
     assert len(pos)==1 and pos[0]["pos"]["radial_m_s"]==130
-    assert requests==[("cat-readback","radio-readback")]
+    assert requests[0][0]=="track"
+    assert requests[1]==("cat-readback","radio-readback")
     win.last_cat_frequency_readback=100.0
     MainWindow.cat_live_tick(win)
-    assert requests[1][0]=="track"
+    assert requests[2][0]=="track"
 
 
 def test_radio_prediction_comparison_is_visible_near_top_cards():
