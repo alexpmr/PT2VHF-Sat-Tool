@@ -816,7 +816,7 @@ class MainWindow(QMainWindow):
         ug.addWidget(self.update_minutes)
         self.include_prerelease=QCheckBox("Incluir versões de testes / pré-lançamentos")
         ug.addWidget(self.include_prerelease)
-        ug.addWidget(label("Nova versão: aviso na barra superior, changelog e download autenticado com SHA-256. A substituição só ocorre após sua confirmação e o fechamento seguro do aplicativo. Configurações preservadas."))
+        ug.addWidget(label("Novas versões são indicadas somente na barra superior, sem pop-up ou changelog automático. Clicar em Nova versão inicia o download com SHA-256 e a instalação externa após a verificação. Configurações preservadas."))
         self.save_update_btn=QPushButton("Salvar preferências de atualização")
         self.save_update_btn.clicked.connect(self.save_update_preferences)
         ug.addWidget(self.save_update_btn)
