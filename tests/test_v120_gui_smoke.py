@@ -38,8 +38,8 @@ def test_operator_window_constructs_with_new_layout():
             assert window.cat_rx.parent() is not None
             assert window.tracked_search.parent() is not None
             assert window.connection.text()=="Conectar"
-            assert window.cat_tune_now.text()=="Sintonizar agora"
-            assert not window.cat_tune_now.isEnabled()
+            assert not hasattr(window,"cat_tune_now")
+            assert window.auto_cat.text().startswith("Auto CAT contínuo")
             assert window.cat_tune_status.text().startswith("Auto CAT")
             # A write/readback error must not re-label a responsive CAT link
             # as disconnected; the link is verified with a read-only poll.

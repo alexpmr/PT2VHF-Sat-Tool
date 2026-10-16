@@ -48,7 +48,7 @@ def test_log_rotation_keeps_previous_history(tmp_path):
     assert all(f.stat().st_size>0 for f in files)
 
 
-def test_operator_armed_only_after_explicit_selection_and_connection_is_readonly():
+def test_continuous_cat_armed_on_connection_and_user_selection():
     source=(Path(__file__).resolve().parents[1]/"sat_tool"/"app.py").read_text(encoding="utf-8")
     assert "self.cat_indicator=QPushButton(" in source
     assert "self.cat_indicator.clicked.connect(self.toggle_connection)" in source
@@ -56,7 +56,8 @@ def test_operator_armed_only_after_explicit_selection_and_connection_is_readonly
     assert "self.mode_combo.activated.connect(self.arm_cat_tracking)" in source
     assert "self.cat_tracking_armed = False" in source
     assert "QTimer.singleShot(1200, self.startup_cat_connect)" in source
-    assert "if self.cat_tracking_armed and not self.cat_connect_was_startup:" in source
+    assert 'self.cat_tracking_armed=bool(self.config.values.get("cat_auto_select",False))' in source
+    assert 'self.last_freqs=(None,None)' in source
     assert 'self.background("cat-track",task)' in source
     assert 'self.export_logs.clicked.connect(self.save_complete_logs)' in source
     assert 'self.journal.append(msg)' in source
