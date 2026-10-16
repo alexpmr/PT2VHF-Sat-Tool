@@ -14,8 +14,8 @@ def available_ports():
 
 
 def frequency_command(channel: str, freq_hz: int) -> str:
-    if channel not in ("FA", "FB"):
-        raise ValueError("Somente FA (downlink) e FB (uplink) são permitidos")
+    if channel not in ("FA", "FB", "FC"):
+        raise ValueError("Somente FA (VFO A), FB (VFO B) e FC (SUB) são permitidos")
     if not 100000 <= freq_hz <= 1_299_999_999:
         raise ValueError("Frequência CAT fora do intervalo seguro")
     return f"{channel}{int(freq_hz):011d};"
@@ -174,12 +174,12 @@ class TS2000:
         with self.lock:
             sa=self._exchange("SA;","SA")
             fa=self._exchange("FA;","FA")
-            fb=self._exchange("FB;","FB")
+            fc=self._exchange("FC;","FC")
             md=self._exchange("MD;","MD")
             self.state.sat_raw=sa
             self.state.sat=sa.startswith("SA1")
             self.state.downlink=parse_frequency(fa,"FA")
-            self.state.uplink=parse_frequency(fb,"FB")
+            self.state.uplink=parse_frequency(fc,"FC")
             self.state.mode=MODES_REV.get(md[2:3],"?")
             # Optional meters run at most once every 5 seconds. Commands are read-only.
             if time.monotonic()-self._last_optional_poll>=5:
@@ -212,7 +212,7 @@ class TS2000:
         with self.lock:
             if not self.connected:
                 raise ConnectionError("Conecte o TS-2000 antes de testar CAT")
-            for code in ("ID","SA","FA","FB","MD"):
+            for code in ("ID","SA","FA","FB","FC","MD"):
                 try:
                     responses[code]=self._exchange(code+";",code)
                 except (TimeoutError,ValueError,ConnectionError) as exc:
@@ -223,7 +223,7 @@ class TS2000:
         except (KeyError,ValueError) as exc:
             errors.setdefault("SA",str(exc))
         frequency={}
-        for key in ("FA","FB"):
+        for key in ("FA","FB","FC"):
             try:
                 frequency[key]=parse_frequency(responses[key],key)
             except (KeyError,ValueError) as exc:
@@ -254,14 +254,14 @@ class TS2000:
             if len(sa)<5 or sa[4]!="1":
                 raise RuntimeError("A seleção MAIN RX / SUB TX não está configurada")
             self._exchange(frequency_command("FA",downlink_hz))
-            self._exchange(frequency_command("FB",uplink_hz))
+            self._exchange(frequency_command("FC",uplink_hz))
             state=self.poll()
             if state.downlink!=downlink_hz or state.uplink!=uplink_hz:
                 raise RuntimeError("TS-2000 não confirmou as frequências por CAT")
             return state
 
     def set_satellite_channel(self,downlink_hz:int,uplink_hz:int|None,rx_mode:str):
-        """Operator-authorized SAT preset: FA=RX, FB=TX when defined, MD=MAIN.
+        """Operator-authorized SAT preset: FA=RX MAIN, FC=TX SUB, MD=MAIN.
         
         The SUB TX demodulation mode is not silently guessed: TS-2000 CAT MD
         operates MAIN only in this driver. Never send PTT/TX/RX commands.
@@ -272,11 +272,13 @@ class TS2000:
         if uplink_hz is not None:frequency_command("FB",uplink_hz)
         with self.lock:
             sa=self._exchange("SA;","SA")
-            if not sa.startswith("SA1") or len(sa)<5 or sa[4]!="1":
+            if not sa.startswith("SA1") or len(sa)<6 or sa[4]!="1":
                 raise RuntimeError("Ative SAT com MAIN=RX e SUB=TX antes do Auto CAT")
+            if sa[5]!="0":
+                raise RuntimeError("CTRL está na SUB; selecione CTRL MAIN para alterar o modo de RX")
             self._exchange(frequency_command("FA",downlink_hz))
             if uplink_hz is not None:
-                self._exchange(frequency_command("FB",uplink_hz))
+                self._exchange(frequency_command("FC",uplink_hz))
             self._exchange("MD"+MODES[rx_mode]+";")
             st=self.poll()
             if st.downlink!=downlink_hz or (uplink_hz is not None and st.uplink!=uplink_hz):
