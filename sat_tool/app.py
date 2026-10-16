@@ -39,7 +39,8 @@ from .profile import choose_satellites, capability, render_service, CANDIDATES
 from .selection import change_selection, transmitter_batch_ids, cat_doppler_allowed
 from .alerts import eta_seconds, format_duration, selected_aos_alarm
 from .media import find_photo, photo_html
-from .operations import select_next_pass, frequency_prediction, status_at, orbital_age_days
+from .operations import (select_next_pass, select_selected_satellite_pass,
+                         frequency_prediction, status_at, orbital_age_days)
 from .core import (Station, now_utc, make_satellite, position, ground_track, footprint,
                    predict_passes, transponder_options, doppler_frequencies, paired_linear_uplink,
                    ground_track_between, track_period_bounds)
@@ -2198,10 +2199,15 @@ class MainWindow(QMainWindow):
             self.next_frequencies.setText("RX/TX: aguardando localização")
             self.pass_progress.setValue(0)
             return
-        c=self.config.values
         selected=str(self.sat_combo.currentData() or "")
-        event=select_next_pass(self.passes,self.pass_rows,c.get("radio_modes",[]),c.get("radio_bands",[]),
-                               now,{selected} if selected else set())
+        try:
+            uplink,downlink=self.nominal_hz()
+        except ValueError:
+            uplink,downlink=None,None
+        channel={"downlink_hz":downlink,"uplink_hz":uplink,
+                 "rx_only":uplink is None,"mode":self.rx_mode.currentText(),
+                 "name":self.mode_combo.currentText()}
+        event=select_selected_satellite_pass(self.passes,selected,channel,now) if selected else None
         self.next_candidate=event
         self.next_select.setEnabled(event is not None)
         if event is None:
@@ -2233,6 +2239,11 @@ class MainWindow(QMainWindow):
             age=orbital_age_days(sat.epoch.utc_datetime().replace(tzinfo=timezone.utc),now)
             if age>7:
                 self.next_frequencies.setText(f"OMM/TLE antigo ({age:.1f} dias); previsão Doppler indisponível. Atualize dados.")
+                return
+            if channel["downlink_hz"] is None:
+                self.next_frequencies.setText(
+                    "AOS/TCA/LOS calculados para o satélite selecionado · "
+                    "informe downlink para previsão Doppler")
                 return
             when=now if event["in_progress"] else event["aos"]
             radial=position(sat,site,when=when,ts=self.ts)["radial_m_s"]
