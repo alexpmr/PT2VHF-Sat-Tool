@@ -147,12 +147,36 @@ class TS2000:
             self.logger("TX " + command)
             if expected is None:
                 return ""
-            for _ in range(3):
-                answer = self.port.read_until(b";").decode("ascii", errors="replace")
-                self.logger("RX " + answer)
-                if answer.startswith(expected) and answer.endswith(";"):
-                    return answer
-            raise TimeoutError(f"Sem resposta válida do CAT para {expected}")
+            # pyserial.read_until() may return *partial bytes* at timeout.
+            # Real TS-2000 COM1 logs show RX "F" followed by "A00...;" and
+            # RX "M" followed by "D4;". Each part is a transport fragment,
+            # not an independent CAT frame. Reassemble until ';', bounded
+            # by a wall-clock deadline and a maximum response size.
+            #
+            # Do not resend a command here: automatic retries of FA/FB/MD
+            # writes could override an operator's dial adjustment.
+            deadline = time.monotonic() + 4.0
+            pending = ""
+            reads = 0
+            while time.monotonic() < deadline and reads < 48:
+                reads += 1
+                chunk = self.port.read_until(b";").decode("ascii", errors="replace")
+                if not chunk:
+                    continue
+                self.logger("RX " + chunk)
+                pending += chunk
+                if len(pending) > 256:
+                    raise TimeoutError(
+                        f"Resposta CAT excessiva sem enquadramento para {expected}")
+                while ";" in pending:
+                    raw_frame, pending = pending.split(";", 1)
+                    frame = raw_frame + ";"
+                    if frame.startswith(expected):
+                        return frame
+                    # Replies '?' and unsolicited/nonmatching frames do
+                    # not invalidate a subsequent complete matching reply.
+            suffix = f" (parcial {pending!r})" if pending else ""
+            raise TimeoutError(f"Sem resposta CAT completa para {expected}{suffix}")
 
     def connect(self, port: str, baud: int = 9600, stopbits: int = 1):
         self.disconnect()

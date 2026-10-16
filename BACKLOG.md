@@ -1,3 +1,10 @@
+## v1.3.6 — resposta CAT serial fragmentada (16/10/2026)
+- [x] **Evidência do rádio TS-2000 físico:** LOG v1.3.4 exportado às 00:55 comprova COM1 conectada, sintonia FA/downlink aplicada e uso indevido de FC/uplink corrigido em v1.3.5. A partir de 00:55:08, CAT passa a receber `F` e `A00436799891;` separadamente, `M` e `D4;`, e quadros SA/FC fragmentados, causando timeouts falsos de polling.
+- [x] **Parser serial:** recompor fragmentos de leitura até `;`, com timeout e limites fixos, ignorar quadros `?;` sem bloquear a próxima resposta; nunca repetir comandos de escrita.
+- [x] **Regressões:** testes de SA/FA/FB/FC/MD fracionados, confirmação de sintonia após fragmentação, resposta incompleta e prevenção de escrita/reenvio PTT.
+- [ ] **Homologação em campo:** retestar COM1/TS-2000 com v1.3.6 e enviar novo ZIP de logs. Investigar baud/cabo/interface USB, latência Windows e firmware se respostas continuarem chegando com atraso ou truncamento.
+- [ ] **Pendências separadas:** proteção TX-ativo para suspender escritas, orientação inversa MAIN TX/SUB RX, uplink/downlink mesma banda ISS SPLIT e reserva de ajuste manual Doppler.
+
 ## v1.3.5 — correção SAT FA/FB e prevenção de disputa VFO (16/10/2026)
 - [x] **Documentação CAT oficial conferida:** manual Kenwood TS-2000, apêndice p.135, estabelece FA=downlink SAT e FB=uplink SAT; FC é o VFO independente do sub-receptor. A interpretação FA/FC adotada nas v1.3.3/v1.3.4 foi corrigida.
 - [x] **Driver CAT:** leitura periódica de SA/FA/FB/FC/MD; no SAT ON o uplink é obtido de FB e o SUB VFO de FC, com campos distintos. Sintonia inicial e Doppler contínuo escrevem FA/FB e exigem readback; sem PTT, ativação de SAT ou inversão automática.
