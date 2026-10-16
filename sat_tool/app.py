@@ -350,8 +350,11 @@ class MainWindow(QMainWindow):
         form.addWidget(label("Uplink · TX (MHz)"),2,0)
         form.addWidget(self.up_edit,3,0)
         self.down_edit.editingFinished.connect(self.pair_linear)
+        self.down_edit.editingFinished.connect(self.on_cat_operator_changed)
+        self.up_edit.editingFinished.connect(self.on_cat_operator_changed)
         self.rx_mode=QComboBox();self.tx_mode=QComboBox()
         for cb in (self.rx_mode,self.tx_mode):cb.addItems(["FM","USB","LSB","CW","AM","FSK"])
+        self.rx_mode.activated.connect(self.on_cat_operator_changed)
         form.addWidget(label("Modo RX"),4,0);form.addWidget(self.rx_mode,5,0)
         form.addWidget(label("Modo TX (referência)"),6,0);form.addWidget(self.tx_mode,7,0)
         fv.addLayout(form)
@@ -1813,6 +1816,15 @@ class MainWindow(QMainWindow):
         self.cat_selection_generation+=1
         if self.cat_tracking_armed:
             self.auto_tune_selected_satellite()
+
+    def on_cat_operator_changed(self,*args):
+        """Explicit changes to RX mode/frequency must immediately rearm Auto CAT."""
+        if not self.config.values.get("cat_auto_select",False):
+            return
+        if not self.radio.connected or not self.sat:
+            return
+        self.cat_selection_generation+=1
+        self.arm_cat_tracking()
 
     def arm_cat_tracking(self,*args):
         """Called only for an explicit user selection, not session restoration."""
