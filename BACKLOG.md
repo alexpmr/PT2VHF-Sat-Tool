@@ -1,3 +1,13 @@
+## P2 — Compactar bloco Passagens do Satélite Selecionado (16/10/2026)
+
+**Issue:** https://github.com/alexpmr/PT2VHF-Sat-Tool/issues/20
+
+- [ ] **Economia horizontal:** reduzir a largura excessiva do bloco **PASSAGENS DO SATÉLITE SELECIONADO · 36 H** sem forçar 520 px arbitrários (`nextpass.setMinimumWidth(520)` atual). Dar às seis colunas (Satélite, AOS local, TCA local, LOS local, Max °, Modos) espaço útil estritamente necessário a cabeçalhos e conteúdos completos; evitar `Stretch` que expande indefinidamente Satélite/Modos.
+- [ ] **Economia vertical:** reduzir margens internas, padding, espaços vazios e altura excessiva das linhas/painel; ajustar a participação vertical no painel direito de modo a liberar espaço à telemetria/mapa. Manter a tabela navegável e rolável com muitas passagens.
+- [ ] **Preservar 100% da informação:** jamais cortar/elipsar nomes, horários, modos ou elevação; usar quebra de linha e altura dinâmica quando o conteúdo for longo. Tooltip não deve ser a única forma de conhecer o valor completo. Preservar seleção, duplo clique e teclado.
+- [ ] **Responsividade e testes:** validar 1366×768 e 1920×1080; janela restaurada/maximizada; DPI 100/125/150/200%; idiomas suportados; zero/uma/muitas passagens e nomes extensos; PySide2 Win7 e PySide6 Win10/11. Comparar dimensões antes/depois e confirmar nenhuma regressão em mapa/telemetria.
+- [ ] **Aceite:** ganho mensurável de área útil em ambas as direções **sem esconder nenhuma informação**, sem perdas funcionais. **Status:** pedido registrado, implementação pendente.
+
 ## P0/P1 — Auto CAT contínuo, padrão de 2 h, layout e categorias da aba Satélites (16/10/2026)
 
 **Issue:** https://github.com/alexpmr/PT2VHF-Sat-Tool/issues/19
