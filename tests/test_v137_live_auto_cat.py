@@ -80,7 +80,8 @@ def test_online_loop_writes_corrected_fa_fb_without_reinitialize(monkeypatch):
     MainWindow.track_cat_frequencies(window,None)
     assert cat.tunes == [(145850012, 436800030)]
     assert len(sent) == 1 and sent[0][0] == "cat-track"
-    assert sent[0][1][2:] == (145850012, 436800030)
+    assert sent[0][1][2:4] == (145850012, 436800030)
+    assert sent[0][1][4] >= 0.0
     # At the same instant no second radio write is allowed.
     MainWindow.track_cat_frequencies(window,None)
     assert len(cat.tunes) == 1
@@ -153,6 +154,6 @@ def test_single_operator_control_and_autotune_on_cat_connect():
     assert "Sintonizar agora" not in app
     assert "cat_tune_now" not in app
     assert 'self.cat_tracking_armed=bool(self.config.values.get("cat_auto_select",False))' in app
-    assert 'self.track_cat_frequencies(now)' in app
+    assert 'self.track_cat_frequencies(now_utc())' in app
     assert 'self.background("cat-track",task)' in app
     assert 'self.threshold.setRange(1,1000)' in app
