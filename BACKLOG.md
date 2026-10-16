@@ -1,3 +1,12 @@
+## v1.3.7 — Auto CAT online contínuo (16/10/2026)
+- [x] **Relato TS-2000 após v1.3.6:** sintonia funciona após clicar em “Sintonizar agora”, mas FA/FB não acompanham o Doppler segundo a segundo. Causa: a ação manual efetuava a sintonia inicial sem armar necessariamente o rastreador contínuo; caminhos e estados concorrentes de Doppler.
+- [x] **Correção:** remover “Sintonizar agora” da UI; preferir uma única chave Auto CAT, com sintonia inicial e posterior acompanhamento continuamente via QTimer de 1 segundo, com escrita CAT apenas quando a diferença prevista chegar a 1 Hz, readback FA/FB e limite de apenas um job ativo.
+- [x] **Conexão persistida:** conexão automática retoma o Auto CAT somente quando a preferência está habilitada e SAT ON está confirmado. Não enviar PTT, nem ativar SAT de forma silenciosa; respeitar orientação, OMM/TLE, perfil crossband, ajustes manuais e erros CAT.
+- [x] **Migração:** 2 s/20 Hz padrão v1.3.6 migram para 1 s/1 Hz na primeira abertura da v1.3.7; configurações personalizadas e Auto CAT desabilitado permanecem intactos.
+- [x] **Regressões:** casos com dois ciclos de atualização sucessivos, ausência de reescrita na mesma janela, pausa por mudança manual, bloqueio de worker em andamento e sem sintonia quando desabilitado; builds Setup e Portable por arquitetura.
+- [ ] **Homologação física:** testar SO-50, CAT COM1/TS-2000 na v1.3.7, inclusive abaixo do horizonte com autorização, para verificar se FA/FB recebem atualizações contínuas e não ficam pausadas sem aviso. Medir atraso efetivo da porta serial e enviar LOGs.
+- [ ] **Outros itens:** desligar/rearmar durante TX real, orientação inversa MAIN TX/SUB RX, ISS V/V SPLIT e offset manual Doppler sem brigar com VFO.
+
 ## v1.3.6 — resposta CAT serial fragmentada (16/10/2026)
 - [x] **Evidência do rádio TS-2000 físico:** LOG v1.3.4 exportado às 00:55 comprova COM1 conectada, sintonia FA/downlink aplicada e uso indevido de FC/uplink corrigido em v1.3.5. A partir de 00:55:08, CAT passa a receber `F` e `A00436799891;` separadamente, `M` e `D4;`, e quadros SA/FC fragmentados, causando timeouts falsos de polling.
 - [x] **Parser serial:** recompor fragmentos de leitura até `;`, com timeout e limites fixos, ignorar quadros `?;` sem bloquear a próxima resposta; nunca repetir comandos de escrita.
