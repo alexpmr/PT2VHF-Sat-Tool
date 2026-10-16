@@ -1873,6 +1873,8 @@ class MainWindow(QMainWindow):
             return False
         try:
             ul,dl=self.nominal_hz()
+            if ul is not None and not self.is_safe_crossband(ul,dl):
+                return blocked("transponder na mesma banda: perfil SPLIT/SAT separado ainda não disponível")
             station=self.saved_station()
             pos=position(self.sat,station,ts=self.ts)
             if ul is not None:
@@ -2019,7 +2021,7 @@ class MainWindow(QMainWindow):
                 if not self.omm_fresh():
                     raise ValueError('OMM antigo: atualize antes de controlar o rádio automaticamente')
                 scope='inclusive fora da visada' if self.config.values.get('cat_doppler_out_of_view',False) else 'durante a passagem visível'
-                if QMessageBox.question(self,'Ativar Doppler',f'Permitir alterar periodicamente FA/FB {scope}?') != QMessageBox.Yes:
+                if QMessageBox.question(self,'Ativar Doppler',f'Permitir alterar periodicamente FA/FC {scope}?') != QMessageBox.Yes:
                     raise ValueError('Operação cancelada')
                 self.log('Doppler automático habilitado pelo operador')
             except Exception as exc:
@@ -2296,7 +2298,8 @@ class MainWindow(QMainWindow):
                 self.preview_doppler(pos=pos,when=now)
                 if (self.last_map_time is None or (now-self.last_map_time).total_seconds()>=12):
                     self.update_map();self.last_map_time=now
-                if self.doppler_checkbox.isChecked():
+                self.track_cat_frequencies(now)
+                if self.doppler_checkbox.isChecked() and not self.cat_tracking_armed:
                     if not cat_doppler_allowed(pos['visible'],self.config.values.get('cat_doppler_out_of_view',False)) or not self.omm_fresh() or not self.radio.connected or not self.radio.state.sat:
                         self.doppler_checkbox.setChecked(False)
                         self.log('Doppler CAT parado: visada, OMM antigo, SAT desligado ou CAT desconectado')
@@ -2374,6 +2377,39 @@ class MainWindow(QMainWindow):
                     f"NORAD {ident} · {status}\n"
                     f"Restante estimado: {eta} · Decorrido: {format_duration(elapsed)}")
                 self.frequency_progress_dialog.setValue(index)
+            return
+        if key=="cat-connect":
+            self.cat_connecting=False
+            self.cat_indicator.setEnabled(True)
+            self.connection.setEnabled(True)
+            self.connection.setText("Desconectar")
+            self.cat_tune_now.setEnabled(True)
+            self.cat_diagnose.setEnabled(True)
+            self.render_radio_state(data)
+            self.cat_tune_status.setText("CAT conectado · leitura MAIN/SUB válida · aguardando seleção explícita")
+            self.config.values.update({"port":self.radio.port.port,
+                "baud":int(self.baud_combo.currentText()),
+                "stopbits":int(self.stops_combo.currentText())})
+            self.config.save()
+            self.log("CAT: conectado e conferido por ID/SA/FA/FC/MD")
+            # No writes on startup, even with Auto CAT enabled by default.
+            if self.cat_tracking_armed and not self.cat_connect_was_startup:
+                self.auto_tune_selected_satellite()
+            return
+        if key=="cat-track":
+            generation,state,ul,dl=data
+            if state is not None and generation==self.cat_selection_generation:
+                self.last_freqs=(ul,dl)
+                self.render_radio_state(state)
+                self.cat_tune_status.setText("CAT: acompanhamento contínuo ativo · MAIN/SUB confirmados")
+            return
+        if key=="logs-export":
+            path,count=data
+            self.export_logs.setEnabled(True)
+            self.log("Log local exportado: "+str(path))
+            QMessageBox.information(self,"Exportação concluída",
+                f"Arquivo salvo em:\\n{path}\\n\\n{count} arquivo(s) de histórico incluídos. "
+                "O pacote pode conter indicativo, posição e comandos CAT; revise antes de compartilhar.")
             return
         if key=="cat-autotune":
             self.cat_tune_manual_request=False
@@ -2477,6 +2513,31 @@ class MainWindow(QMainWindow):
                 self.frequency_progress_dialog.close()
                 self.frequency_progress_dialog=None
             self.catalog_progress.setText("SatNOGS: falha, cache anterior preservado")
+            return
+        if key=="cat-connect":
+            self.cat_connecting=False
+            self.cat_indicator.setEnabled(True)
+            self.connection.setEnabled(True)
+            self.connection.setText("Conectar")
+            self.cat_tune_now.setEnabled(False)
+            self.cat_diagnose.setEnabled(False)
+            self.cat_indicator.setText("! CAT DESCONECTADO / ERRO")
+            self.cat_indicator.setStyleSheet("font-size:14px;font-weight:800;color:#ff9595")
+            self.cat_tune_status.setText("CAT: conexão falhou · "+message)
+            self.log("CAT: falha ao conectar: "+message)
+            if not self.cat_connect_was_startup:
+                QMessageBox.warning(self,"Falha de conexão CAT",message)
+            return
+        if key=="cat-track":
+            self.cat_tracking_armed=False
+            self.cat_tune_status.setText("CAT: rastreamento pausado · "+message)
+            self.log("CAT contínuo pausado após falha: "+message)
+            if self.radio.connected:
+                self.background("cat-poll",self.radio.poll)
+            return
+        if key=="logs-export":
+            self.export_logs.setEnabled(True)
+            QMessageBox.warning(self,"Erro ao exportar log",message)
             return
         if key=="cat-autotune":
             was_manual=self.cat_tune_manual_request
@@ -2676,8 +2737,10 @@ class MainWindow(QMainWindow):
         self.config.values["cat_auto_select"]=bool(enabled)
         self.config.save()
         if enabled:
+            self.cat_tracking_armed=True
             self.auto_tune_selected_satellite()
         else:
+            self.cat_tracking_armed=False
             self.cat_selection_generation+=1
             self.cat_tune_status.setText("Auto CAT desligado · sintonia somente por comando manual")
 
