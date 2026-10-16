@@ -4,24 +4,32 @@
 
 ## Downloads — instaladores e portáteis
 
-**PT2VHF Sat Tool v1.3.1 — Windows 7 SP1, Windows 10 e Windows 11.** Os quatro downloads são arquivos `.exe` diretos. Links ficam disponíveis após aprovação dos builds Windows. Embora seja o marco 1.0 de funcionalidades, permanece em pré-lançamento até a homologação CAT com TS-2000 físico e Windows 7 real.
+**PT2VHF Sat Tool v1.3.2 — Windows 7 SP1, Windows 10 e Windows 11.** Os quatro downloads são arquivos `.exe` diretos. Links ficam disponíveis após aprovação dos builds Windows. Embora seja o marco 1.0 de funcionalidades, permanece em pré-lançamento até a homologação CAT com TS-2000 físico e Windows 7 real.
 
 | Windows | Instalável | Portátil |
 | --- | --- | --- |
-| **Windows 7 SP1** (x86; executável de 32 bits também para Win7 x64) | [Instalador Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.1/PT2VHF-Sat-Tool-v1.3.1-Win7-x86-Setup.exe) | [Portable Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.1/PT2VHF-Sat-Tool-v1.3.1-Win7-x86-Portable.exe) |
-| **Windows 10 (1809+)/11** (x64; arquivo `Win11-x64` para manter atualizador) | [Instalador Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.1/PT2VHF-Sat-Tool-v1.3.1-Win11-x64-Setup.exe) | [Portable Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.1/PT2VHF-Sat-Tool-v1.3.1-Win11-x64-Portable.exe) |
+| **Windows 7 SP1** (x86; executável de 32 bits também para Win7 x64) | [Instalador Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.2/PT2VHF-Sat-Tool-v1.3.2-Win7-x86-Setup.exe) | [Portable Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.2/PT2VHF-Sat-Tool-v1.3.2-Win7-x86-Portable.exe) |
+| **Windows 10 (1809+)/11** (x64; arquivo `Win11-x64` para manter atualizador) | [Instalador Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.2/PT2VHF-Sat-Tool-v1.3.2-Win11-x64-Setup.exe) | [Portable Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.2/PT2VHF-Sat-Tool-v1.3.2-Win11-x64-Portable.exe) |
 
 **Formato dos downloads:** tanto instaladores quanto portáteis são entregues diretamente como arquivos **`.exe`**. O portátil inclui as dependências dentro do mesmo EXE (PyInstaller onefile) e não requer descompactação.
 
 **[Todas as releases](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases)** · **[Acompanhar compilação](https://github.com/alexpmr/PT2VHF-Sat-Tool/actions)**
 
 - **Instalável:** instalação por usuário, atalho e desinstalação, atualização pelo aplicativo usando o Setup de sua edição.
-- **Portátil:** execute diretamente `PT2VHF-Sat-Tool-v1.3.1-*-Portable.exe` (um único arquivo). Configurações ficam em `data/` ao lado do EXE, preservadas após atualizações.
+- **Portátil:** execute diretamente `PT2VHF-Sat-Tool-v1.3.2-*-Portable.exe` (um único arquivo). Configurações ficam em `data/` ao lado do EXE, preservadas após atualizações.
 - **Win7:** Python 3.8 x86 + PySide2/Qt5 + PyInstaller 5.13.2 (legado, precisa ser validado no Windows 7 real).
 - **Win10/11 x64:** Windows 10 1809+ ou Windows 11, Python 3.11 x64 + PySide6/Qt6 + PyInstaller 6.13.0.
 - Arquivos SHA256 acompanham cada compilação. A versão Windows 7 é experimental; não confundir sucesso do CI com homologação em campo.
 
 ---
+
+## Diagnóstico CAT v1.3.2 — leitura TS-2000 e SAT/MAIN/SUB
+
+- **RÁDIO REAL (CAT):** a tela Operação mostra agora RX (FA), TX (FB) e modo MAIN (MD) efetivamente lidos do TS-2000, separados das frequências orbitais calculadas.
+- **SAT/MAIN/SUB:** status SA interpretado e alerta explícito quando o rádio está SAT ON, porém MAIN=UPLINK e SUB=DOWNLINK, orientação que o controlador automático anterior bloqueia.
+- **Diagnosticar comunicação CAT · somente leitura:** botão na aba Operação para consultar `ID;`, `SA;`, `FA;`, `FB;`, `MD;`; mostra comandos, respostas e eventuais timeouts na aba LOGs / CAT e em popup. **Não escreve frequências, não altera modo SAT e não transmite.**
+- A leitura CAT com falha deixa de parecer uma frequência orbital válida; status indica leitura vencida ou indisponível.
+- **Importante:** esta edição serve para obter evidência do rádio real e diagnosticar a regressão reportada de sincronização bidirecional. Não afirmar correção definitiva da sintonia até validar respostas SA/FA/FB/MD físicas. O modo SUB TX ainda requer conferência manual.
 
 ## Correção v1.3.1 — sintonia automática CAT ao conectar (15/10/2026)
 
