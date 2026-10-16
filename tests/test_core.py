@@ -110,8 +110,11 @@ def test_cat_writes_only_safe_commands_in_simulation():
     rig.state=RadioState(True,'Kenwood TS-2000')
     st=rig.set_frequencies(145902000,435799000)
     assert st.uplink==145902000 and st.downlink==435799000
-    assert st.signal_main==18 and st.signal_sub==8
-    assert st.power_set_w==25 and st.meter_type=='ALC' and st.meter_value==14
+    # Fast CAT writes confirm SA/FA/FB; optional S-meters are polled separately.
+    assert st.signal_main is None and st.signal_sub is None
+    full=rig.poll()
+    assert full.signal_main==18 and full.signal_sub==8
+    assert full.power_set_w==25 and full.meter_type=='ALC' and full.meter_value==14
     assert 'FA00435799000;' in sim.writes
     assert 'FB00145902000;' in sim.writes
     assert not any(cmd.startswith('FC0') for cmd in sim.writes)

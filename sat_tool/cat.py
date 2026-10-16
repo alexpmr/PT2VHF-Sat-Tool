@@ -282,18 +282,41 @@ class TS2000:
             raise RuntimeError("Não foi possível confirmar o modo SAT")
         return state
 
-    def set_frequencies(self, uplink_hz: int, downlink_hz: int):
+    def poll_tracking(self):
+        """Low-latency live SAT readback; no FC/MD/meters in Doppler loop.
+
+        SA/FA/FB provide real radio state. Full telemetry remains available via
+        poll(), but it should not monopolize the COM port between live writes.
+        """
         with self.lock:
             sa=self._exchange("SA;","SA")
-            if not sa.startswith("SA1"):
+            fa=self._exchange("FA;","FA")
+            fb=self._exchange("FB;","FB")
+            self.state.sat_raw=sa
+            status=decode_satellite_status(sa)
+            self.state.sat=status["sat"]
+            self.state.downlink=parse_frequency(fa,"FA")
+            self.state.vfo_b=parse_frequency(fb,"FB")
+            self.state.uplink=self.state.vfo_b if self.state.sat else None
+            return self.state
+
+    def set_frequencies(self, uplink_hz: int, downlink_hz: int):
+        """Write VFOs only after SAT status is validated, then verify FA/FB fast."""
+        with self.lock:
+            sa=self._exchange("SA;","SA")
+            status=decode_satellite_status(sa)
+            if not status["sat"]:
                 raise RuntimeError("Ative SAT no rádio antes de alterar as frequências")
-            if len(sa)<5 or sa[4]!="1":
+            if not status["main_downlink"]:
                 raise RuntimeError("A seleção MAIN RX / SUB TX não está configurada")
+            # Never key TX/PTT. Confirm with short readback, not full SM/RM/FC poll.
             self._exchange(frequency_command("FA",downlink_hz))
             self._exchange(frequency_command("FB",uplink_hz))
-            state=self.poll()
+            state=self.poll_tracking()
             if state.downlink!=downlink_hz or state.uplink!=uplink_hz:
-                raise RuntimeError("TS-2000 não confirmou as frequências por CAT")
+                raise RuntimeError(
+                    f"TS-2000 não confirmou CAT: RX esperado {downlink_hz}, real {state.downlink}; "
+                    f"TX esperado {uplink_hz}, real {state.uplink}")
             return state
 
     def set_satellite_channel(self,downlink_hz:int,uplink_hz:int|None,rx_mode:str):

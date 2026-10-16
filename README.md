@@ -4,25 +4,43 @@
 
 ## Downloads — instaladores e portáteis
 
-**PT2VHF Sat Tool v1.3.7 — Windows 7 SP1, Windows 10 e Windows 11.** Os quatro downloads são arquivos `.exe` diretos. Links ficam disponíveis após aprovação dos builds Windows. Embora seja o marco 1.0 de funcionalidades, permanece em pré-lançamento até a homologação CAT com TS-2000 físico e Windows 7 real.
+**PT2VHF Sat Tool v1.3.8 — Windows 7 SP1, Windows 10 e Windows 11.** Os quatro downloads são arquivos `.exe` diretos. Links ficam disponíveis após aprovação dos builds Windows. Embora seja o marco 1.0 de funcionalidades, permanece em pré-lançamento até a homologação CAT com TS-2000 físico e Windows 7 real.
 
 | Windows | Instalável | Portátil |
 | --- | --- | --- |
-| **Windows 7 SP1** (x86; executável de 32 bits também para Win7 x64) | [Instalador Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.7/PT2VHF-Sat-Tool-v1.3.7-Win7-x86-Setup.exe) | [Portable Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.7/PT2VHF-Sat-Tool-v1.3.7-Win7-x86-Portable.exe) |
-| **Windows 10 (1809+)/11** (x64; arquivo `Win11-x64` para manter atualizador) | [Instalador Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.7/PT2VHF-Sat-Tool-v1.3.7-Win11-x64-Setup.exe) | [Portable Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.7/PT2VHF-Sat-Tool-v1.3.7-Win11-x64-Portable.exe) |
+| **Windows 7 SP1** (x86; executável de 32 bits também para Win7 x64) | [Instalador Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.8/PT2VHF-Sat-Tool-v1.3.8-Win7-x86-Setup.exe) | [Portable Win7 x86](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.8/PT2VHF-Sat-Tool-v1.3.8-Win7-x86-Portable.exe) |
+| **Windows 10 (1809+)/11** (x64; arquivo `Win11-x64` para manter atualizador) | [Instalador Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.8/PT2VHF-Sat-Tool-v1.3.8-Win11-x64-Setup.exe) | [Portable Win11 x64](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.8/PT2VHF-Sat-Tool-v1.3.8-Win11-x64-Portable.exe) |
 
 **Formato dos downloads:** tanto instaladores quanto portáteis são entregues diretamente como arquivos **`.exe`**. O portátil inclui as dependências dentro do mesmo EXE (PyInstaller onefile) e não requer descompactação.
 
 **[Todas as releases](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases)** · **[Acompanhar compilação](https://github.com/alexpmr/PT2VHF-Sat-Tool/actions)**
 
 - **Instalável:** instalação por usuário, atalho e desinstalação, atualização pelo aplicativo usando o Setup de sua edição.
-- **Portátil:** execute diretamente `PT2VHF-Sat-Tool-v1.3.7-*-Portable.exe` (um único arquivo). Configurações ficam em `data/` ao lado do EXE, preservadas após atualizações.
+- **Portátil:** execute diretamente `PT2VHF-Sat-Tool-v1.3.8-*-Portable.exe` (um único arquivo). Configurações ficam em `data/` ao lado do EXE, preservadas após atualizações.
 - **Win7:** Python 3.8 x86 + PySide2/Qt5 + PyInstaller 5.13.2 (legado, precisa ser validado no Windows 7 real).
 - **Win10/11 x64:** Windows 10 1809+ ou Windows 11, Python 3.11 x64 + PySide6/Qt6 + PyInstaller 6.13.0.
 - Arquivos SHA256 acompanham cada compilação. A versão Windows 7 é experimental; não confundir sucesso do CI com homologação em campo.
 
 ---
 
+
+## Novidades v1.3.8 — SO-50 FM V/U e diagnóstico do bloqueio CAT
+
+## Ajustes adicionais v1.3.8 — CAT online e agenda automática
+
+- **Doppler CAT em tempo real:** motor CAT com timer independente de 250 ms, sem depender da atualização do mapa. Intervalo de escrita configurável entre **0,25 e 15 segundos**, respeitando a variação mínima em Hz; não promete confirmação subsegundo se a porta serial ou rádio forem mais lentos.
+- **Leitura real FA/FB:** cada ajuste usa readback rápido SA/FA/FB, evitando consultar FC/modo/medidores a cada escrita. Exibe diferença em Hz entre o destino CAT enviado e o confirmado, tempo de comando e status sincronizado/divergente; mantém consultas periódicas de telemetria separadas.
+- **Seleção de satélite e transponder:** troca pela tabela ou pela lista de passagens aciona a sintonia automática, se Auto CAT estiver autorizado. Seleção manual do serviço é preservada quando o catálogo é atualizado.
+- **Próxima passagem e lista:** ambas refletem o satélite selecionado, não o próximo satélite da lista global. O topo usa o canal/transponder atualmente escolhido; datas e contador atualizados automaticamente. A lista de 36 horas é recalculada ao trocar de satélite e de cinco em cinco minutos; **removido o botão Recalcular passagens**. Painel lateral ampliado e sem quebra de linha em horários.
+- **Atualização de versões:** não há mais pop-up de aviso ou notas de novidades. A versão nova aparece apenas no botão da barra superior; clicar inicia download verificado por SHA256, com progresso, seguido de instalação. Sem versão disponível, o botão indica Última versão. Erros mantêm o aplicativo aberto.
+- **Teste físico pendente:** confirmar CAT em TS-2000 real, latência serial, qualidade de sincronização e segurança durante eventual transmissão.
+
+
+
+- Ao selecionar SO-50/NORAD 27607, o canal FM de referência AMSAT passa a ser o perfil padrão, com downlink RX **436,795 MHz** e uplink TX **145,850 MHz**. A ordenação de registros SatNOGS de telemetria ou com canais antigos não poderá substituir esse par na seleção inicial.
+- Em outros satélites, transponders completos e crossband passam à frente de entradas RX-only ou da mesma banda. A seleção explícita do operador é preservada durante atualização do catálogo.
+- O bloqueio CAT mostra exatamente as frequências **RX/TX**, o **NORAD**, o **nome do transponder** e o **motivo da recusa**; o LOG inclui a mesma evidência para diagnóstico. Não desliga a proteção para pares realmente incompatíveis nem envia PTT.
+- O acompanhamento Doppler contínuo a cada segundo da v1.3.7 foi mantido. Ainda é necessário verificar no TS-2000 real.
 
 ## Novidades v1.3.7 — Auto CAT contínuo, sem botão de sintonia
 
