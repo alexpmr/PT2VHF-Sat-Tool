@@ -1,3 +1,13 @@
+### P0 — Evidência adicional: seleção manual provoca sintonia única (16/10/2026)
+
+- **Relato em TS-2000 físico:** duplo clique no satélite na tabela **Passagens do Satélite Selecionado** ou escolha no campo **Satélite** provoca sinal sonoro no rádio e atualiza suas frequências **uma única vez**, para o instante da seleção. Sem novos cliques, o rádio não acompanha continuamente as correções Doppler observadas.
+- **Fluxo confirmado em `sat_tool/app.py`:** `self.pass_table.cellDoubleClicked → select_pass_satellite → sat_combo.setCurrentIndex → arm_cat_tracking → auto_tune_selected_satellite`; `sat_combo.activated → arm_cat_tracking → auto_tune_selected_satellite`. O botão de seleção reexecuta a **sintonia inicial**, diferentemente do scheduler periódico `cat_live_timer → cat_live_tick → track_cat_frequencies`.
+- **Hipótese:** caminho de inicialização funcional e caminho periódico interrompido, impedido por pré-condição ou bloqueado por worker/readback pendente. A nota audível **não** é confirmação de sequência contínua de comandos nem de transmissão Morse/PTT; conferir comandos CAT TX e leitura FA/FB com timestamps.
+- **Instrumentação exigida:** LOGs/CAT devem identificar sem flood (heartbeat periódico agregado + mudança de estado): tick do scheduler, satélite NORAD, elevação, previsão Doppler RX/TX, leitura real FA/FB e idade, diferença em Hz, `cat_tracking_armed`, `cat_auto_select`, status SAT, `pending_jobs` e motivo de cada *early return* (frequência igual, limiar, intervalo, OMM antigo, sem satélite/posição, falta de uplink, `cat_retry_after`, worker ocupado, geração inválida, porta desconectada). Contabilizar solicitações/confirmados/erros/retries sem inundar COM ou a UI.
+- **Aceite:** sem qualquer clique ou reconexão após a sintonia inicial, simular passagem por 10 minutos acima e abaixo do horizonte com no mínimo 10 setpoints divergentes e confirmar sucessivos envios CAT FA/FB + readback; repetir com rádio físico TS-2000, PTT inativo. Distinguir que o patch do PR #18 removeu o bloqueio por horizonte, mas **ainda não teve homologação física** e não prova resolução deste sintoma de seleção única.
+
+---
+
 ## P2 — Compactar bloco Passagens do Satélite Selecionado (16/10/2026)
 
 **Issue:** https://github.com/alexpmr/PT2VHF-Sat-Tool/issues/20
