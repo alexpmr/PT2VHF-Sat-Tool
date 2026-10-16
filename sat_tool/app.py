@@ -1755,7 +1755,7 @@ class MainWindow(QMainWindow):
         if (self.last_freqs[0] is not None and self.last_freqs[1] is not None
             and current.uplink is not None and current.downlink is not None
             and max(abs(current.uplink-self.last_freqs[0]),
-                    abs(current.downlink-self.last_freqs[1])) > max(100,2*int(self.threshold.value())):
+                    abs(current.downlink-self.last_freqs[1])) > max(100,2*int(self.threshold.value()))):
             self.cat_tracking_armed=False
             self.cat_tune_status.setText("CAT: PAUSADO · ajuste manual detectado no TS-2000; selecione o satélite para retomar")
             self.log("CAT: alteração manual de FA/FB detectada; Auto CAT pausado para preservar a sintonia do operador")
