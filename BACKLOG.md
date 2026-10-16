@@ -1,3 +1,16 @@
+## P0/P1 — Auto CAT contínuo, padrão de 2 h, layout e categorias da aba Satélites (16/10/2026)
+
+**Issue:** https://github.com/alexpmr/PT2VHF-Sat-Tool/issues/19
+
+- [ ] **P0 | Bug Auto CAT / TS-2000:** com Auto CAT ativado, rádio recebe a primeira sintonia Doppler corrigida, mas deixa de acompanhar as mudanças seguintes. Investigar `cat_live_tick`, workers `cat-track`/`cat-readback`, `cat_tracking_armed`, limiar/cadência, readback real FA/FB, slots concorrentes, erros e visibilidade; manter controle contínuo confirmado pelo rádio, sem PTT ou ativação silenciosa de SAT. Regressão prolongada e **teste físico obrigatório**.
+- [ ] **P1 | Auto CAT padrão:** exibir habilitado por padrão em novas instalações/perfis e restaurar seleção persistida. Não reativar uma desativação explícita nem sintonizar sem condições seguras (CAT conectado, SAT ON e perfil válido).
+- [ ] **P1 | Trajetória futura:** padrão `Trajetória=2 h` e `Direção=Futuro` ao iniciar, **mostrando efetivamente** a trajetória das próximas duas horas no mapa; persistir modificações do operador. Não confundir com tabela de passagens de 36 h.
+- [ ] **P2 | Configurações responsivas:** justificar/alinha rótulos e campos; largura útil conforme o valor esperado em Porta COM, fabricante/modelo, baud/stop bits, duração de trajetória, direção `Futuro` e outros controles, sem alongamento exagerado; testar janelas/DPI/idiomas.
+- [ ] **P1 | Aba Satélites — dropdown multisseleção:** substituir filtro de categoria única por categorias múltiplas selecionáveis (Amador, Estações, CubeSat, Starlink, OneWeb, Meteorológicos, Científicos, Visuais), com todas/limpar, combinação com pesquisa, persistência e contagens. Respeitar categorias superpostas, seleção/favoritos e distinção entre filtro *visual* e grupos configurados para *download*.
+- [ ] **Aceite:** simulação CAT com várias correções sucessivas e readback, recuperação após falha/reconexão, teste físico TS-2000, defaults e persistência, grid responsivo, filtros de múltiplas categorias em catálogos extensos.
+
+**Constatação prévia:** `config.py` já tem `cat_auto_select=True`, `trail_period="2 h"` e `trail_direction="Futuro"`; a aba Satélites já tem `catalog_category` de categoria única. Portanto são **correções de funcionamento/UX**, não recursos integralmente ausentes. Até homologação, não declarar Auto CAT contínuo corrigido.
+
 ## v1.3.11 — reconciliação da frequência CAT real com a previsão Doppler (16/10/2026)
 
 - [x] **Relato TS-2000:** painel CAT abaixo do mapa reflete alterações manuais no rádio, mas cartões superiores RX/TX calculados com Doppler não acompanham FA/FB; Auto CAT às vezes sintoniza uma única vez. Constatado no código: o limite para um novo comando comparava a previsão atual só à última frequência solicitada, não à FA/FB realmente lida; telemetria periódica não consultava FA/FB.
