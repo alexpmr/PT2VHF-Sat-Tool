@@ -38,13 +38,13 @@ def test_predicted_doppler_independent_of_visibility_and_cat_protected():
     assert receding["rx_offset_hz"]<0 and receding["tx_offset_hz"]>0
     assert approaching["rx_offset_hz"]>0 and approaching["tx_offset_hz"]<0
     assert approaching["rx_hz"]!=receding["rx_hz"]
-    # Frequency math has no line-of-sight gate; CAT does.
+    # Legacy helper supports a visibility gate, but active Auto CAT must not use it.
     assert not cat_doppler_allowed(False)
     assert cat_doppler_allowed(True)
     assert cat_doppler_allowed(False,True)
 
 
-def test_cat_out_of_view_setting_defaults_off_and_persists(tmp_path):
+def test_cat_out_of_view_setting_defaults_on_and_persists(tmp_path):
     config=Config(tmp_path)
     assert config.values["cat_doppler_out_of_view"] is True
     config.values["cat_doppler_out_of_view"]=True
@@ -59,6 +59,8 @@ def test_gui_wires_batch_checkboxes_and_every_second_preview():
     assert "def toggle_catalog_satellite_selection(self,row,col):" in source
     assert "self.preview_doppler(pos=pos,when=now)" in source
     assert "self.cat_live_timer.timeout.connect(self.cat_live_tick)" in source
-    assert "cat_doppler_allowed(self.last_pos[\"visible\"]" in source
+    active=source.split("    def track_cat_frequencies(self,now):",1)[1].split("    def cat_live_tick(self):",1)[0]
+    assert "cat_doppler_allowed(" not in active
+    assert "self.cat_outside" not in source
     assert "self.tick_timer.start(1000)" in source
     assert "FORA DA VISADA" in source
