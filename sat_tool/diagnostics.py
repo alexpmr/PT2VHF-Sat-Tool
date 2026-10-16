@@ -49,6 +49,11 @@ def run_self_test(report_path: str, expected_qt: str = "") -> int:
     except BaseException:
         result["error"] = traceback.format_exc()
     try:
+        # On Windows a launcher may pass a quoted argument literally.
+        # Strip only matching outer command-line quotes; the report remains local.
+        report_path = str(report_path).strip()
+        if len(report_path) >= 2 and report_path[0] == report_path[-1] == '"':
+            report_path = report_path[1:-1]
         destination = Path(report_path)
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
