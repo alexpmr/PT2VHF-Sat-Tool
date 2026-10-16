@@ -28,7 +28,8 @@ from . import __version__
 from .cat import TS2000, available_ports, decode_satellite_status
 from .catalog import refresh_orbits, load_orbits, refresh_transmitters, load_transmitters, age_hours, satellite_search_text, normalized_satellite_search, DEFAULT_GROUPS
 from .config import Config
-from .geolocation import GeoFix, lookup_approximate_ip, read_gps_serial
+from .geolocation import GeoFix
+from .maidenhead import maidenhead_to_latlon
 from .location_map import parse_coordinate_fields, sanitize_map_pick, valid_coordinates
 from .frequency import format_frequency,parse_mhz_input,frequency_label
 from .transponder import prioritized_transponders,cat_pair_diagnostic
@@ -633,41 +634,42 @@ class MainWindow(QMainWindow):
         for i,(txt,widget) in enumerate(fields):
             grid.addWidget(label(txt),i,0);grid.addWidget(widget,i,1)
         sg.addLayout(grid)
-        source_row=QHBoxLayout()
-        source_row.addWidget(label("Fonte de localização:"))
-        self.location_source=QComboBox()
-        self.location_source.addItems([
-            "Windows (se houver provedor de posição)",
-            "IP aproximado (cidade/região, com consentimento)",
-            "GPS USB / serial (NMEA)",
-            "Manual (sem consulta externa)",
-        ])
-        self.location_source.currentIndexChanged.connect(self.change_location_source)
-        source_row.addWidget(self.location_source,2)
-        self.gps_port=QComboBox();self.gps_port.setEditable(True)
-        self.gps_port.setToolTip("Porta COM do receptor GPS, diferente da porta CAT do TS-2000")
-        self.gps_port.setMinimumWidth(95)
-        self.gps_baud=QComboBox();self.gps_baud.addItems(["4800","9600","38400","115200"])
-        self.gps_baud.setCurrentText("9600")
-        source_row.addWidget(label("GPS COM:"));source_row.addWidget(self.gps_port)
-        source_row.addWidget(label("Baud:"));source_row.addWidget(self.gps_baud)
-        sg.addLayout(source_row)
+        locator_row=QHBoxLayout()
+        locator_row.addWidget(label("Grid Locator / QTH (Maidenhead):"))
+        self.grid_locator=QLineEdit()
+        self.grid_locator.setPlaceholderText("Ex.: GH64ab")
+        self.grid_locator.setToolTip(
+            "Informe um Grid Locator de 2, 4, 6, 8 ou 10 caracteres. "
+            "O centro da quadrícula preenche latitude/longitude; não é posição GPS exata.")
+        self.grid_locator.returnPressed.connect(self.apply_grid_locator)
+        self.grid_apply=QPushButton("Converter grid em coordenadas")
+        self.grid_apply.clicked.connect(self.apply_grid_locator)
+        locator_row.addWidget(self.grid_locator,1)
+        locator_row.addWidget(self.grid_apply)
+        sg.addLayout(locator_row)
         place=QHBoxLayout()
-        self.get_position=QPushButton("Obter localização da fonte selecionada")
+        self.get_position=QPushButton("Solicitar coordenadas ao navegador")
+        self.get_position.setToolTip(
+            "Solicita permissão explícita de localização ao navegador incorporado; "
+            "pode estar indisponível dependendo do Windows, permissões e QtWebEngine.")
         self.get_position.clicked.connect(self.geolocate)
         self.save_station_btn=QPushButton("Salvar estação")
-        self.save_station_btn.setObjectName('primary')
+        self.save_station_btn.setObjectName("primary")
         self.save_station_btn.clicked.connect(self.save_station)
-        self.station_map_button=QPushButton("Marcar estação no mapa")
-        self.station_map_button.clicked.connect(self.begin_station_map)
+        self.station_map_button=QPushButton()  # obsolete map-picker methods stay inert
+        self.station_map_button.hide()
         place.addWidget(self.get_position)
-        place.addWidget(self.station_map_button)
         place.addWidget(self.save_station_btn)
         sg.addLayout(place)
-        self.location_status=label("Sem consulta: escolha a fonte. IP é aproximado, GPS requer receptor, manual não usa rede.")
+        self.location_status=label(
+            "Escolha: latitude/longitude manual, Grid Locator, ou autorização de "
+            "geolocalização do navegador. Revise e salve a estação.")
         self.location_status.setStyleSheet("color:#a6cede;font-size:11px")
         sg.addWidget(self.location_status)
-        sg.addWidget(label("A latitude/longitude obtidas precisam ser conferidas e depois salvas manualmente. Consultar IP envia seu IP público ao provedor; nenhuma consulta é automática."))
+        sg.addWidget(label(
+            "Grid Locator preenche o centro da quadrícula, não uma posição exata. "
+            "A localização do navegador depende de autorização e suporte do sistema; "
+            "nada será salvo nem enviado ao rádio sem clicar em Salvar estação."))
         cfg.addWidget(station_group)
         profile_group,pg=group("PERFIL OPERACIONAL — MODOS E BANDAS")
         pg.addWidget(label("Modos selecionados determinam candidatos automáticos; as escolhas manuais permanecem salvas."))
@@ -844,9 +846,6 @@ class MainWindow(QMainWindow):
         self.altitude.setValue(float(c['altitude_m']))
         self.min_el.setValue(float(c['min_elevation']))
         self.baud_combo.setCurrentText(str(c['baud']))
-        self.gps_baud.setCurrentText(str(c.get('gps_baud',9600)))
-        if c.get('gps_port'):self.gps_port.setCurrentText(str(c['gps_port']))
-        self.change_location_source()
         for name,w in self.station_modes.items():
             w.setChecked(name in c.get("radio_modes",["FM","SSB","CW"]))
         for name,w in self.station_bands.items():
@@ -1176,113 +1175,96 @@ class MainWindow(QMainWindow):
         self.map_edit_bar.setVisible(False)
         self.station_map_button.setEnabled(True)
 
-    def change_location_source(self,*args):
-        source=self.location_source.currentIndex()
-        gps=(source==2)
-        self.gps_port.setVisible(gps)
-        self.gps_baud.setVisible(gps)
-        # The serial settings are independent of the TS-2000 CAT port.
-        self.get_position.setText(
-            ("Solicitar coordenadas ao Windows",
-             "Consultar IP aproximado (pedir autorização)",
-             "Ler posição GPS por COM",
-             "Inserir coordenadas manualmente")[source])
-        if source==0:
-            self.location_status.setText("Windows: exige serviço/provedor de localização e permissões habilitadas.")
-        elif source==1:
-            self.location_status.setText("IP aproximado: será enviada uma consulta HTTPS a ipwho.is SOMENTE após sua autorização.")
-        elif source==2:
-            self.location_status.setText("GPS NMEA: receptor conectado e porta COM exclusiva; nenhuma solicitação à Internet.")
-        else:
-            self.location_status.setText("Manual: digite latitude e longitude, confira altitude e clique em Salvar estação.")
+    def apply_grid_locator(self):
+        """Preview the geometric center; only Salvar estação persists location."""
+        try:
+            lat,lon=maidenhead_to_latlon(self.grid_locator.text())
+        except ValueError as exc:
+            self.location_status.setText("Grid Locator inválido: "+str(exc))
+            self.grid_locator.setFocus()
+            return
+        self.lat.setText(f"{lat:.8f}")
+        self.lon.setText(f"{lon:.8f}")
+        self.location_status.setText(
+            f"Grid {self.grid_locator.text().strip().upper()}: centro da quadrícula "
+            f"{lat:.8f}, {lon:.8f} · confira e clique em Salvar estação.")
+        self.log("Grid Locator convertido para prévia; estação salva permanece inalterada")
 
     def geolocate(self):
-        choice=self.location_source.currentIndex()
-        if choice==3:
-            self.lat.setFocus()
-            self.location_status.setText("Digite as coordenadas da antena manualmente e clique em Salvar estação.")
-            return
-        if choice==1:
-            consent=QMessageBox.question(self,"Localização aproximada por IP",
-                "Quer consultar sua região aproximada em https://ipwho.is/?\n\n"
-                "O serviço externo receberá seu IP público e metadados normais da requisição HTTPS. "
-                "O resultado pode indicar apenas a cidade ou região, NÃO a posição exata da estação.\n\n"
-                "Nada será salvo nem enviado ao rádio automaticamente. Continuar?",
-                QMessageBox.Yes | QMessageBox.No,QMessageBox.No)
-            if consent!=QMessageBox.Yes:
-                self.location_status.setText("Consulta IP cancelada. Coordenadas anteriores preservadas.")
-                return
-            self.location_status.setText("Consultando localização aproximada por IP com autorização…")
-            self.background("geo-ip",lookup_approximate_ip)
-            return
-        if choice==2:
-            port=self.gps_port.currentText().strip()
-            if not port:
-                QMessageBox.warning(self,"GPS","Selecione ou digite a porta COM do receptor GPS.")
-                return
-            cat=(self.ports.currentText() or self.config.values.get("port","")).strip()
-            if port.casefold()==cat.casefold():
-                QMessageBox.warning(self,"Porta em uso",
-                    "A porta do GPS deve ser diferente da porta CAT do TS-2000. "
-                    "Não usaremos o rádio como fonte de GPS.")
-                return
-            baud=int(self.gps_baud.currentText())
-            self.config.values.update({"gps_port":port,"gps_baud":baud})
-            self.config.save()
-            self.location_status.setText("Aguardando posição válida do GPS NMEA (até 12 s)…")
-            self.background("geo-gps",lambda:read_gps_serial(port,baud=baud,timeout_s=12))
-            return
+        """Request browser-native geolocation on operator click, never via IP/GPS."""
+        self.location_waiting=True
+        self.browser_geo_started=time.monotonic()
+        self.get_position.setEnabled(False)
+        self.location_status.setText(
+            "Navegador: solicitando permissão de localização; nenhuma informação foi salva.")
         try:
-            source=QGeoPositionInfoSource.createDefaultSource(self)
-            if source is None:
-                self.location_status.setText(
-                    "Windows sem provedor de localização. Use coordenadas manuais, IP aproximado "
-                    "com consentimento ou GPS serial.")
-                self.log("QtPositioning: provedor de localização indisponível no sistema")
-                return
-            self.pos_source=source
-            source.positionUpdated.connect(self.position_found)
-            self.location_waiting=True
-            if getattr(self,"location_timer",None) is None:
-                self.location_timer=QTimer(self)
-                self.location_timer.setSingleShot(True)
-                self.location_timer.timeout.connect(self.location_timed_out)
-            self.location_timer.start(13000)
-            source.requestUpdate(12000)
-            self.location_status.setText("Aguardando serviço de localização do Windows (até 13 s)…")
+            self.map.page().runJavaScript(
+                "window.requestBrowserGeolocation && window.requestBrowserGeolocation()")
+            if not hasattr(self,"browser_geo_timer"):
+                self.browser_geo_timer=QTimer(self)
+                self.browser_geo_timer.timeout.connect(self.poll_browser_geolocation)
+            self.browser_geo_timer.start(700)
         except Exception as exc:
-            self.location_waiting=False
-            self.location_status.setText(
-                "Windows não forneceu localização. Tente manual, IP opcional ou GPS serial.")
-            self.log(f"Falha ao consultar localização do Windows: {exc}")
+            self.finish_browser_geolocation("Navegador não disponível: "+str(exc))
 
-    def location_timed_out(self):
-        if getattr(self,"location_waiting",False):
-            self.location_waiting=False
-            self.log("Localização Windows: sem resposta dentro de 13 s")
-            self.location_status.setText(
-                "Tempo excedido no Windows; use GPS serial, IP aproximado (opcional) ou digite as coordenadas.")
-
-    def position_found(self,info):
-        if not getattr(self,"location_waiting",False):
-            return
-        coord=info.coordinate()
-        if not coord.isValid():
-            self.location_status.setText("O Windows retornou uma posição inválida; nenhuma coordenada alterada.")
-            return
-        self.location_waiting=False
-        timer=getattr(self,"location_timer",None)
-        if timer is not None:timer.stop()
+    def grant_browser_geo(self,security_origin,feature):
+        """Grant only an explicitly requested geolocation permission."""
+        page=self.map.page()
         try:
-            lat=float(coord.latitude())
-            lon=float(coord.longitude())
-            altitude=float(coord.altitude())
-            fix=GeoFix(lat,lon,"Localização do Windows",
-                       altitude_m=altitude if math.isfinite(altitude) else None,
-                       description="Provedor Qt/Windows").validate()
-            self.apply_location_fix(fix)
-        except (ValueError,TypeError) as exc:
-            self.location_status.setText(f"Posição Windows rejeitada: {exc}. Dados anteriores preservados.")
+            from .qt_compat import QT_BINDING
+            if QT_BINDING=="PySide6":
+                from PySide6.QtWebEngineCore import QWebEnginePage
+            else:
+                from PySide2.QtWebEngineWidgets import QWebEnginePage
+            geo=getattr(QWebEnginePage,"Geolocation",None)
+            if geo is None:geo=QWebEnginePage.Feature.Geolocation
+            granted=getattr(QWebEnginePage,"PermissionGrantedByUser",None)
+            denied=getattr(QWebEnginePage,"PermissionDeniedByUser",None)
+            if granted is None:
+                granted=QWebEnginePage.PermissionPolicy.PermissionGrantedByUser
+                denied=QWebEnginePage.PermissionPolicy.PermissionDeniedByUser
+            page.setFeaturePermission(
+                security_origin,feature,
+                granted if self.location_waiting and feature==geo else denied)
+        except Exception as exc:
+            self.log("Navegador: serviço de permissão de localização indisponível: "+str(exc))
+
+    def finish_browser_geolocation(self,message):
+        self.location_waiting=False
+        self.get_position.setEnabled(True)
+        if hasattr(self,"browser_geo_timer"):self.browser_geo_timer.stop()
+        self.location_status.setText(message)
+
+    def poll_browser_geolocation(self):
+        if not self.location_waiting:return
+        if time.monotonic()-self.browser_geo_started>18:
+            self.finish_browser_geolocation(
+                "Tempo excedido ao solicitar localização do navegador. "
+                "Informe latitude/longitude ou Grid Locator.")
+            return
+        self.map.page().runJavaScript(
+            "window.takeBrowserGeolocation && window.takeBrowserGeolocation()",
+            self.browser_geolocation_result)
+
+    def browser_geolocation_result(self,reply):
+        if not self.location_waiting or not isinstance(reply,dict):return
+        if reply.get("pending"):return
+        if reply.get("error"):
+            self.finish_browser_geolocation(
+                "Navegador não forneceu coordenadas: "+str(reply["error"])+
+                ". Use inserção manual ou Grid Locator.")
+            return
+        try:
+            fix=GeoFix(
+                float(reply["lat"]),float(reply["lon"]),"Navegador (geolocalização autorizada)",
+                accuracy_m=float(reply["accuracy"]) if reply.get("accuracy") is not None else None
+            ).validate()
+        except (ValueError,TypeError,KeyError) as exc:
+            self.finish_browser_geolocation("Posição do navegador inválida: "+str(exc))
+            return
+        self.finish_browser_geolocation(
+            "Navegador retornou coordenadas; confirme a prévia antes de salvar.")
+        self.apply_location_fix(fix)
 
     def apply_location_fix(self,fix):
         """Explicit preview; applies to edit controls only after confirmation."""
