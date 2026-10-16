@@ -26,8 +26,9 @@ def test_batch_default_habilitados_and_single_or_filtered():
     assert transmitter_batch_ids(0,"25544",enabled,[],orbits)==["25544"]
     assert transmitter_batch_ids(2,None,enabled,["25544","99999"],orbits)==["25544"]
     assert transmitter_batch_ids(0,None,enabled,[],orbits)==[]
+    assert transmitter_batch_ids(3,None,enabled,[],orbits)==["25544","27607","44881"]
     with pytest.raises(ValueError):
-        transmitter_batch_ids(3,None,enabled,[],orbits)
+        transmitter_batch_ids(4,None,enabled,[],orbits)
 
 
 def test_predicted_doppler_independent_of_visibility_and_cat_protected():
