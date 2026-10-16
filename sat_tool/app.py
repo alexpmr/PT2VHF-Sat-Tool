@@ -148,6 +148,8 @@ class MainWindow(QMainWindow):
         self.aos_alarm_target = None
         self.cat_selection_generation = 0
         self.cat_autotune_requested_generation = -1
+        self.cat_retry_after = 0.0
+        self.cat_consecutive_failures = 0
         self.cat_tune_manual_request = False
         self.cat_tracking_armed = False
         self.cat_connecting = False
@@ -293,7 +295,8 @@ class MainWindow(QMainWindow):
         self.pass_progress.setTextVisible(False)
         self.pass_progress.setStyleSheet("QProgressBar{background:#10243c;border:0;border-radius:3px}QProgressBar::chunk{background:#35d9b6;border-radius:3px}")
         upcoming_layout.addWidget(self.pass_progress)
-        op.addWidget(upcoming)
+        # The next-pass countdown belongs to orbital telemetry, not a
+        # separate banner consuming the full width above the operation.
         splitter = QSplitter(Qt.Horizontal)
         splitter.setChildrenCollapsible(False)
         left = QWidget()
@@ -358,13 +361,8 @@ class MainWindow(QMainWindow):
         # Retire the competing legacy Doppler control; use Auto CAT as the single control.
         self.doppler_checkbox=QCheckBox()
         self.doppler_checkbox.setChecked(False)
-        self.frequency_apply=QPushButton("Aplicar RX/TX no TS-2000")
-        self.frequency_apply.setObjectName('primary')
-        self.frequency_apply.clicked.connect(self.apply_freqs)
-        fv.addWidget(self.frequency_apply)
-        self.apply_main_mode=QPushButton("Aplicar modo RX (MAIN)")
-        self.apply_main_mode.clicked.connect(self.apply_rx_mode)
-        fv.addWidget(self.apply_main_mode)
+        # The old manual apply/sync buttons are removed: Auto CAT is the sole
+        # user-authorized, continuously verified frequency/mode write path.
         lv.addWidget(freqs)
         lv.addStretch(1)
         # Old satellite editor moves to Settings without deleting its controls.
@@ -448,8 +446,15 @@ class MainWindow(QMainWindow):
         # A Chromium renderer crash may leave the GUI running, so record it.
         try:self.map.page().renderProcessTerminated.connect(self.web_renderer_terminated)
         except AttributeError:pass
-        self.map.setHtml(Path(__file__).with_name("map.html").read_text(encoding="utf-8"),
-                         QUrl("about:blank"))
+        map_file=Path(__file__).with_name("map.html")
+        self.map.setHtml(map_file.read_text(encoding="utf-8"),
+                         QUrl.fromLocalFile(str(map_file.resolve())))
+        # The built-in browser asks for geolocation only when the operator
+        # explicitly clicks Solicitar coordenadas ao navegador.
+        try:
+            self.map.page().featurePermissionRequested.connect(self.grant_browser_geo)
+        except (AttributeError,TypeError):
+            self.log("Geolocalização QtWebEngine não suportada nesta edição")
         mv.addWidget(self.map,1)
         self.map_radio_label=label("CAT desconectado · RX — MHz · TX — MHz · Modo —")
         self.map_radio_label.setStyleSheet("font-size:13px;color:#f0c186;font-weight:700")
@@ -469,6 +474,7 @@ class MainWindow(QMainWindow):
         self.visibility=label("Aguardando localização")
         self.visibility.setObjectName('metric')
         sv.addWidget(self.visibility)
+        sv.addWidget(upcoming)
         rv.addWidget(stat)
         nextpass,np=group("PASSAGENS DO SATÉLITE SELECIONADO · 36 H")
         nextpass.setMinimumWidth(520)
@@ -1689,7 +1695,6 @@ class MainWindow(QMainWindow):
         ident=self.sat_combo.currentData()
         if ident==self._active_satellite_id and self.sat is not None:
             return  # The same satellite must not interrupt CAT.
-        self.suspend_cat_doppler("satélite selecionado mudou")
         self.last_freqs=(None,None)
         self.cat_autotune_requested_generation=-1
         self.cat_last_requested=(None,None)
@@ -1765,13 +1770,15 @@ class MainWindow(QMainWindow):
         self.refresh_satellite_table()
 
     def choose_mode(self):
-        self.suspend_cat_doppler("transponder/modo mudou")
         self.last_freqs=(None,None)
         self.cat_autotune_requested_generation=-1
         i=self.mode_combo.currentData()
         if not isinstance(i,int) or i<0 or i>=len(self.options):
             self.mode_note.setText("Modo manual: confira cada frequência e modo antes de usar.")
             self.preview_doppler()
+            self.cat_selection_generation+=1
+            if self.cat_tracking_armed:
+                self.auto_tune_selected_satellite()
             return
         opt=self.options[i]
         low,high=opt['downlink'],opt['downlink_high']
@@ -1845,8 +1852,9 @@ class MainWindow(QMainWindow):
         if not self.sat or not self.last_pos or not self.omm_fresh():
             return
         if (self.last_freqs==(None,None)
-                and self.cat_autotune_requested_generation!=self.cat_selection_generation
-                and self.down_edit.text().strip()):
+                and time.monotonic()>=self.cat_retry_after
+                and self.down_edit.text().strip()
+                and "cat-autotune" not in self.pending_jobs):
             # When a saved/updated catalog becomes ready, initiate once.
             self.auto_tune_selected_satellite()
             return
@@ -1854,17 +1862,9 @@ class MainWindow(QMainWindow):
             return
         if any(k in self.pending_jobs for k in ("cat-autotune","cat-track","cat-connect","cat-diagnostic")):
             return
-        # A manual MAIN/SAT-Uplink dial change must not trigger a VFO tug-of-war.
-        # Pausing explicitly is safer than overwriting the operator\'s adjustment.
-        current=self.radio.state
-        if (self.last_freqs[0] is not None and self.last_freqs[1] is not None
-            and current.uplink is not None and current.downlink is not None
-            and max(abs(current.uplink-self.last_freqs[0]),
-                    abs(current.downlink-self.last_freqs[1])) > max(100,2*int(self.threshold.value()))):
-            self.cat_tracking_armed=False
-            self.cat_tune_status.setText("CAT: PAUSADO · ajuste manual detectado no TS-2000; selecione o satélite para retomar")
-            self.log("CAT: alteração manual de FA/FB detectada; Auto CAT pausado para preservar a sintonia do operador")
-            return
+        # Live synchronization is authoritative while Auto CAT is enabled.
+        # A changed FA/FB readback is a divergence to correct, not an
+        # unconfirmed "manual change" that silently disables tracking.
         if not cat_doppler_allowed(self.last_pos["visible"],
                 self.config.values.get("cat_doppler_out_of_view",True)):
             return
@@ -2007,6 +2007,8 @@ class MainWindow(QMainWindow):
             return blocked("OMM/TLE vencido; atualize elementos orbitais antes de sintonizar")
         if "cat-autotune" in self.pending_jobs:
             self.cat_tune_status.setText("CAT: nova seleção aguardando sintonia anterior…")
+            return False
+        if time.monotonic()<self.cat_retry_after:
             return False
         try:
             ul,dl=self.nominal_hz()
@@ -2559,6 +2561,8 @@ class MainWindow(QMainWindow):
             generation,state,ul,dl,elapsed=data
             if state is not None and generation==self.cat_selection_generation:
                 self.last_freqs=(ul,dl)
+                self.cat_consecutive_failures=0
+                self.cat_retry_after=0.0
                 self.last_cat_track_completed=time.monotonic()
                 self.cat_last_roundtrip_ms=round(elapsed*1000)
                 self.render_radio_state(state)
@@ -2579,6 +2583,8 @@ class MainWindow(QMainWindow):
             generation,state=data
             if generation==self.cat_selection_generation and state is not None:
                 self.last_freqs=(state.uplink,state.downlink)
+                self.cat_consecutive_failures=0
+                self.cat_retry_after=0.0
                 self.cat_last_requested=(state.uplink,state.downlink)
                 self.last_cat_track_completed=time.monotonic()
                 self.last_tracking_write=0.0
@@ -2704,11 +2710,19 @@ class MainWindow(QMainWindow):
                 QMessageBox.warning(self,"Falha de conexão CAT",message)
             return
         if key=="cat-track":
-            self.cat_tracking_armed=False
-            self.cat_tune_status.setText("CAT: rastreamento pausado · "+message)
-            self.log("CAT contínuo pausado após falha: "+message)
-            if self.radio.connected:
-                self.background("cat-poll",self.radio.poll)
+            # A CAT timeout/readback mismatch must not silently turn off
+            # automatic tracking forever. Back off, read current SAT/FA/FB
+            # and reinitialize with fresh satellite/mode if still authorized.
+            self.cat_consecutive_failures+=1
+            self.cat_retry_after=time.monotonic()+min(8.0,0.5*2**min(4,self.cat_consecutive_failures))
+            self.last_freqs=(None,None)
+            self.cat_autotune_requested_generation=-1
+            self.cat_tune_status.setText(
+                f"CAT: resposta não confirmada · nova tentativa automática em "
+                f"{max(1,round(self.cat_retry_after-time.monotonic()))} s · "+message[:110])
+            self.log("CAT contínuo: falha recuperável, reconsultando SAT/FA/FB: "+message)
+            if self.radio.connected and "cat-poll" not in self.pending_jobs:
+                self.background("cat-poll",self.radio.poll_tracking)
             return
         if key=="logs-export":
             self.export_logs.setEnabled(True)
@@ -2738,12 +2752,14 @@ class MainWindow(QMainWindow):
                                     "O rádio não confirmou a sintonia solicitada. "
                                     "Isso não significa, necessariamente, perda da conexão CAT.\n\n"
                                     +message+"\n\nVeja também LOGs / CAT.")
-            # Retry only when a NEW explicit, valid satellite selection exists.
-            # A stale/unconfigured selection must not erase the real CAT error.
-            if (self.config.values.get("cat_auto_select",False) and self.radio.connected
-                    and self.sat is not None and self.sat_combo.currentData()
-                    and self.cat_autotune_requested_generation!=self.cat_selection_generation):
-                self.auto_tune_selected_satellite()
+            self.cat_consecutive_failures+=1
+            self.cat_retry_after=time.monotonic()+min(
+                8.0,0.5*2**min(4,self.cat_consecutive_failures))
+            self.last_freqs=(None,None)
+            self.cat_autotune_requested_generation=-1
+            if self.cat_tracking_armed and self.radio.connected:
+                self.cat_tune_status.setText(
+                    "CAT: sintonia pendente · tentando novamente automaticamente · "+message[:110])
             return
         if key=="cat-diagnostic":
             self.cat_diagnose.setEnabled(self.radio.connected)
