@@ -53,7 +53,8 @@ def test_ui_source_limits_large_catalog_and_keeps_cat_opt_in():
     source=(Path(__file__).resolve().parents[1]/"sat_tool"/"app.py").read_text(encoding="utf-8")
     assert "ids[:350]" in source
     assert "rows=rows[:350]" in source
-    assert 'if self._loading_catalog or item.column()!=0:return' in source
+    assert 'if self._loading_catalog:return' in source
+    assert 'self.catalog_table.cellClicked.connect(self.toggle_catalog_satellite_selection)' in source
     assert 'self.catalog_table.setItem(row,0,box)' in source
     assert 'self.auto_cat=QCheckBox(' in source
     assert 'self.cat_selection_generation+=1' in source
