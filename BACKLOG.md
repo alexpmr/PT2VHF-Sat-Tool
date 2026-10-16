@@ -1,3 +1,13 @@
+## v1.3.9 — Satélites, Passagens e telemetria CAT (16/10/2026)
+
+- [x] **Tabela Passagens:** ajustar colunas para aproveitamento total do painel: horários AOS/TCA/LOS e elevação máxima com largura pelo conteúdo; satélite e modos expandem proporcionalmente; horário/elevação centralizados e sem quebra.
+- [x] **Aba Satélites:** eliminar coluna “Selecionado” e seus checkboxes; um clique na linha marca/desmarca o NORAD persistido. Satélites selecionados exibem toda a linha em amarelo com letras pretas, tanto no catálogo filtrado quanto após atualização/reinício. Duplo clique continua abrindo a operação.
+- [x] **Baixar/atualizar frequências:** ignorar favoritos/selecionados/filtro e consultar todos os NORAD do catálogo orbital carregado. Conservar confirmação de download extenso, progresso, cancelamento, erros por satélite e cache existente.
+- [x] **Cartões RX/TX:** retirar a linha “Doppler ±Hz” de ambos, mantendo modo e frequência corrigida legíveis. Outras telas continuam com cálculo orbital e diagnóstico.
+- [x] **Telemetria do TS-2000:** leituras CAT periódicas separadas do loop de Doppler rápido, incluindo modo MAIN (MD), SAT e orientação/CTRL/TRACE/memória (SA), VFO SUB independente (FC), S-meter MAIN/SUB (SM0/SM1), potência **configurada** (PC) e medidor (RM), sempre rotulando ausência/frescura das leituras. Sem PTT.
+- [x] **Testes automatizados:** regressão da seleção e escopo global, read-only do rádio, cartões de frequência sem Doppler, QTableWidget responsiva e compatibilidade Qt5/Qt6.
+- [ ] **Validação externa:** confirmar no rádio TS-2000 físico a telemetria, latência e atualização sem travar o CAT Doppler; medir tempo real entre sondagens e resposta.
+
 ## v1.3.8 — CAT HRD-like e passagens por satélite selecionado (16/10/2026)
 - [x] **Sintoma TS-2000:** v1.3.7 sintoniza uma vez mas não acompanha continuamente Doppler, e mudança de satélite/modo pode não refletir no rádio. O laço dependia do tick principal de 1 s (com cálculos e mapa), fazia leitura CAT completa com medidores/FC após cada escrita, sofria concorrência de polling, e mudanças por clique em tabela não rearmavam explicitamente Auto CAT.
 - [x] **CAT:** timer autônomo 250 ms, controle independente de desenho/mapa, intervalo CAT configurável desde 0,25 s, comando FA/FB seguido de leitura rápida SA/FA/FB; só reprograma ao ultrapassar limiar configurado, mantendo execução serial e readback. Reduzir polls secundários para cada 8 s durante Auto CAT.
