@@ -4,18 +4,22 @@
 
 ## Downloads — Windows 10/11 x64
 
-**PT2VHF Sat Tool v1.3.12 — Windows 10 1809+ e Windows 11 (x64)**. O suporte a Windows 7 foi pausado por solicitação do mantenedor; versões históricas permanecem no GitHub, mas não receberão novos builds neste ciclo.
+**PT2VHF Sat Tool v1.3.13 — Windows 10 1809+ e Windows 11 (x64)**. O suporte a Windows 7 foi pausado por solicitação do mantenedor; versões históricas permanecem no GitHub, mas não receberão novos builds neste ciclo.
 
 | Edição | Download direto |
 | --- | --- |
-| **Instalável x64** | [Setup (.exe)](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.12/PT2VHF-Sat-Tool-v1.3.12-Win11-x64-Setup.exe) |
-| **Portátil x64** | [Portable (.exe)](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.12/PT2VHF-Sat-Tool-v1.3.12-Win11-x64-Portable.exe) |
+| **Instalável x64** | [Setup (.exe)](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.13/PT2VHF-Sat-Tool-v1.3.13-Win11-x64-Setup.exe) |
+| **Portátil x64** | [Portable (.exe)](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.13/PT2VHF-Sat-Tool-v1.3.13-Win11-x64-Portable.exe) |
 
 O sufixo `Win11-x64` é mantido para compatibilidade com o atualizador e também atende ao Windows 10 1809+. Arquivos SHA256 acompanham a release. [Todas as releases](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases) · [GitHub Actions](https://github.com/alexpmr/PT2VHF-Sat-Tool/actions).
 
 **Homologação física:** testes automatizados emulam CAT/TS-2000; a validação com rádio real, COM física e Windows de destino continua necessária.
 
 ---
+
+## Novidades v1.3.13 — aviso de nova versão
+
+- Quando houver versão nova, além do botão no topo, abre um aviso perguntando **se deseja atualizar agora**. **Atualizar agora** segue o mesmo download com verificação SHA-256 do botão de versão; **Depois** adia a mesma versão por 24 horas. Nada é instalado sem confirmação.
 
 ## Novidades v1.3.12 — Auto CAT e espaço útil
 

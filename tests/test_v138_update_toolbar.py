@@ -1,4 +1,8 @@
-"""Regression: update button owns download; no changelog/news modal."""
+"""Regression: update button owns download; no changelog/news modal.
+
+v1.3.13: the new-version prompt (maybe_prompt_update) only asks whether to
+update; it shows no changelog and starts the same request_update flow.
+"""
 from pathlib import Path
 
 ROOT=Path(__file__).resolve().parents[1]

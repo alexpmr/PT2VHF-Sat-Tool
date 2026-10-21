@@ -118,6 +118,7 @@ class MainWindow(QMainWindow):
         self.update_last_checked = 0
         self.update_distribution = install_flavor(QT_BINDING)
         self.manual_update_requested = False
+        self._update_prompted_version = None
         self.omm = {}
         self.sat = None
         self.options = []
@@ -1021,6 +1022,43 @@ class MainWindow(QMainWindow):
         self.update_dialog.setValue(0)
         self.version_btn.setText('Atualização em andamento…')
         self.background('update-download', lambda: download_update(u, lambda n,total:self.events.progress.emit(n,total)))
+
+    UPDATE_PROMPT_SNOOZE_SECONDS = 24 * 3600
+
+    def maybe_prompt_update(self, data):
+        """Pergunta se deseja atualizar ao detectar versão nova (v1.3.13).
+
+        Só "Atualizar agora" inicia o download, como o clique no botão de
+        versão; "Depois" adia a mesma versão por 24 h. Não abre sobre outro
+        diálogo nem repete a pergunta da mesma versão na sessão.
+        """
+        import time
+        if data is None or 'update-download' in self.pending_jobs:
+            return
+        if self._update_prompted_version == data.version:
+            return
+        snooze = self.config.values.get('update_prompt_snooze') or {}
+        if (snooze.get('version') == data.version
+                and time.time() - float(snooze.get('at') or 0) < self.UPDATE_PROMPT_SNOOZE_SECONDS):
+            return
+        if QApplication.activeModalWidget() is not None:
+            QTimer.singleShot(5000, lambda: self.maybe_prompt_update(self.available_update))
+            return
+        self._update_prompted_version = data.version
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Question)
+        box.setWindowTitle('Nova versão disponível')
+        box.setText(f'PT2VHF Sat Tool {data.version} está disponível (instalada: {__version__}).\n\n'
+                    'Deseja atualizar agora?')
+        update_now = box.addButton('Atualizar agora', QMessageBox.AcceptRole)
+        box.addButton('Depois', QMessageBox.RejectRole)
+        box.exec()
+        if box.clickedButton() is update_now:
+            self.request_update(manual=True)
+        else:
+            self.config.values['update_prompt_snooze'] = {'version': data.version, 'at': time.time()}
+            self.config.save()
+            self.log(f'Atualização {data.version} adiada por 24 h')
 
     def download_progress(self, current, total):
         if self.update_dialog:
@@ -2770,6 +2808,8 @@ class MainWindow(QMainWindow):
                 self.version_btn.setStyleSheet('background:#ae6616;color:white;border:1px solid #eda847')
                 if start_download:
                     self.request_update(manual=True)
+                else:
+                    self.maybe_prompt_update(data)
             else:
                 self.version_btn.setText('Última versão')
                 self.version_btn.setStyleSheet('background:#145a3d;color:#e6ffee')

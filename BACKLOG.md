@@ -1,3 +1,8 @@
+## v1.3.13 — aviso de nova versão (21/10/2026)
+
+- [x] **Pedido do mantenedor (também no APRS Client, Prop Tool, Mesh Analyzer e venus-8):** ao detectar versão nova, abrir popup perguntando se deseja atualizar, além do botão do topo. "Atualizar agora" = mesmo fluxo do clique no botão de versão (download + SHA-256); "Depois" adia 24 h (`update_prompt_snooze`); não abre sobre outro diálogo nem durante download.
+- [ ] Homologar em Windows com release real publicada.
+
 ## v1.3.12 — distribuição Windows 10/11 x64 e diagnóstico contínuo Auto CAT (16/10/2026)
 
 - [x] **Pausa Win7:** novos builds de Windows 7 x86 suspensos por solicitação do mantenedor, preservando releases históricas; distribuição somente **Windows 10/11 x64, Setup e Portable .exe**.

@@ -20,8 +20,8 @@ def test_gha_windows10_1809_minimum_both_release_and_local_build():
     assert "$Minimum = '10.0.17763'" in local
     assert "min_windows: '6.1sp1'" not in workflow
     assert "target: Win7-x86" not in workflow
-    assert "v1.3.12" in workflow
-    assert "$Version = '1.3.12'" in local
+    assert "v1.3.13" in workflow
+    assert "$Version = '1.3.13'" in local
     assert "10.0.22000" not in workflow
     assert "10.0.22000" not in local
 

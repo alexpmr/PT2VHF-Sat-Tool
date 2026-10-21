@@ -8,6 +8,8 @@ DEFAULTS = {
     "update_interval_s": 1, "tune_threshold_hz": 1,
     "auto_doppler": False, "selected_norad": "",
     "version_check_minutes": 15, "include_prereleases": True,
+    # Versão adiada pelo botão "Depois" do aviso de nova versão: {"version", "at"}.
+    "update_prompt_snooze": {},
     "last_update_notice": "",
     "radio_brand": "Kenwood", "radio_model": "TS-2000",
     "radio_modes": ["FM", "SSB", "CW"], "radio_bands": ["VHF", "UHF"],
