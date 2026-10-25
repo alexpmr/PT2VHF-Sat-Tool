@@ -6,10 +6,12 @@
 
 **PT2VHF Sat Tool v1.3.13 — Windows 10 1809+ e Windows 11 (x64)**. O suporte a Windows 7 foi pausado por solicitação do mantenedor; versões históricas permanecem no GitHub, mas não receberão novos builds neste ciclo.
 
-| Edição | Download direto |
-| --- | --- |
-| **Instalável x64** | [Setup (.exe)](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.13/PT2VHF-Sat-Tool-v1.3.13-Win11-x64-Setup.exe) |
-| **Portátil x64** | [Portable (.exe)](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.13/PT2VHF-Sat-Tool-v1.3.13-Win11-x64-Portable.exe) |
+| Edição | Download direto | Downloads (todas as versões) |
+| --- | --- | ---: |
+| **Instalável x64** | [Setup (.exe)](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.13/PT2VHF-Sat-Tool-v1.3.13-Win11-x64-Setup.exe) | ![downloads](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Falexpmr%2FPT2VHF-Sat-Tool%2Fbadges%2Fdownloads%2Fsetup.json) |
+| **Portátil x64** | [Portable (.exe)](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.13/PT2VHF-Sat-Tool-v1.3.13-Win11-x64-Portable.exe) | ![downloads](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Falexpmr%2FPT2VHF-Sat-Tool%2Fbadges%2Fdownloads%2Fportable.json) |
+
+**Total de downloads:** ![downloads](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Falexpmr%2FPT2VHF-Sat-Tool%2Fbadges%2Fdownloads%2Ftotal.json) · contagem acumulada de todas as versões, atualizada a cada hora.
 
 O sufixo `Win11-x64` é mantido para compatibilidade com o atualizador e também atende ao Windows 10 1809+. Arquivos SHA256 acompanham a release. [Todas as releases](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases) · [GitHub Actions](https://github.com/alexpmr/PT2VHF-Sat-Tool/actions).
 

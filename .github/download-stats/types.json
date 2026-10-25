@@ -1,0 +1,14 @@
+{
+ "types": [
+  [
+   "setup",
+   "-Setup\\.exe$"
+  ],
+  [
+   "portable",
+   "-Portable\\.(exe|zip)$"
+  ]
+ ],
+ "groups": {},
+ "total": []
+}
