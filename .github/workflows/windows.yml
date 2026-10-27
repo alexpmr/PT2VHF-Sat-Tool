@@ -183,7 +183,8 @@ jobs:
               --title "PT2VHF Sat Tool $RELEASE_TAG - Windows 10/11 x64" \
               --notes 'v1.3.14: atualizações automáticas passam a vir exclusivamente de www.pt2vhf.com (manifesto update.php com tamanho e SHA-256, sem redirecionamentos) e aviso do novo site oficial na abertura do programa. Esta release no GitHub existe apenas como ponte para instalações até v1.3.13; downloads oficiais em https://www.pt2vhf.com/sat' \
               --prerelease
-          gh release upload "$RELEASE_TAG" release/* --repo '${{ github.repository }}' --clobber  publish_site:
+          gh release upload "$RELEASE_TAG" release/* --repo '${{ github.repository }}' --clobber
+  publish_site:
     # Fonte oficial do OTA: www.pt2vhf.com. O repositório do site é implantado
     # pela integração Git da Hostinger; aqui apenas fazemos commit dos EXEs.
     # Configuração única: secret SITE_DEPLOY_TOKEN (PAT fine-grained com
