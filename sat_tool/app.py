@@ -20,7 +20,7 @@ from .qt_compat import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
     QLabel, QPushButton, QLineEdit, QComboBox, QGroupBox, QTabWidget, QPlainTextEdit,
     QSplitter, QMessageBox, QCheckBox, QTableWidget, QTableWidgetItem, QHeaderView,
-    QDoubleSpinBox, QAbstractItemView, QProgressDialog, QScrollArea, QProgressBar, QFileDialog,
+    QDoubleSpinBox, QAbstractItemView, QProgressDialog, QScrollArea, QProgressBar, QFileDialog, QDialog,
 )
 from .qt_compat import QWebEngineView, QGeoPositionInfoSource, qt_exec, QT_BINDING
 from skyfield.api import load
@@ -202,20 +202,50 @@ class MainWindow(QMainWindow):
         if self.config.values.get("cat_auto_connect_startup",True) and self.config.values.get("port","").strip():
             QTimer.singleShot(1200, self.startup_cat_connect)
 
+    OFFICIAL_SITE_NOTICE = {
+        "pt-BR": ("Downloads no site oficial", "A partir de agora, as novas versões e os instaladores do PT2VHF Sat Tool serão distribuídos pelo site oficial.", "Entendi"),
+        "en": ("Downloads on the official website", "From now on, new versions and installers of PT2VHF Sat Tool will be distributed through the official website.", "Got it"),
+        "es": ("Descargas en el sitio web oficial", "A partir de ahora, las nuevas versiones y los instaladores de PT2VHF Sat Tool se distribuirán a través del sitio web oficial.", "Entendido"),
+        "fr": ("Téléchargements sur le site officiel", "Désormais, les nouvelles versions et les installateurs de PT2VHF Sat Tool seront distribués via le site officiel.", "Compris"),
+        "de": ("Downloads auf der offiziellen Website", "Ab sofort werden neue Versionen und Installationsprogramme von PT2VHF Sat Tool über die offizielle Website verteilt.", "Verstanden"),
+        "it": ("Download sul sito ufficiale", "D’ora in poi, le nuove versioni e i programmi di installazione di PT2VHF Sat Tool saranno distribuiti tramite il sito ufficiale.", "Ho capito"),
+    }
+
     def show_official_site_notice(self):
-        """One informational notice per launch; independent of update availability."""
-        import webbrowser
-        box = QMessageBox(self)
-        box.setWindowTitle('Novo site oficial PT2VHF')
-        box.setIcon(QMessageBox.Information)
-        box.setText('Conheça o novo site oficial: www.PT2VHF.com\n\n'
-                    'Downloads, novas versões e informações do PT2VHF Sat Tool agora ficam no site; '
-                    'as atualizações automáticas também são baixadas de lá.')
-        visit = box.addButton('Visitar site', QMessageBox.AcceptRole)
-        box.addButton('Fechar', QMessageBox.RejectRole)
-        box.exec()
-        if box.clickedButton() is visit:
-            webbrowser.open('https://www.pt2vhf.com/sat')
+        """Aviso "Downloads no site oficial" (mesmo visual do PT2VHF Mesh Analyzer), uma vez por abertura."""
+        if QApplication.activeModalWidget() is not None:
+            QTimer.singleShot(2000, self.show_official_site_notice)
+            return
+        locale = self.config.values.get("language", "pt-BR")
+        title, body, close = self.OFFICIAL_SITE_NOTICE.get(locale, self.OFFICIAL_SITE_NOTICE["en"])
+        dialog = QDialog(self)
+        dialog.setWindowTitle(title)
+        dialog.setModal(True)
+        dialog.setMinimumWidth(520)
+        dialog.setStyleSheet(
+            "QDialog{background:#2a2c33;border:1px solid #708a99;border-radius:13px}"
+            "QLabel{color:#eff6f9;font-size:14px}"
+            "QLabel#officialSiteTitle{font-size:20px;font-weight:bold}"
+            "QPushButton{color:#eff6f9;background:#2a2c33;border:2px solid #f5c400;border-radius:8px;padding:6px 16px}")
+        layout = QVBoxLayout(dialog)
+        layout.setContentsMargins(24, 24, 24, 24)
+        layout.setSpacing(14)
+        heading = QLabel(title)
+        heading.setObjectName("officialSiteTitle")
+        text = QLabel(body)
+        text.setWordWrap(True)
+        link = QLabel('<a href="https://www.pt2vhf.com/sat" style="color:#72d2ff;font-weight:bold">www.PT2VHF.com</a>')
+        link.setOpenExternalLinks(True)
+        buttons = QHBoxLayout()
+        buttons.addStretch(1)
+        ok = QPushButton(close)
+        ok.clicked.connect(dialog.accept)
+        buttons.addWidget(ok)
+        for widget in (heading, text, link):
+            layout.addWidget(widget)
+        layout.addLayout(buttons)
+        ok.setFocus()
+        dialog.exec() if QT_BINDING != "PySide2" else dialog.exec_()
 
     def log(self,message):
         """Qt widgets may only be modified from the GUI thread.
