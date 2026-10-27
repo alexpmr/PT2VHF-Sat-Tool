@@ -33,3 +33,9 @@ def test_user_selection_overrides_auto_and_is_stable():
     assert choose_satellites(sat,{},["SSB"],["VHF","UHF"])==["44881"]
     assert choose_satellites(sat,{},["FM"],["VHF","UHF"],["99999"])==["99999"]
     assert choose_satellites(sat,{},["FM"],["VHF","UHF"],[])==[]
+
+
+def test_v1315_default_satellites_iss_io86_so50(tmp_path):
+    from sat_tool.config import Config
+    cfg = Config(tmp_path)
+    assert cfg.values["satellite_selection"] == ["25544", "40931", "27607"]

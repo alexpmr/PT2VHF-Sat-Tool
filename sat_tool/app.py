@@ -506,7 +506,9 @@ class MainWindow(QMainWindow):
         self.visibility=label("Aguardando localização")
         self.visibility.setObjectName('metric')
         sv.addWidget(self.visibility)
-        sv.addWidget(upcoming)
+        # v1.3.15: bloco "Próxima passagem do satélite selecionado" removido da
+        # tela; os widgets continuam vivos (atualizados pelo timer) sem exibição.
+        self._upcoming_group=upcoming
         rv.addWidget(stat)
         nextpass,np=group("PASSAGENS DO SATÉLITE SELECIONADO · 36 H")
         # Compact and readable in narrower windows: dates use two lines,

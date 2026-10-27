@@ -13,7 +13,8 @@ DEFAULTS = {
     "last_update_notice": "",
     "radio_brand": "Kenwood", "radio_model": "TS-2000",
     "radio_modes": ["FM", "SSB", "CW"], "radio_bands": ["VHF", "UHF"],
-    "satellite_selection": None, "tle_update_hours": 4,
+    # Instalações novas começam com ISS, IO-86 e SO-50 habilitados (v1.3.15).
+    "satellite_selection": ["25544", "40931", "27607"], "tle_update_hours": 4,
     "poll_interval_s": 1, "tle_source": "CelesTrak",
     "orbit_groups": ["amateur","stations","cubesat","starlink","oneweb","weather","science","visual"],
     "cat_auto_select": True, "cat_auto_connect_startup": True,

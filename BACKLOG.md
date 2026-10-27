@@ -1,3 +1,8 @@
+## v1.3.15 — seleção padrão ISS/IO-86/SO-50 (27/10/2026)
+
+- Padrão `satellite_selection` = 25544, 40931, 27607 (só instalações novas).
+- Bloco "Próxima passagem do satélite selecionado" removido da tela.
+
 ## v1.3.14 — OTA via www.pt2vhf.com (27/10/2026)
 
 - Atualizador migrado do GitHub Releases para o manifesto `https://www.pt2vhf.com/update.php?product=sat` (schema 1, igual ao APRS Client).
