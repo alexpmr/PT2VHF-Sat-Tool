@@ -189,14 +189,14 @@ jobs:
     # pela integração Git da Hostinger; aqui apenas fazemos commit dos EXEs.
     # Configuração única: secret SITE_DEPLOY_TOKEN (PAT fine-grained com
     # Contents: read/write no repositório do site) e, opcionalmente, a
-    # variável SITE_REPO (padrão alexpmr/PT2VHF-site).
+    # variável SITE_REPO (padrão alexpmr/PT2VHF-Site).
     name: Publicar no site www.pt2vhf.com
     needs: build
     if: github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     concurrency: pt2vhf-site-publish
     env:
-      SITE_REPO: ${{ vars.SITE_REPO || 'alexpmr/PT2VHF-site' }}
+      SITE_REPO: ${{ vars.SITE_REPO || 'alexpmr/PT2VHF-Site' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
