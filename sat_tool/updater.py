@@ -64,6 +64,7 @@ class AvailableUpdate:
     expected_sha256: Optional[str]
     expected_size: int
     html_url: str
+    counter_key: Optional[str] = None
 
 
 def is_official_asset(url: str, name: str) -> bool:
@@ -118,8 +119,33 @@ def select_release(manifest, current_version: str, variant: str, kind: str,
         return AvailableUpdate(
             version=version, body=str(manifest.get('notes') or ''), is_prerelease=False,
             asset_name=name, url=url, expected_sha256=sha, expected_size=size,
-            html_url=str(manifest.get('page') or WEB_URL))
+            html_url=str(manifest.get('page') or WEB_URL),
+            counter_key=_counter_key(entry))
     return None
+
+
+COUNTER_API = ORIGIN + '/download.php'
+
+
+def _counter_key(entry) -> Optional[str]:
+    key = entry.get('counterKey') or entry.get('category')
+    return key if isinstance(key, str) and re.fullmatch(r'[A-Za-z0-9_-]{1,40}', key) else None
+
+
+def record_download_count(update: AvailableUpdate, post=None) -> bool:
+    """Soma a atualização baixada pelo app ao contador do site (o mesmo dos downloads manuais).
+
+    Só no app empacotado e sem bloquear a instalação se o site não responder.
+    """
+    if not update.counter_key or (post is None and not getattr(sys, 'frozen', False)):
+        return False
+    try:
+        response = (post or requests.post)(
+            COUNTER_API, data={'action': 'count', 'product': 'sat', 'category': update.counter_key},
+            timeout=4, allow_redirects=False, headers={'User-Agent': 'PT2VHF-Sat-Tool-updater'})
+        return 200 <= response.status_code < 300
+    except Exception:
+        return False
 
 
 def check_for_update(current_version: str, variant: str, kind: str,
@@ -175,6 +201,7 @@ def download_update(update: AvailableUpdate, progress: Optional[Callable[[int, i
     if total != update.expected_size or digest.hexdigest() != expected:
         dest.unlink(missing_ok=True)
         raise ValueError('SHA-256 ou tamanho não confere: atualização abortada')
+    record_download_count(update)
     return dest
 
 
