@@ -4,18 +4,26 @@
 
 ## Downloads — Windows 10/11 x64
 
-**PT2VHF Sat Tool v1.3.13 — Windows 10 1809+ e Windows 11 (x64)**. O suporte a Windows 7 foi pausado por solicitação do mantenedor; versões históricas permanecem no GitHub, mas não receberão novos builds neste ciclo.
+**PT2VHF Sat Tool v1.3.14 — Windows 10 1809+ e Windows 11 (x64)**.
+
+**Novo site oficial: [www.PT2VHF.com](https://www.pt2vhf.com/sat)** — downloads (Setup e Portátil), novas versões e somas SHA-256 ficam no site. A partir da v1.3.14 o atualizador consulta exclusivamente `https://www.pt2vhf.com/update.php?product=sat`.
 
 | Edição | Download direto |
 | --- | --- |
-| **Instalável x64** | [Setup (.exe)](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.13/PT2VHF-Sat-Tool-v1.3.13-Win11-x64-Setup.exe) |
-| **Portátil x64** | [Portable (.exe)](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.3.13/PT2VHF-Sat-Tool-v1.3.13-Win11-x64-Portable.exe) |
+| **Instalável x64** | [Setup (.exe)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.3.14-Win11-x64-Setup.exe) |
+| **Portátil x64** | [Portable (.exe)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.3.14-Win11-x64-Portable.exe) |
 
-O sufixo `Win11-x64` é mantido para compatibilidade com o atualizador e também atende ao Windows 10 1809+. Arquivos SHA256 acompanham a release. [Todas as releases](https://github.com/alexpmr/PT2VHF-Sat-Tool/releases) · [GitHub Actions](https://github.com/alexpmr/PT2VHF-Sat-Tool/actions).
+O sufixo `Win11-x64` é mantido para compatibilidade com o atualizador e também atende ao Windows 10 1809+.
 
 **Homologação física:** testes automatizados emulam CAT/TS-2000; a validação com rádio real, COM física e Windows de destino continua necessária.
 
 ---
+
+## Novidades v1.3.14 — atualização pelo site PT2VHF.com
+
+- **OTA pelo site:** novas versões são consultadas e baixadas apenas de `www.pt2vhf.com` (manifesto `update.php?product=sat`, pasta `/downloads/sat-tool/`). Redirecionamentos e URLs externas são recusados; tamanho e SHA-256 publicados são obrigatórios.
+- **Aviso do novo site:** ao abrir o programa, uma mensagem curta divulga o novo site oficial www.PT2VHF.com, com botão para visitá-lo.
+- **Publicação:** o GitHub Actions compila os EXEs e faz commit no repositório do site, implantado pela integração Git da Hostinger.
 
 ## Novidades v1.3.13 — aviso de nova versão
 

@@ -1,5 +1,5 @@
 #define AppName "PT2VHF Sat Tool"
-#define AppVersion "1.3.13"
+#define AppVersion "1.3.14"
 #ifndef BuildFlavor
   #define BuildFlavor "Win11-x64"
 #endif
@@ -24,7 +24,7 @@ AppName={#AppName} ({#BuildFlavor})
 #endif
 AppVersion={#AppVersion}
 AppPublisher=PT2VHF
-AppPublisherURL=https://github.com/alexpmr/PT2VHF-Sat-Tool
+AppPublisherURL=https://www.pt2vhf.com/sat
 DefaultDirName={localappdata}\Programs\PT2VHF Sat Tool {#BuildFlavor}
 DefaultGroupName=PT2VHF Sat Tool {#BuildFlavor}
 OutputDir=..\dist

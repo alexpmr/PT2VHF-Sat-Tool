@@ -9,35 +9,82 @@ from sat_tool.updater import (AvailableUpdate, select_release, version_tuple,
 from sat_tool.satellite_info import orbital_characteristics, operational_characteristics, characteristics_text
 
 
-def sample_release(ver='0.1.3', prerelease=False):
-    stem=f'PT2VHF-Sat-Tool-v{ver}-Win7-x86'
-    return {'tag_name':f'v{ver}', 'draft':False, 'prerelease':prerelease,
-            'body':'Melhorias importantes', 'html_url':f'https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/tag/v{ver}',
-            'assets':[{'name':stem+'-Portable.exe','state':'uploaded',
-                       'browser_download_url':f'https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v{ver}/{stem}-Portable.exe',
-                       'digest':'sha256:'+ 'a'*64},
-                      {'name':stem+'-SHA256.txt','state':'uploaded',
-                       'browser_download_url':f'https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v{ver}/{stem}-SHA256.txt'}]}
+def sample_release(ver='0.1.3', variant='Win11-x64', kind='Portable', **changes):
+    name=f'PT2VHF-Sat-Tool-v{ver}-{variant}-{kind}.exe'
+    data={'schema':1,'source':'https://www.pt2vhf.com','product':'sat','status':'available',
+          'version':ver,'notes':'Melhorias importantes','page':'https://www.pt2vhf.com/sat',
+          'files':[{'name':name,'size':1234,'sha256':'a'*64,
+                    'url':'https://www.pt2vhf.com/downloads/sat-tool/'+name}]}
+    data.update(changes)
+    return data
 
 
 def test_version_semver_and_no_downgrade():
     assert version_tuple('v0.1.12')>(version_tuple('0.1.9'))
     assert version_tuple('v0.1.2-rc1') is None
-    assert select_release([sample_release('0.1.1')], '0.1.2','Win7-x86','Portable') is None
+    assert select_release(sample_release('0.1.1'), '0.1.2','Win11-x64','Portable') is None
+    assert select_release(sample_release('0.1.2'), '0.1.2','Win11-x64','Portable') is None
 
 
 def test_release_picks_exact_variant_and_asset():
-    r=select_release([sample_release('0.1.3')],'0.1.2','Win7-x86','Portable')
-    assert r.version=='0.1.3' and r.expected_sha256=='a'*64
-    assert select_release([sample_release()],'0.1.2','Win11-x64','Portable') is None
-    assert select_release([sample_release()],'0.1.2','Win7-x86','Setup') is None
+    r=select_release(sample_release('0.1.3'),'0.1.2','Win11-x64','Portable')
+    assert r.version=='0.1.3' and r.expected_sha256=='a'*64 and r.expected_size==1234
+    assert r.url.startswith('https://www.pt2vhf.com/downloads/sat-tool/')
+    assert select_release(sample_release(),'0.1.2','Win7-x86','Portable') is None
+    assert select_release(sample_release(),'0.1.2','Win11-x64','Setup') is None
 
 
-def test_release_filters_prerelease_and_missing_url():
-    assert select_release([sample_release(prerelease=True)],'0.1.2','Win7-x86','Portable',include_prereleases=False) is None
+@pytest.mark.parametrize('url', [
+    'http://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v0.1.3-Win11-x64-Portable.exe',
+    'https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v0.1.3/PT2VHF-Sat-Tool-v0.1.3-Win11-x64-Portable.exe',
+    'https://evil.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v0.1.3-Win11-x64-Portable.exe',
+    'https://www.pt2vhf.com/downloads/aprs-client/PT2VHF-Sat-Tool-v0.1.3-Win11-x64-Portable.exe',
+    'https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v0.1.3-Win11-x64-Portable.exe?x=1',
+])
+def test_release_rejects_assets_outside_site(url):
     bad=sample_release()
-    bad['assets'][0]['browser_download_url']='http://evil.example/payload'
-    assert select_release([bad],'0.1.2','Win7-x86','Portable') is None
+    bad['files'][0]['url']=url
+    assert select_release(bad,'0.1.2','Win11-x64','Portable') is None
+
+
+def test_release_requires_size_and_sha256():
+    for field, value in (('sha256','abc'),('size',0),('size','1234')):
+        bad=sample_release()
+        bad['files'][0][field]=value
+        assert select_release(bad,'0.1.2','Win11-x64','Portable') is None
+
+
+def test_manifest_must_be_sat_product_from_site():
+    with pytest.raises(ValueError):
+        select_release(sample_release(product='aprs'),'0.1.2','Win11-x64','Portable')
+    with pytest.raises(ValueError):
+        select_release(sample_release(source='https://github.com'),'0.1.2','Win11-x64','Portable')
+    assert select_release(sample_release(status='unpublished',version=None),'0.1.2','Win11-x64','Portable') is None
+
+
+def test_updater_never_contacts_github():
+    import sat_tool.updater as updater
+    source=Path(updater.__file__).read_text(encoding='utf-8')
+    assert 'github' not in source.casefold()
+    assert updater.UPDATE_API=='https://www.pt2vhf.com/update.php?product=sat'
+
+
+def test_download_rejects_hash_mismatch(monkeypatch):
+    import sat_tool.updater as updater
+    payload=b'MZ-not-the-published-file'
+    upd=select_release(sample_release(),'0.1.2','Win11-x64','Portable')
+    upd=replace(upd, expected_size=len(payload))
+    class Resp:
+        is_redirect=False; headers={'Content-Length':str(len(payload))}
+        def __enter__(self): return self
+        def __exit__(self,*a): return False
+        def raise_for_status(self): pass
+        def iter_content(self,chunk_size): yield payload
+    monkeypatch.setattr(updater.requests,'get',lambda *a,**k: Resp())
+    with pytest.raises(ValueError,match='SHA-256'):
+        updater.download_update(upd)
+    good=replace(upd, expected_sha256=hashlib.sha256(payload).hexdigest())
+    assert updater.download_update(good).read_bytes()==payload
 
 
 def test_checksum_manifest_exact_filename():

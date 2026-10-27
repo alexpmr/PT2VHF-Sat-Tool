@@ -206,9 +206,11 @@ class MainWindow(QMainWindow):
         """One informational notice per launch; independent of update availability."""
         import webbrowser
         box = QMessageBox(self)
-        box.setWindowTitle('Site oficial PT2VHF')
+        box.setWindowTitle('Novo site oficial PT2VHF')
         box.setIcon(QMessageBox.Information)
-        box.setText('Os downloads, novas versões e informações do PT2VHF Sat Tool estão disponíveis no site oficial: www.PT2VHF.com')
+        box.setText('Conheça o novo site oficial: www.PT2VHF.com\n\n'
+                    'Downloads, novas versões e informações do PT2VHF Sat Tool agora ficam no site; '
+                    'as atualizações automáticas também são baixadas de lá.')
         visit = box.addButton('Visitar site', QMessageBox.AcceptRole)
         box.addButton('Fechar', QMessageBox.RejectRole)
         box.exec()
@@ -270,7 +272,7 @@ class MainWindow(QMainWindow):
         headline.setStyleSheet('font-size:20px;font-weight:800;color:#e9fbff;letter-spacing:1px')
         header.addWidget(headline)
         self.version_btn = QPushButton("Verificar atualizações")
-        self.version_btn.setToolTip("Verificar versões no GitHub; iniciar atualização com autorização")
+        self.version_btn.setToolTip("Verificar versões em www.pt2vhf.com; iniciar atualização com autorização")
         self.version_btn.clicked.connect(lambda: self.request_update(manual=True))
         self.version_btn.setStyleSheet('background:#155a3e;border:1px solid #30a579;color:#e6fff4')
         header.addWidget(self.version_btn)
@@ -876,7 +878,7 @@ class MainWindow(QMainWindow):
         about_layout.addWidget(label(f"PT2VHF Sat Tool v{__version__} — Controle CAT do TS-2000"))
         about_layout.addWidget(label("Distribuição: Windows 10/11 x64; instalador Setup EXE e portátil EXE único. Win7 pausado."))
         about_layout.addWidget(label("Elementos orbitais: CelesTrak OMM/TLE. Transponders e modos: SatNOGS (créditos e licenças nos provedores)."))
-        about_layout.addWidget(label("Repositório: https://github.com/alexpmr/PT2VHF-Sat-Tool · Licença MIT"))
+        about_layout.addWidget(label("Site oficial e downloads: https://www.pt2vhf.com/sat · Licença MIT"))
         btn=QPushButton("Verificar versão");btn.clicked.connect(lambda:self.request_update(manual=True))
         about_layout.addWidget(btn);about_layout.addStretch()
         root.addTab(about,"Sobre")
@@ -1040,7 +1042,7 @@ class MainWindow(QMainWindow):
     UPDATE_PROMPT_SNOOZE_SECONDS = 24 * 3600
 
     def maybe_prompt_update(self, data):
-        """Pergunta se deseja atualizar ao detectar versão nova (v1.3.13).
+        """Pergunta se deseja atualizar ao detectar versão nova (v1.3.13; manifesto do site desde v1.3.14).
 
         Só "Atualizar agora" inicia o download, como o clique no botão de
         versão; "Depois" adia a mesma versão por 24 h. Não abre sobre outro

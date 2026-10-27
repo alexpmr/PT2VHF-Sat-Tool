@@ -1,3 +1,10 @@
+## v1.3.14 — OTA via www.pt2vhf.com (27/10/2026)
+
+- Atualizador migrado do GitHub Releases para o manifesto `https://www.pt2vhf.com/update.php?product=sat` (schema 1, igual ao APRS Client).
+- Aviso do novo site oficial na abertura.
+- CI publica Setup/Portable/SHA256 em `downloads/sat-tool/` e atualiza `updates.json` no repositório do site (secret `SITE_DEPLOY_TOKEN`).
+- Pendente: confirmar que `update.php` do site aceita `product=sat`.
+
 ## v1.3.13 — aviso de nova versão (21/10/2026)
 
 - [x] **Pedido do mantenedor (também no APRS Client, Prop Tool, Mesh Analyzer e venus-8):** ao detectar versão nova, abrir popup perguntando se deseja atualizar, além do botão do topo. "Atualizar agora" = mesmo fluxo do clique no botão de versão (download + SHA-256); "Depois" adia 24 h (`update_prompt_snooze`); não abre sobre outro diálogo nem durante download.

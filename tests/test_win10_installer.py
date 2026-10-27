@@ -20,8 +20,8 @@ def test_gha_windows10_1809_minimum_both_release_and_local_build():
     assert "$Minimum = '10.0.17763'" in local
     assert "min_windows: '6.1sp1'" not in workflow
     assert "target: Win7-x86" not in workflow
-    assert "v1.3.13" in workflow
-    assert "$Version = '1.3.13'" in local
+    assert "v1.3.14" in workflow
+    assert "$Version = '1.3.14'" in local
     assert "10.0.22000" not in workflow
     assert "10.0.22000" not in local
 
@@ -29,15 +29,8 @@ def test_gha_windows10_1809_minimum_both_release_and_local_build():
 def test_release_asset_names_stable_for_existing_updater():
     from sat_tool.updater import select_release
     stem="PT2VHF-Sat-Tool-v1.1.1-Win11-x64"
-    data=[{
-        "tag_name":"v1.1.1","draft":False,"prerelease":True,
-        "assets":[
-          {"name":stem+"-Setup.exe","state":"uploaded","browser_download_url":
-            "https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.1.1/"+stem+"-Setup.exe",
-            "digest":"sha256:"+"a"*64},
-          {"name":stem+"-SHA256.txt","state":"uploaded","browser_download_url":
-            "https://github.com/alexpmr/PT2VHF-Sat-Tool/releases/download/v1.1.1/"+stem+"-SHA256.txt"},
-        ]
-    }]
+    data={"schema":1,"source":"https://www.pt2vhf.com","product":"sat","status":"available",
+          "version":"1.1.1","files":[{"name":stem+"-Setup.exe","size":10,"sha256":"a"*64,
+          "url":"https://www.pt2vhf.com/downloads/sat-tool/"+stem+"-Setup.exe"}]}
     update=select_release(data,"1.1.0","Win11-x64","Setup")
     assert update and update.asset_name==stem+"-Setup.exe"
