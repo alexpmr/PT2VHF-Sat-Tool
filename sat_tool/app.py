@@ -204,8 +204,7 @@ class MainWindow(QMainWindow):
 
     def show_official_site_notice(self):
         """One informational notice per launch; independent of update availability."""
-        from PySide6.QtGui import QDesktopServices
-        from PySide6.QtCore import QUrl
+        import webbrowser
         box = QMessageBox(self)
         box.setWindowTitle('Site oficial PT2VHF')
         box.setIcon(QMessageBox.Information)
@@ -214,7 +213,7 @@ class MainWindow(QMainWindow):
         box.addButton('Fechar', QMessageBox.RejectRole)
         box.exec()
         if box.clickedButton() is visit:
-            QDesktopServices.openUrl(QUrl('https://www.pt2vhf.com/sat'))
+            webbrowser.open('https://www.pt2vhf.com/sat')
 
     def log(self,message):
         """Qt widgets may only be modified from the GUI thread.
