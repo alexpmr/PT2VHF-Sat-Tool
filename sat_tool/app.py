@@ -197,9 +197,24 @@ class MainWindow(QMainWindow):
         self.diagnostic_timer.timeout.connect(heartbeat)
         self.diagnostic_timer.start(30000)
         # Delay startup network I/O until the UI is visible.
+        QTimer.singleShot(1800, self.show_official_site_notice)
         QTimer.singleShot(12000, self.check_for_updates)
         if self.config.values.get("cat_auto_connect_startup",True) and self.config.values.get("port","").strip():
             QTimer.singleShot(1200, self.startup_cat_connect)
+
+    def show_official_site_notice(self):
+        """One informational notice per launch; independent of update availability."""
+        from PySide6.QtGui import QDesktopServices
+        from PySide6.QtCore import QUrl
+        box = QMessageBox(self)
+        box.setWindowTitle('Site oficial PT2VHF')
+        box.setIcon(QMessageBox.Information)
+        box.setText('Os downloads, novas versões e informações do PT2VHF Sat Tool estão disponíveis no site oficial: www.PT2VHF.com')
+        visit = box.addButton('Visitar site', QMessageBox.AcceptRole)
+        box.addButton('Fechar', QMessageBox.RejectRole)
+        box.exec()
+        if box.clickedButton() is visit:
+            QDesktopServices.openUrl(QUrl('https://www.pt2vhf.com/sat'))
 
     def log(self,message):
         """Qt widgets may only be modified from the GUI thread.
