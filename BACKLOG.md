@@ -1,5 +1,11 @@
 ## Pendentes
 
+- **Aviso do novo site no mesmo padrão dos demais projetos** (registrado em 28/10/2026)
+  - Referência: `docs/backlog/aviso-site-padrao-mesh.png` (aviso do PT2VHF Mesh Analyzer).
+  - Título "Downloads no site oficial"; texto "A partir de agora, as novas versões e os instaladores do
+    PT2VHF Sat Tool serão distribuídos pelo site oficial."; link clicável www.PT2VHF.com; botão único "Entendi".
+  - Substitui o QMessageBox atual ("Novo site oficial PT2VHF", botões Visitar site / Fechar).
+
 - **Painel Passagens do satélite selecionado · 36 h — usar melhor o espaço** (registrado em 28/10/2026)
   - Imagem: `docs/backlog/passagens-espaco-v1.3.15.png`.
   - Hoje a tabela fica espremida (colunas estreitas, nomes e datas quebrando em duas linhas, só ~2 linhas visíveis)
