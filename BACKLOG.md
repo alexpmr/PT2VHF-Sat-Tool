@@ -1,3 +1,12 @@
+## Pendentes
+
+- **Painel Passagens do satélite selecionado · 36 h — usar melhor o espaço** (registrado em 28/10/2026)
+  - Imagem: `docs/backlog/passagens-espaco-v1.3.15.png`.
+  - Hoje a tabela fica espremida (colunas estreitas, nomes e datas quebrando em duas linhas, só ~2 linhas visíveis)
+    enquanto sobra área vazia à direita da coluna Modos e abaixo da Telemetria orbital.
+  - Esticar as colunas até a largura do painel (Satélite e Modos elásticas), dar mais altura à tabela
+    aproveitando o espaço livre abaixo da telemetria, e reduzir quebras de linha desnecessárias.
+
 ## v1.3.15 — seleção padrão ISS/IO-86/SO-50 (27/10/2026)
 
 - Padrão `satellite_selection` = 25544, 40931, 27607 (só instalações novas).
