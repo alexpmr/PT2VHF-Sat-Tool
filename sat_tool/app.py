@@ -27,7 +27,7 @@ from skyfield.api import load
 from . import __version__
 from .cat import TS2000, available_ports, decode_satellite_status
 from .catalog import refresh_orbits, load_orbits, refresh_transmitters, load_transmitters, age_hours, satellite_search_text, normalized_satellite_search, DEFAULT_GROUPS
-from .config import Config
+from .config import Config, DEFAULT_SATELLITES
 from .geolocation import GeoFix
 from .maidenhead import maidenhead_to_latlon
 from .location_map import parse_coordinate_fields, sanitize_map_pick, valid_coordinates
@@ -203,19 +203,27 @@ class MainWindow(QMainWindow):
             QTimer.singleShot(1200, self.startup_cat_connect)
 
     def show_official_site_notice(self):
-        """One informational notice per launch; independent of update availability."""
-        import webbrowser
-        box = QMessageBox(self)
-        box.setWindowTitle('Novo site oficial PT2VHF')
-        box.setIcon(QMessageBox.Information)
-        box.setText('Conheça o novo site oficial: www.PT2VHF.com\n\n'
-                    'Downloads, novas versões e informações do PT2VHF Sat Tool agora ficam no site; '
-                    'as atualizações automáticas também são baixadas de lá.')
-        visit = box.addButton('Visitar site', QMessageBox.AcceptRole)
-        box.addButton('Fechar', QMessageBox.RejectRole)
-        box.exec()
-        if box.clickedButton() is visit:
-            webbrowser.open('https://www.pt2vhf.com/sat')
+        """Aviso do site oficial no mesmo padrão dos demais projetos PT2VHF (v1.3.16)."""
+        from .qt_compat import QDialog, QDialogButtonBox
+        dialog = QDialog(self)
+        dialog.setWindowTitle('PT2VHF Sat Tool')
+        layout = QVBoxLayout(dialog)
+        title = QLabel('Downloads no site oficial')
+        title.setStyleSheet('font-size:18px;font-weight:700')
+        text = QLabel('A partir de agora, as novas versões e os instaladores do PT2VHF Sat Tool '
+                      'serão distribuídos pelo site oficial.')
+        text.setWordWrap(True)
+        link = QLabel('<a href="https://www.pt2vhf.com/sat" style="color:#6cc7ff;font-weight:700">www.PT2VHF.com</a>')
+        link.setOpenExternalLinks(True)
+        buttons = QDialogButtonBox()
+        ok = buttons.addButton('Entendi', QDialogButtonBox.AcceptRole)
+        ok.setDefault(True)
+        buttons.accepted.connect(dialog.accept)
+        for widget in (title, text, link):
+            layout.addWidget(widget)
+        layout.addWidget(buttons)
+        dialog.setMinimumWidth(520)
+        qt_exec(dialog)
 
     def log(self,message):
         """Qt widgets may only be modified from the GUI thread.
@@ -511,8 +519,7 @@ class MainWindow(QMainWindow):
         self._upcoming_group=upcoming
         rv.addWidget(stat)
         nextpass,np=group("PASSAGENS DO SATÉLITE SELECIONADO · 36 H")
-        # Compact and readable in narrower windows: dates use two lines,
-        # long satellite/mode names wrap, with vertical scrolling if needed.
+        # Datas em uma linha; nomes/modos longos ainda quebram se a janela for estreita.
         nextpass.setMinimumWidth(0)
         self.pass_table=QTableWidget(0,6)
         self.pass_table.setHorizontalHeaderLabels(["Satélite","AOS\nlocal","TCA\nlocal","LOS\nlocal","Máx °","Modos"])
@@ -523,16 +530,16 @@ class MainWindow(QMainWindow):
         pass_header.setFixedHeight(36)
         for col in (1,2,3,4):
             pass_header.setSectionResizeMode(col,QHeaderView.ResizeToContents)
-        for col,width in ((0,110),(5,110)):
-            pass_header.setSectionResizeMode(col,QHeaderView.Interactive)
-            pass_header.resizeSection(col,width)
+        # v1.3.16: Satélite e Modos ocupam a largura livre do painel.
+        for col in (0,5):
+            pass_header.setSectionResizeMode(col,QHeaderView.Stretch)
         self.pass_table.setWordWrap(True)
         self.pass_table.setTextElideMode(Qt.ElideNone)
         self.pass_table.verticalHeader().setMinimumSectionSize(23)
         self.pass_table.verticalHeader().setDefaultSectionSize(28)
         self.pass_table.verticalHeader().hide()
-        self.pass_table.setMinimumHeight(110)
-        self.pass_table.setMaximumHeight(230)
+        # Sem altura máxima: a tabela cresce no espaço livre abaixo da telemetria.
+        self.pass_table.setMinimumHeight(160)
         self.pass_table.setStyleSheet("QTableWidget::item { padding: 1px 2px; }")
         self.pass_table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.pass_table.cellDoubleClicked.connect(self.select_pass_satellite)
@@ -1031,6 +1038,12 @@ class MainWindow(QMainWindow):
         if 'update-download' in self.pending_jobs:
             return
         u=self.available_update
+        if self.update_distribution[1]=='Manual':
+            # Linux/macOS: sem instalação automática; abre a página oficial de downloads.
+            import webbrowser
+            webbrowser.open(u.html_url or 'https://www.pt2vhf.com/sat')
+            self.log(f'Versão {u.version} disponível em www.pt2vhf.com/sat')
+            return
         # The version button click is authorization. No separate confirmation
         # or changelog popup; keep progress and SHA256 integrity checks.
         self.update_dialog=QProgressDialog('Baixando e verificando atualização…','',0,100,self)
@@ -2859,9 +2872,9 @@ class MainWindow(QMainWindow):
             self.passes=data[:75]
             self.pass_table.setRowCount(len(self.passes))
             for i,p in enumerate(self.passes):
-                aos=p['aos'].astimezone().strftime('%d/%m\n%H:%M')
-                peak=p['tca'].astimezone().strftime('%d/%m\n%H:%M') if p.get('tca') else '—'
-                los=p['los'].astimezone().strftime('%d/%m\n%H:%M')
+                aos=p['aos'].astimezone().strftime('%d/%m %H:%M')
+                peak=p['tca'].astimezone().strftime('%d/%m %H:%M') if p.get('tca') else '—'
+                los=p['los'].astimezone().strftime('%d/%m %H:%M')
                 modes=self.suggested_mode_text(p['id'])
                 for j,value in enumerate((p['name'],aos,peak,los,f"{p['max_el']:.0f}",modes)):
                     cell=QTableWidgetItem(value)
@@ -3012,8 +3025,10 @@ class MainWindow(QMainWindow):
         # Never scan tens of thousands of SatNOGS files for automatic suggestions.
         rows={ident:load_transmitters(self.config.dir,int(ident))
               for ident in self.omm if ident in CANDIDATES}
-        return choose_satellites(self.omm,rows,c.get("radio_modes",[]),
-                                 c.get("radio_bands",[]),c.get("satellite_selection"))
+        suggested=choose_satellites(self.omm,rows,c.get("radio_modes",[]),
+                                    c.get("radio_bands",[]),c.get("satellite_selection"))
+        # Seleção automática sempre inclui os satélites padrão presentes no catálogo.
+        return list(dict.fromkeys([n for n in DEFAULT_SATELLITES if n in self.omm]+suggested))
 
     def suggested_mode_text(self,ident):
         c=self.config.values

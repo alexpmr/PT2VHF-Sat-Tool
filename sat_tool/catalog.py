@@ -5,7 +5,9 @@ from datetime import datetime, timezone
 import json
 import requests
 
-# CelesTrak group feeds return batches; never request one orbit per satellite.
+from .config import DEFAULT_SATELLITES
+
+# CelesTrak group feeds return batches; per-NORAD requests only for missing default satellites.
 DEFAULT_GROUPS = ("amateur", "stations", "cubesat", "starlink", "oneweb",
                   "weather", "science", "visual")
 ALL_GROUPS = DEFAULT_GROUPS + ("active",)
@@ -17,7 +19,10 @@ HEADERS = {"User-Agent": "PT2VHF-Sat-Tool/1.3.0 (radio amateur tracking tool)",
 ALIASES = {"27607": ("SO-50", "SO50", "SAUDISAT 1C", "SAUDISAT-1C"),
            "25544": ("ISS", "ARISS", "ZARYA"),
            "24278": ("FO-29", "FO29", "JAS-2"),
-           "44881": ("RS-44", "RS44", "DOSAAF-85")}
+           "44909": ("RS-44", "RS44", "DOSAAF-85"),
+           "7530": ("AO-7", "AO7", "OSCAR 7"),
+           "40931": ("IO-86", "IO86", "LAPAN-A2"),
+           "59112": ("SONATE-2", "SONATE2")}
 
 
 def normalized_satellite_search(text):
@@ -68,6 +73,30 @@ def refresh_group_omm(data_dir, group):
     return objects
 
 
+def refresh_catnr_omm(data_dir, ident):
+    """OMM de um único NORAD, com cache de 2 h como os grupos."""
+    ident=str(int(ident))
+    file=cache_path(data_dir,"catnr_"+ident+".json")
+    hours=age_hours(data_dir,file.name)
+    if file.exists() and hours is not None and hours<2:
+        return json.loads(file.read_text(encoding="utf-8"))
+    try:
+        response=requests.get("https://celestrak.org/NORAD/elements/gp.php",
+                              params={"CATNR":ident,"FORMAT":"json"},headers=HEADERS,timeout=30)
+        response.raise_for_status()
+        objects=response.json()
+    except Exception:
+        if file.exists():
+            return json.loads(file.read_text(encoding="utf-8"))
+        raise
+    if not isinstance(objects,list) or not all(isinstance(o,dict) and "NORAD_CAT_ID" in o for o in objects):
+        raise ValueError("OMM inválido para NORAD "+ident)
+    temp=file.with_suffix(".tmp")
+    temp.write_text(json.dumps(objects,ensure_ascii=False),encoding="utf-8")
+    temp.replace(file)
+    return objects
+
+
 def load_group_omm(data_dir,group):
     file=data_dir/("group_"+group+".json")
     if not file.exists():return []
@@ -91,6 +120,18 @@ def refresh_multi_omm(data_dir,groups=None,progress=None):
             cached=load_group_omm(data_dir,group)
             if cached:all_data[group]=cached
         if progress:progress(index,len(groups),group,len(all_data.get(group,[])),len(errors))
+    # Satélites padrão fora dos grupos baixados são buscados pelo NORAD (v1.3.16).
+    present={str(row.get("NORAD_CAT_ID")) for rows in all_data.values() for row in rows if isinstance(row,dict)}
+    extra=[]
+    for ident in DEFAULT_SATELLITES:
+        if ident in present:
+            continue
+        try:
+            extra+=refresh_catnr_omm(data_dir,ident)
+        except Exception as exc:
+            errors.append("NORAD "+ident+": "+str(exc))
+    if extra:
+        all_data["defaults"]=extra
     merged=merge_orbits(all_data)
     if not merged:
         cached=load_omm(data_dir)

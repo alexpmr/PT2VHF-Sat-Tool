@@ -23,19 +23,38 @@ def test_unknown_satellite_not_marked_operational():
 
 
 def test_default_hints_are_not_operational_confirmations():
-    out=capability("44881",[],["SSB"],["VHF","UHF"])
+    out=capability("44909",[],["SSB"],["VHF","UHF"])
     assert out["suggested"] and not out["confirmed"]
     assert out["source"].startswith("histórico")
 
 
 def test_user_selection_overrides_auto_and_is_stable():
-    sat={"44881":{"OBJECT_NAME":"RS-44"},"99999":{"OBJECT_NAME":"Test"}}
-    assert choose_satellites(sat,{},["SSB"],["VHF","UHF"])==["44881"]
+    sat={"44909":{"OBJECT_NAME":"RS-44"},"99999":{"OBJECT_NAME":"Test"}}
+    assert choose_satellites(sat,{},["SSB"],["VHF","UHF"])==["44909"]
     assert choose_satellites(sat,{},["FM"],["VHF","UHF"],["99999"])==["99999"]
     assert choose_satellites(sat,{},["FM"],["VHF","UHF"],[])==[]
 
 
-def test_v1315_default_satellites_iss_io86_so50(tmp_path):
-    from sat_tool.config import Config
+def test_v1316_default_satellites(tmp_path):
+    from sat_tool.config import Config, DEFAULT_SATELLITES
+    assert DEFAULT_SATELLITES == ("25544", "27607", "40931", "7530", "24278", "44909", "59112")
+    assert Config(tmp_path).values["satellite_selection"] == list(DEFAULT_SATELLITES)
+
+
+def test_v1316_existing_selection_gains_defaults_once(tmp_path):
+    import json
+    from sat_tool.config import Config, DEFAULT_SATELLITES
+    (tmp_path / "settings.json").write_text(json.dumps({"satellite_selection": ["43017", "25544"]}))
     cfg = Config(tmp_path)
-    assert cfg.values["satellite_selection"] == ["25544", "40931", "27607"]
+    assert cfg.values["satellite_selection"][:2] == ["43017", "25544"]
+    assert set(DEFAULT_SATELLITES) <= set(cfg.values["satellite_selection"])
+    cfg.values["satellite_selection"] = ["43017"]  # operador desmarca depois
+    cfg.save()
+    assert Config(tmp_path).values["satellite_selection"] == ["43017"]
+
+
+def test_v1316_auto_selection_is_preserved(tmp_path):
+    import json
+    from sat_tool.config import Config
+    (tmp_path / "settings.json").write_text(json.dumps({"satellite_selection": None}))
+    assert Config(tmp_path).values["satellite_selection"] is None

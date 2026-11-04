@@ -46,6 +46,10 @@ def install_flavor(qt_binding: str, *, frozen: Optional[bool] = None, exe_path: 
         frozen = bool(getattr(sys, 'frozen', False))
     if not frozen:
         return None
+    if sys.platform.startswith('linux'):
+        return 'Linux-x64', 'Manual'
+    if sys.platform == 'darwin':
+        return 'macOS-arm64', 'Manual'
     if sys.platform != 'win32':
         return None
     root = (exe_path or Path(sys.executable)).resolve().parent
@@ -66,6 +70,13 @@ class AvailableUpdate:
     html_url: str
 
 
+def asset_name(version: str, variant: str, kind: str) -> str:
+    """Windows: Setup/Portable EXE (OTA). Linux/macOS: pacote baixado pelo site (Manual)."""
+    if kind == 'Manual':
+        return f'PT2VHF-Sat-Tool-v{version}-{variant}' + ('.dmg' if variant.startswith('macOS') else '.tar.gz')
+    return f'PT2VHF-Sat-Tool-v{version}-{variant}-{kind}.exe'
+
+
 def is_official_asset(url: str, name: str) -> bool:
     """Only https://www.pt2vhf.com/downloads/sat-tool/<name>.exe is accepted."""
     try:
@@ -74,7 +85,7 @@ def is_official_asset(url: str, name: str) -> bool:
                 and info.path == DOWNLOAD_PREFIX + name
                 and not info.query and not info.fragment and '%' not in info.path
                 and bool(re.fullmatch(r'[A-Za-z0-9_.-]+', name))
-                and name.casefold().endswith('.exe'))
+                and name.casefold().endswith(('.exe', '.tar.gz', '.dmg')))
     except (TypeError, ValueError, AttributeError):
         return False
 
@@ -101,7 +112,7 @@ def select_release(manifest, current_version: str, variant: str, kind: str,
     if ver <= current:
         return None
     version = '.'.join(map(str, ver))
-    name = f'PT2VHF-Sat-Tool-v{version}-{variant}-{kind}.exe'
+    name = asset_name(version, variant, kind)
     files = manifest.get('files')
     if not isinstance(files, list):
         raise ValueError('Manifesto sem lista de arquivos')

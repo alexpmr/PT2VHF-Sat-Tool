@@ -13,7 +13,10 @@ CANDIDATES = {
     "27607": {"modes": ("FM",), "note": "SO-50; confirmar status"},
     "43017": {"modes": ("FM",), "note": "AO-91; confirmar status"},
     "44496": {"modes": ("FM",), "note": "PO-101; confirmar status"},
-    "44881": {"modes": ("SSB", "CW"), "note": "RS-44; confirmar status"},
+    "44909": {"modes": ("SSB", "CW"), "note": "RS-44; confirmar status"},
+    "7530": {"modes": ("SSB", "CW"), "note": "AO-7; confirmar status"},
+    "40931": {"modes": ("FM",), "note": "IO-86; confirmar status"},
+    "59112": {"modes": ("FM",), "note": "SONATE-2; confirmar status"},
     "24278": {"modes": ("SSB", "CW"), "note": "FO-29; confirmar status"},
     "39444": {"modes": ("SSB", "CW"), "note": "AO-73; confirmar status"},
 }

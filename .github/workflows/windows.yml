@@ -92,10 +92,10 @@ jobs:
       - name: Portable ONEFILE EXE (sem ZIP)
         shell: pwsh
         run: |
-          python -m PyInstaller --noconfirm --clean --windowed --onefile --name 'PT2VHF-Sat-Tool-v1.3.15-${{ matrix.target }}-Portable' `
+          python -m PyInstaller --noconfirm --clean --windowed --onefile --name 'PT2VHF-Sat-Tool-v1.3.16-${{ matrix.target }}-Portable' `
             --icon 'assets/branding/app-icon.ico' --add-data 'sat_tool/map.html;sat_tool' --add-data 'assets/branding/icon-256.png;assets/branding' --add-data 'scripts/apply-update.ps1;scripts' --hidden-import sat_tool.app --hidden-import sat_tool.cat --collect-all skyfield --collect-binaries numpy `
             run.py
-          $portable = (Resolve-Path 'dist/PT2VHF-Sat-Tool-v1.3.15-${{ matrix.target }}-Portable.exe').Path
+          $portable = (Resolve-Path 'dist/PT2VHF-Sat-Tool-v1.3.16-${{ matrix.target }}-Portable.exe').Path
           if (-not (Test-Path $portable)) { throw 'Portable EXE missing' }
           $report = Join-Path $env:RUNNER_TEMP 'portable-onefile-${{ matrix.target }}.json'
           $binding = if ('${{ matrix.target }}' -eq 'Win7-x86') { 'PySide2' } else { 'PySide6' }
@@ -119,12 +119,12 @@ jobs:
           if (-not (Test-Path $iscc)) { throw 'Inno Setup compiler missing' }
           & $iscc '/DBuildFlavor=${{ matrix.target }}' '/DMinTarget=${{ matrix.min_windows }}' '/DTargetArch=${{ matrix.inno_arch }}' installer/setup.iss
           if ($LASTEXITCODE -ne 0) { throw 'Inno Setup build failed' }
-          if (-not (Test-Path 'dist/PT2VHF-Sat-Tool-v1.3.15-${{ matrix.target }}-Setup.exe')) { throw 'Installer missing' }
+          if (-not (Test-Path 'dist/PT2VHF-Sat-Tool-v1.3.16-${{ matrix.target }}-Setup.exe')) { throw 'Installer missing' }
       - name: Verify standalone EXEs and icon resources
         shell: pwsh
         run: |
           $target = '${{ matrix.target }}'
-          $base = "dist/PT2VHF-Sat-Tool-v1.3.15-$target"
+          $base = "dist/PT2VHF-Sat-Tool-v1.3.16-$target"
           if (-not (Test-Path "$base-Setup.exe" -PathType Leaf)) { throw 'Installer must be EXE' }
           if (-not (Test-Path "$base-Portable.exe" -PathType Leaf)) { throw 'Portable must be EXE onefile' }
           if (Get-ChildItem -Path dist -Filter '*.zip' -File) { throw 'No ZIP distribution permitted' }
@@ -132,29 +132,98 @@ jobs:
       - name: Checksums
         shell: pwsh
         run: |
-          $items = Get-ChildItem 'dist/PT2VHF-Sat-Tool-v1.3.15-${{ matrix.target }}-*' -File
+          $items = Get-ChildItem 'dist/PT2VHF-Sat-Tool-v1.3.16-${{ matrix.target }}-*' -File
           $lines = foreach ($item in $items) {
             $hash = (Get-FileHash $item.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
             "$hash  $($item.Name)"
           }
-          $lines | Set-Content -Path 'dist/PT2VHF-Sat-Tool-v1.3.15-${{ matrix.target }}-SHA256.txt' -Encoding Ascii
+          $lines | Set-Content -Path 'dist/PT2VHF-Sat-Tool-v1.3.16-${{ matrix.target }}-SHA256.txt' -Encoding Ascii
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: PT2VHF-Sat-Tool-v1.3.15-${{ matrix.target }}
-          path: dist/PT2VHF-Sat-Tool-v1.3.15-${{ matrix.target }}-*
+          name: PT2VHF-Sat-Tool-v1.3.16-${{ matrix.target }}
+          path: dist/PT2VHF-Sat-Tool-v1.3.16-${{ matrix.target }}-*
+          if-no-files-found: error
+          retention-days: 90
+  build_unix:
+    name: ${{ matrix.target }} - pacote
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: Linux-x64
+            os: ubuntu-22.04
+          - target: macOS-arm64
+            os: macos-14
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Bibliotecas Qt (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q libegl1 libgl1 libxkbcommon0 libxkbcommon-x11-0 libfontconfig1 libdbus-1-3 \
+            libnss3 libxcomposite1 libxdamage1 libxrandr2 libxtst6 libxshmfence1 libasound2 libxcb-cursor0 \
+            libxcb-icccm4 libxcb-keysyms1 libxcb-shape0 libxcb-xinerama0 libxcb-randr0 libxcb-render-util0 libxcb-image0
+      - name: Dependências e testes
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          python -m pip install --upgrade 'pip<25.1'
+          python -m pip install -r requirements-win11.txt 'pyinstaller==6.13.0' 'pytest==8.3.5' 'Pillow==10.4.0'
+          python -m compileall -q sat_tool
+          python -m pytest -q tests
+          python scripts/build_brand_assets.py
+      - name: PyInstaller
+        run: |
+          python -m PyInstaller --noconfirm --clean --windowed --onedir --name PT2VHF-Sat-Tool \
+            --icon assets/branding/icon-256.png --add-data 'sat_tool/map.html:sat_tool' \
+            --add-data 'assets/branding/icon-256.png:assets/branding' \
+            --hidden-import sat_tool.app --hidden-import sat_tool.cat --collect-all skyfield --collect-binaries numpy \
+            run.py
+      - name: Autoteste do binário
+        env:
+          QT_QPA_PLATFORM: offscreen
+          QTWEBENGINE_CHROMIUM_FLAGS: --no-sandbox
+        run: |
+          if [ "$RUNNER_OS" = macOS ]; then exe=dist/PT2VHF-Sat-Tool.app/Contents/MacOS/PT2VHF-Sat-Tool; else exe=dist/PT2VHF-Sat-Tool/PT2VHF-Sat-Tool; fi
+          report="$RUNNER_TEMP/selftest.json"
+          "$exe" --self-test "$report" PySide6 || true
+          for f in "$RUNNER_TEMP"/pt2vhf-selftest-*.txt; do [ -f "$f" ] && { echo "== $f"; cat "$f"; }; done
+          test -f "$report" && cat "$report"
+          python -c "import json,sys; d=json.load(open(sys.argv[1])); assert d['status']=='passed' and d['frozen'], d" "$report"
+      - name: Empacotar
+        run: |
+          mkdir -p out
+          base="PT2VHF-Sat-Tool-v1.3.16-${{ matrix.target }}"
+          if [ "$RUNNER_OS" = macOS ]; then
+            hdiutil create -volname "PT2VHF Sat Tool" -srcfolder dist/PT2VHF-Sat-Tool.app -ov -format UDZO "out/$base.dmg"
+          else
+            tar -C dist -czf "out/$base.tar.gz" PT2VHF-Sat-Tool
+          fi
+          ls -l out
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: PT2VHF-Sat-Tool-v1.3.16-${{ matrix.target }}
+          path: out/*
           if-no-files-found: error
           retention-days: 90
   release:
     name: Publicar instaladores e portáteis na Release
-    needs: build
+    needs: [build, build_unix]
     if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - name: Download compiled Windows binaries
         uses: actions/download-artifact@v4
         with:
-          pattern: PT2VHF-Sat-Tool-v1.3.15-*
+          pattern: PT2VHF-Sat-Tool-v1.3.16-*
           merge-multiple: true
           path: release
       - name: Verify Windows 10/11 x64 deliverables
@@ -162,13 +231,15 @@ jobs:
         run: |
           set -euo pipefail
           for item in Setup Portable; do
-            test -s "release/PT2VHF-Sat-Tool-v1.3.15-Win11-x64-${item}.exe"
+            test -s "release/PT2VHF-Sat-Tool-v1.3.16-Win11-x64-${item}.exe"
           done
-          test -s "release/PT2VHF-Sat-Tool-v1.3.15-Win11-x64-SHA256.txt"
+          test -s "release/PT2VHF-Sat-Tool-v1.3.16-Win11-x64-SHA256.txt"
+          test -s "release/PT2VHF-Sat-Tool-v1.3.16-Linux-x64.tar.gz"
+          test -s "release/PT2VHF-Sat-Tool-v1.3.16-macOS-arm64.dmg"
       - name: Resolve release tag
         shell: bash
         run: |
-          if [[ "$GITHUB_REF" == refs/heads/main ]]; then echo 'RELEASE_TAG=v1.3.15' >> "$GITHUB_ENV"; else echo "RELEASE_TAG=$GITHUB_REF_NAME" >> "$GITHUB_ENV"; fi
+          if [[ "$GITHUB_REF" == refs/heads/main ]]; then echo 'RELEASE_TAG=v1.3.16' >> "$GITHUB_ENV"; else echo "RELEASE_TAG=$GITHUB_REF_NAME" >> "$GITHUB_ENV"; fi
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -181,7 +252,7 @@ jobs:
           gh release view "$RELEASE_TAG" --repo '${{ github.repository }}' >/dev/null 2>&1 || \
             gh release create "$RELEASE_TAG" --target '${{ github.sha }}' --repo '${{ github.repository }}' \
               --title "PT2VHF Sat Tool $RELEASE_TAG - Windows 10/11 x64" \
-              --notes 'v1.3.15: ISS, IO-86 e SO-50 habilitados por padrão em instalações novas; removido o bloco Próxima passagem do satélite selecionado. OTA exclusivamente via www.pt2vhf.com. Esta release no GitHub existe apenas como ponte para instalações até v1.3.13; downloads oficiais em https://www.pt2vhf.com/sat' \
+              --notes 'v1.3.16: ISS, SO-50, IO-86, AO-7, FO-29, RS-44 e SONATE-2 habilitados por padrão (também em instalações existentes); painel de passagens 36 h aproveitando a largura e a altura; aviso Downloads no site oficial no padrão PT2VHF; novas versões para Linux x64 e macOS Apple Silicon. Esta release no GitHub existe apenas como ponte para instalações até v1.3.13; downloads oficiais em https://www.pt2vhf.com/sat' \
               --prerelease
           gh release upload "$RELEASE_TAG" release/* --repo '${{ github.repository }}' --clobber
   publish_site:
@@ -191,7 +262,7 @@ jobs:
     # Contents: read/write no repositório do site) e, opcionalmente, a
     # variável SITE_REPO (padrão alexpmr/PT2VHF-Site).
     name: Publicar no site www.pt2vhf.com
-    needs: build
+    needs: [build, build_unix]
     if: github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     concurrency: pt2vhf-site-publish
@@ -211,7 +282,7 @@ jobs:
       - name: Download compiled Windows binaries
         uses: actions/download-artifact@v4
         with:
-          pattern: PT2VHF-Sat-Tool-v1.3.15-*
+          pattern: PT2VHF-Sat-Tool-v1.3.16-*
           merge-multiple: true
           path: release
       - name: Checkout site repository
@@ -223,8 +294,8 @@ jobs:
           path: site
       - name: Copy EXEs and update updates.json
         run: |
-          python3 scripts/publish_sat_to_site.py --version 1.3.15 --release-dir release --site-dir site \
-            --notes 'v1.3.15: ISS, IO-86 e SO-50 habilitados por padrão em instalações novas; removido o bloco Próxima passagem do satélite selecionado. OTA exclusivamente via www.pt2vhf.com.'
+          python3 scripts/publish_sat_to_site.py --version 1.3.16 --release-dir release --site-dir site \
+            --notes 'v1.3.16: ISS, SO-50, IO-86, AO-7, FO-29, RS-44 e SONATE-2 habilitados por padrão (também em instalações existentes); painel de passagens 36 h aproveitando a largura e a altura; aviso Downloads no site oficial no padrão PT2VHF; novas versões para Linux x64 e macOS Apple Silicon.'
       - name: Commit and push to site (Hostinger deploy)
         working-directory: site
         run: |
@@ -233,7 +304,7 @@ jobs:
             echo 'Pacotes desta versão já estão no site.'
             exit 0
           fi
-          git -c user.name='PT2VHF CI' -c user.email='ci@pt2vhf.com' commit -m 'release(sat): binários oficiais v1.3.15'
+          git -c user.name='PT2VHF CI' -c user.email='ci@pt2vhf.com' commit -m 'release(sat): binários oficiais v1.3.16'
           for i in 1 2 3; do
             git pull --rebase origin main && git push origin HEAD:main && exit 0
             sleep $((i*5))

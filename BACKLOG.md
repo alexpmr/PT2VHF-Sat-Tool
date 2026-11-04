@@ -1,6 +1,10 @@
 ## Pendentes
 
-- **ISS, SO-50, IO-86, AO-7, FO-29, RS-44 e SONATE-2 habilitados por padrão, inclusive em instalações existentes** (registrado em 04/11/2026)
+(nenhum)
+
+## v1.3.16 — backlog resolvido + Linux e macOS (04/11/2026)
+
+- **ISS, SO-50, IO-86, AO-7, FO-29, RS-44 e SONATE-2 habilitados por padrão, inclusive em instalações existentes** (concluído na v1.3.16; registrado em 04/11/2026)
   - Lista padrão: ISS 25544, SO-50 27607, IO-86 40931, AO-7 7530, FO-29 24278, RS-44 44909, SONATE-2 59112.
   - Conferir o NORAD do RS-44: `sat_tool/profile.py` (CANDIDATES) usa 44881, mas o RS-44 é 44909; corrigir se confirmado.
   - A v1.3.15 só aplica o padrão (25544, 27607, 40931) quando não há `satellite_selection` salvo;
@@ -11,18 +15,20 @@
   - "Restaurar seleção automática" deve voltar a incluir os sete.
   - Conferir que os sete estão no catálogo OMM baixado (AO-7 e FO-29 são antigos; SONATE-2 é recente e pode não estar no grupo amateur); o que faltar, buscar pelo NORAD.
 
-- **Aviso do novo site no mesmo padrão dos demais projetos** (registrado em 28/10/2026)
+- **Aviso do novo site no mesmo padrão dos demais projetos** (concluído na v1.3.16; registrado em 28/10/2026)
   - Referência: `docs/backlog/aviso-site-padrao-mesh.png` (aviso do PT2VHF Mesh Analyzer).
   - Título "Downloads no site oficial"; texto "A partir de agora, as novas versões e os instaladores do
     PT2VHF Sat Tool serão distribuídos pelo site oficial."; link clicável www.PT2VHF.com; botão único "Entendi".
   - Substitui o QMessageBox atual ("Novo site oficial PT2VHF", botões Visitar site / Fechar).
 
-- **Painel Passagens do satélite selecionado · 36 h — usar melhor o espaço** (registrado em 28/10/2026)
+- **Painel Passagens do satélite selecionado · 36 h — usar melhor o espaço** (concluído na v1.3.16; registrado em 28/10/2026)
   - Imagem: `docs/backlog/passagens-espaco-v1.3.15.png`.
   - Hoje a tabela fica espremida (colunas estreitas, nomes e datas quebrando em duas linhas, só ~2 linhas visíveis)
     enquanto sobra área vazia à direita da coluna Modos e abaixo da Telemetria orbital.
   - Esticar as colunas até a largura do painel (Satélite e Modos elásticas), dar mais altura à tabela
     aproveitando o espaço livre abaixo da telemetria, e reduzir quebras de linha desnecessárias.
+
+- Novas distribuições: Linux x64 (.tar.gz) e macOS Apple Silicon (.dmg), com aviso de versão nova pelo site.
 
 ## v1.3.15 — seleção padrão ISS/IO-86/SO-50 (27/10/2026)
 

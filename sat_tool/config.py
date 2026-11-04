@@ -2,6 +2,8 @@ from __future__ import annotations
 from pathlib import Path
 import json, os, sys
 
+DEFAULT_SATELLITES = ("25544", "27607", "40931", "7530", "24278", "44909", "59112")
+
 DEFAULTS = {
     "callsign": "PT2VHF", "lat": "", "lon": "", "altitude_m": 0,
     "min_elevation": 10, "port": "", "baud": 9600, "stopbits": 1,
@@ -13,13 +15,15 @@ DEFAULTS = {
     "last_update_notice": "",
     "radio_brand": "Kenwood", "radio_model": "TS-2000",
     "radio_modes": ["FM", "SSB", "CW"], "radio_bands": ["VHF", "UHF"],
-    # Instalações novas começam com ISS, IO-86 e SO-50 habilitados (v1.3.15).
-    "satellite_selection": ["25544", "40931", "27607"], "tle_update_hours": 4,
+    # Satélites habilitados por padrão (v1.3.16): ISS, SO-50, IO-86, AO-7, FO-29,
+    # RS-44 e SONATE-2. Instalações existentes recebem os mesmos uma única vez.
+    "satellite_selection": list(DEFAULT_SATELLITES), "tle_update_hours": 4,
     "poll_interval_s": 1, "tle_source": "CelesTrak",
     "orbit_groups": ["amateur","stations","cubesat","starlink","oneweb","weather","science","visual"],
     "cat_auto_select": True, "cat_auto_connect_startup": True,
     "cat_tracking_interval_s": 1, "cat_doppler_out_of_view": True,
     "cat_live_v137_migrated": True,
+    "default_satellites_v1316_migrated": True,
     "aos_alarm_enabled": True, "aos_alarm_sound": True,
     "aos_alarm_fired": [],
     "language": "pt-BR", "frequency_style": "radio10",
@@ -59,6 +63,17 @@ class Config:
                 if self.values["tune_threshold_hz"] == 20:
                     self.values["tune_threshold_hz"] = 1
                 self.values["cat_live_v137_migrated"] = True
+                self.save()
+            # v1.3.16: soma os satélites padrão à seleção existente uma única vez,
+            # sem desmarcar nada; desmarcar depois não é revertido.
+            if not data.get("default_satellites_v1316_migrated", False):
+                current = self.values.get("satellite_selection")
+                # None (seleção automática) já inclui os padrões em enabled_satellite_ids.
+                if current is not None:
+                    merged = [str(n) for n in current]
+                    merged += [n for n in DEFAULT_SATELLITES if n not in merged]
+                    self.values["satellite_selection"] = merged
+                self.values["default_satellites_v1316_migrated"] = True
                 self.save()
 
     def save(self):

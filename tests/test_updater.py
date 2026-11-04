@@ -138,3 +138,21 @@ def test_tle_orbital_characteristics():
     o=orbital_characteristics({'NORAD_CAT_ID':25544, 'OBJECT_NAME':'TEST','TLE_LINE2':tle})
     assert o['period_min']==pytest.approx(1440/15.5)
     assert o['eccentricity']==pytest.approx(0.0004)
+
+
+def test_v1316_linux_and_macos_detect_site_version():
+    from sat_tool.updater import install_flavor
+    import sys
+    for plat, variant, name in (('linux', 'Linux-x64', 'PT2VHF-Sat-Tool-v0.1.3-Linux-x64.tar.gz'),
+                                ('darwin', 'macOS-arm64', 'PT2VHF-Sat-Tool-v0.1.3-macOS-arm64.dmg')):
+        data = sample_release()
+        data['files'].append({'name': name, 'size': 99, 'sha256': 'b'*64,
+                              'url': 'https://www.pt2vhf.com/downloads/sat-tool/' + name})
+        r = select_release(data, '0.1.2', variant, 'Manual')
+        assert r.asset_name == name and r.html_url == 'https://www.pt2vhf.com/sat'
+        orig = sys.platform
+        try:
+            sys.platform = plat
+            assert install_flavor('PySide6', frozen=True) == (variant, 'Manual')
+        finally:
+            sys.platform = orig

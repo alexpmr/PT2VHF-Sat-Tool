@@ -4,20 +4,27 @@
 
 ## Downloads — Windows 10/11 x64
 
-**PT2VHF Sat Tool v1.3.15 — Windows 10 1809+ e Windows 11 (x64)**.
+**PT2VHF Sat Tool v1.3.16 — Windows 10/11 x64, Linux x64 e macOS Apple Silicon**.
 
 **Novo site oficial: [www.PT2VHF.com](https://www.pt2vhf.com/sat)** — downloads (Setup e Portátil), novas versões e somas SHA-256 ficam no site. A partir da v1.3.14 o atualizador consulta exclusivamente `https://www.pt2vhf.com/update.php?product=sat`.
 
 | Edição | Download direto |
 | --- | --- |
-| **Instalável x64** | [Setup (.exe)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.3.15-Win11-x64-Setup.exe) |
-| **Portátil x64** | [Portable (.exe)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.3.15-Win11-x64-Portable.exe) |
+| **Instalável x64** | [Setup (.exe)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.3.16-Win11-x64-Setup.exe) |
+| **Portátil x64** | [Portable (.exe)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.3.16-Win11-x64-Portable.exe) |
 
 O sufixo `Win11-x64` é mantido para compatibilidade com o atualizador e também atende ao Windows 10 1809+.
 
 **Homologação física:** testes automatizados emulam CAT/TS-2000; a validação com rádio real, COM física e Windows de destino continua necessária.
 
 ---
+
+## Novidades v1.3.16 — Linux, macOS e satélites padrão
+
+- **Linux x64 (.tar.gz) e macOS Apple Silicon (.dmg)**, além do Windows 10/11 x64. No Linux e no macOS a versão nova é avisada pelo site e o botão abre a página de download; a atualização automática continua no Windows.
+- **Satélites habilitados por padrão:** ISS, SO-50, IO-86, AO-7, FO-29, RS-44 e SONATE-2 — também em instalações existentes (somados uma única vez, sem desmarcar nada). O que não estiver nos grupos do CelesTrak é buscado pelo NORAD. RS-44 corrigido para NORAD 44909.
+- **Passagens 36 h:** a tabela ocupa a largura e a altura livres do painel, com datas em uma linha.
+- **Aviso "Downloads no site oficial"** no mesmo padrão dos demais projetos PT2VHF.
 
 ## Novidades v1.3.15 — seleção padrão e tela mais limpa
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Copia os EXEs verificados do Sat Tool para o repositório do site e atualiza updates.json.
 
-Uso (no CI): python scripts/publish_sat_to_site.py --version 1.3.14 --release-dir release --site-dir site
+Uso (no CI): python scripts/publish_sat_to_site.py --version X.Y.Z --release-dir release --site-dir site
 O site www.pt2vhf.com (Hostinger) é implantado a partir desse repositório.
 Recusa regressão de versão, arquivos vazios ou que não sejam executáveis Windows.
 Os EXEs (> 100 MiB, limite do GitHub) são gravados em partes de 48 MiB com um
@@ -21,9 +21,16 @@ SITE = "https://www.pt2vhf.com"
 FOLDER = "downloads/sat-tool"
 VARIANT = "Win11-x64"
 CHUNK = 48 * 1024 * 1024
+# (category, counterKey, kind, sufixo do arquivo, platform, architecture, label, detail, assinatura inicial)
 EDITIONS = (
-    ("windows-installer", "win-setup-x64", "installer", "Setup", "Windows — Instalador", "Windows 10 1809+ / 11 64 bits (recomendado)"),
-    ("windows-portable", "win-portable-x64", "portable", "Portable", "Windows — Portátil", "Windows 10 1809+ / 11 64 bits, EXE único sem instalar"),
+    ("windows-installer", "win-setup-x64", "installer", "Win11-x64-Setup.exe", "windows-x64", "x64",
+     "Windows — Instalador", "Windows 10 1809+ / 11 64 bits (recomendado)", b"MZ"),
+    ("windows-portable", "win-portable-x64", "portable", "Win11-x64-Portable.exe", "windows-x64", "x64",
+     "Windows — Portátil", "Windows 10 1809+ / 11 64 bits, EXE único sem instalar", b"MZ"),
+    ("linux-targz", "linux-tar-x64", "tar.gz", "Linux-x64.tar.gz", "linux-x64", "x64",
+     "Linux — .tar.gz", "Linux x64 (glibc 2.35+, ex.: Ubuntu 22.04+); extraia e execute PT2VHF-Sat-Tool", b"\x1f\x8b"),
+    ("macos", "mac-dmg-arm64", "dmg", "macOS-arm64.dmg", "macos-arm64", "Apple Silicon",
+     "macOS — .dmg", "macOS 14+ Apple Silicon (M1 ou superior); arraste para Aplicativos", b""),
 )
 
 
@@ -80,23 +87,23 @@ def main():
         if old.is_file() and old.name.startswith("PT2VHF-Sat-Tool-v"):
             old.unlink()
     files = []
-    for category, counter, file_kind, kind, label, detail in EDITIONS:
-        name = f"PT2VHF-Sat-Tool-v{args.version}-{VARIANT}-{kind}.exe"
+    for category, counter, file_kind, suffix, plat, arch, label, detail, magic in EDITIONS:
+        name = f"PT2VHF-Sat-Tool-v{args.version}-{suffix}"
         source = args.release_dir / name
         if not source.is_file() or source.stat().st_size <= 0:
             raise SystemExit("Arquivo ausente ou vazio: " + name)
         with source.open("rb") as fh:
-            if fh.read(2) != b"MZ":
-                raise SystemExit("Executável Windows inválido: " + name)
+            if magic and fh.read(len(magic)) != magic:
+                raise SystemExit("Pacote com formato inválido: " + name)
         digest = write_parts(source, target)
         files.append({
             "category": category, "counterKey": counter, "kind": file_kind,
-            "platform": "windows-x64", "architecture": "x64", "label": label, "name": name,
+            "platform": plat, "architecture": arch, "label": label, "name": name,
             "url": f"{SITE}/{FOLDER}/{name}",
             "size": source.stat().st_size, "sha256": digest, "detail": detail,
         })
     sums = "".join(f"{f['sha256']}  {f['name']}\n" for f in files)
-    sums_name = f"PT2VHF-Sat-Tool-v{args.version}-{VARIANT}-SHA256.txt"
+    sums_name = f"PT2VHF-Sat-Tool-v{args.version}-SHA256.txt"
     (target / sums_name).write_text(sums, encoding="ascii")
     files.append({
         "category": "checksums", "label": "Somas de verificação", "name": sums_name,
@@ -115,7 +122,7 @@ def main():
         "page": SITE + "/sat",
         "notes": args.notes,
         "files": files,
-        "releaseStatus": "Instalador e portátil oficiais para Windows 10/11 x64. Confira o SHA-256 antes da instalação.",
+        "releaseStatus": "Pacotes oficiais para Windows 10/11 x64, Linux x64 e macOS Apple Silicon. Confira o SHA-256 antes da instalação.",
         "updateEndpoint": SITE + "/update.php?product=sat",
     })
     manifest["updated"] = date.today().isoformat()
