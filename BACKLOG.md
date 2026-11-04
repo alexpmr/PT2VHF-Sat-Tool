@@ -1,5 +1,14 @@
 ## Pendentes
 
+- **ISS, SO-50 e IO-86 habilitados por padrão também em instalações existentes** (registrado em 04/11/2026)
+  - A v1.3.15 só aplica o padrão (25544, 27607, 40931) quando não há `satellite_selection` salvo;
+    quem já tinha seleção (ou `None` = automático) não vê os três marcados.
+  - Migração única na primeira abertura da nova versão: acrescentar os três à seleção existente
+    (sem remover nenhum satélite escolhido) e converter `None` em lista com os três + sugestões atuais;
+    registrar a migração para não reaplicar se o operador desmarcar depois.
+  - "Restaurar seleção automática" deve voltar a incluir os três.
+  - Conferir que IO-86 (40931) está no catálogo OMM baixado; se não estiver, buscar pelo NORAD.
+
 - **Aviso do novo site no mesmo padrão dos demais projetos** (registrado em 28/10/2026)
   - Referência: `docs/backlog/aviso-site-padrao-mesh.png` (aviso do PT2VHF Mesh Analyzer).
   - Título "Downloads no site oficial"; texto "A partir de agora, as novas versões e os instaladores do
