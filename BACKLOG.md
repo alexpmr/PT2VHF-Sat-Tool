@@ -1,13 +1,15 @@
 ## Pendentes
 
-- **ISS, SO-50 e IO-86 habilitados por padrão também em instalações existentes** (registrado em 04/11/2026)
+- **ISS, SO-50, IO-86, AO-7, FO-29 e RS-44 habilitados por padrão, inclusive em instalações existentes** (registrado em 04/11/2026)
+  - Lista padrão: ISS 25544, SO-50 27607, IO-86 40931, AO-7 7530, FO-29 24278, RS-44 44909.
+  - Conferir o NORAD do RS-44: `sat_tool/profile.py` (CANDIDATES) usa 44881, mas o RS-44 é 44909; corrigir se confirmado.
   - A v1.3.15 só aplica o padrão (25544, 27607, 40931) quando não há `satellite_selection` salvo;
     quem já tinha seleção (ou `None` = automático) não vê os três marcados.
-  - Migração única na primeira abertura da nova versão: acrescentar os três à seleção existente
-    (sem remover nenhum satélite escolhido) e converter `None` em lista com os três + sugestões atuais;
+  - Migração única na primeira abertura da nova versão: acrescentar os seis à seleção existente
+    (sem remover nenhum satélite escolhido) e converter `None` em lista com os seis + sugestões atuais;
     registrar a migração para não reaplicar se o operador desmarcar depois.
-  - "Restaurar seleção automática" deve voltar a incluir os três.
-  - Conferir que IO-86 (40931) está no catálogo OMM baixado; se não estiver, buscar pelo NORAD.
+  - "Restaurar seleção automática" deve voltar a incluir os seis.
+  - Conferir que os seis estão no catálogo OMM baixado (AO-7 e FO-29 são antigos); o que faltar, buscar pelo NORAD.
 
 - **Aviso do novo site no mesmo padrão dos demais projetos** (registrado em 28/10/2026)
   - Referência: `docs/backlog/aviso-site-padrao-mesh.png` (aviso do PT2VHF Mesh Analyzer).
