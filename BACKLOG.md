@@ -58,6 +58,20 @@
 
 ## Pendentes
 
+- **P0 · RTL-SDR não reconhecido no Windows mesmo após instalar o driver WinUSB (Zadig)** (registrado em 06/11/2026)
+  - Imagem: `docs/backlog/rtlsdr-nao-reconhecido-v1.4.0.webp` (v1.4.0, Windows): "Nenhum RTL-SDR detectado" + texto do Zadig.
+  - A mensagem atual é genérica: aparece sempre que `rtlsdr_get_device_count()` retorna 0, sem distinguir
+    (a) biblioteca nativa não carregou, (b) dongle ausente na USB, (c) driver errado/interface errada,
+    (d) dongle ocupado por outro programa (SDR#, SDR++, HDSDR, rtl_tcp).
+  - Investigar no EXE congelado: carga de `librtlsdr.dll` + `libusb-1.0.dll` do pyrtlsdrlib (caminho em
+    `_MEIPASS`, dependências do MSVC runtime), versão da librtlsdr x RTL-SDR Blog V4 (R828D), e se a
+    enumeração vê o VID:PID 0BDA:2838/2832.
+  - Diagnóstico na tela (botão "Diagnosticar RTL-SDR"): biblioteca carregada e caminho; dispositivos USB
+    com VID 0BDA via PnP do Windows e driver associado (WinUSB/RTL2832UUSB/libusbK); resultado de abrir
+    o dispositivo (código libusb) e recomendação específica; incluir no log exportável.
+  - Só sugerir o Zadig quando o driver associado não for WinUSB/libusbK; detectar o caso "Interface 1".
+  - Validar com RTL-SDR real no Windows 10/11 (inclusive V4) antes de fechar.
+
 - **Passagens 36 h — coluna "Qualidade" de 1 a 5 estrelas** (registrado em 06/11/2026)
   - Nota composta, não só elevação máxima ou duração: estimar a qualidade real do contato.
   - Fatores sugeridos (pesos ajustáveis, documentados no tooltip de cada linha):
