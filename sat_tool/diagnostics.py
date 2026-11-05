@@ -47,6 +47,22 @@ def run_self_test(report_path: str, expected_qt: str = "") -> int:
         if "MAPA VETORIAL OFFLINE" not in html or "tile.openstreetmap.org" in html:
             raise RuntimeError("Mapa offline indisponível ou ainda depende de OSM tiles")
         result["checks"].append("offline_map_and_brand_embedded")
+        # v1.4.0: SDR (librtlsdr empacotada), DSP/AFSK, decodificadores SatNOGS e QtMultimedia.
+        from sat_tool import ax25, sdr, sdr_panel, telemetry, rigs  # noqa: F401
+        sdr._librtlsdr()
+        devices, message = sdr.detect_devices()
+        result["checks"].append("librtlsdr_loaded:%d" % len(devices))
+        frame = ax25.build_ui_frame("CQ", "PT2VHF", [], b"selftest")
+        decoded = ax25.AfskDemodulator().process(ax25.modulate_afsk(frame))
+        if decoded != [frame]:
+            raise RuntimeError("Decodificador AFSK 1200 falhou no autoteste")
+        result["checks"].append("afsk1200_roundtrip")
+        if not telemetry.TelemetryDecoder.decode_with("iss", frame):
+            raise RuntimeError("satnogs-decoders não decodificou o quadro de teste")
+        result["checks"].append("satnogs_decoders")
+        if QT_BINDING == "PySide6":
+            from PySide6.QtMultimedia import QAudioSink  # noqa: F401
+            result["checks"].append("qt_multimedia")
         result["status"] = "passed"
     except BaseException:
         result["error"] = traceback.format_exc()

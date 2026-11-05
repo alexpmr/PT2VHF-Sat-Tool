@@ -1,0 +1,9 @@
+PT2VHF Sat Tool — RTL-SDR no Linux (uma vez só)
+
+1. Permissão USB sem root:
+   sudo cp rtl-sdr.rules /etc/udev/rules.d/20-rtl-sdr.rules
+   sudo udevadm control --reload && sudo udevadm trigger
+2. Impedir que o driver de TV digital tome o dongle:
+   echo 'blacklist dvb_usb_rtl28xxu' | sudo tee /etc/modprobe.d/blacklist-rtl-sdr.conf
+   sudo modprobe -r dvb_usb_rtl28xxu
+3. Reconecte o RTL-SDR e abra o PT2VHF Sat Tool: ele detecta o dongle e pergunta se deve usá-lo para RX.

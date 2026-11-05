@@ -1,0 +1,4 @@
+# PT2VHF Sat Tool — acesso ao RTL-SDR sem root (RTL2832U).
+# Instale: sudo cp rtl-sdr.rules /etc/udev/rules.d/20-rtl-sdr.rules && sudo udevadm control --reload
+SUBSYSTEM=="usb", ATTRS{idVendor}=="0bda", ATTRS{idProduct}=="2838", MODE="0666", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTRS{idVendor}=="0bda", ATTRS{idProduct}=="2832", MODE="0666", TAG+="uaccess"

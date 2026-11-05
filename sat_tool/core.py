@@ -173,7 +173,7 @@ def transponder_options(rows: list[dict]) -> list[dict]:
             "uplink_high": int(t.get("uplink_high") or ul) if ul else None,
             "mode": (t.get("mode") or "FM").upper(), "inverted": bool(t.get("invert")),
             "uuid": t.get("uuid"), "receive_only": ul is None,
-            "type": t.get("type") or "",
+            "type": t.get("type") or "", "baud": t.get("baud"),
         })
     return options
 
