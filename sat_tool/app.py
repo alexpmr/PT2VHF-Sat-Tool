@@ -529,24 +529,22 @@ class MainWindow(QMainWindow):
         self._upcoming_group=upcoming
         rv.addWidget(stat)
         nextpass,np=group("PASSAGENS DO SATÉLITE SELECIONADO · 36 H")
-        # Datas em uma linha; nomes/modos longos ainda quebram se a janela for estreita.
         nextpass.setMinimumWidth(0)
         self.pass_table=QTableWidget(0,6)
-        self.pass_table.setHorizontalHeaderLabels(["Satélite","AOS\nlocal","TCA\nlocal","LOS\nlocal","Máx °","Modos"])
+        # Selected satellite appears in the combo; redundant table column removed.
+        self.pass_table.setHorizontalHeaderLabels(["AOS\nlocal","TCA\nlocal","LOS\nlocal","Duração","Máx °","Modos"])
         pass_header=self.pass_table.horizontalHeader()
         pass_header.setStretchLastSection(False)
-        pass_header.setMinimumSectionSize(36)
+        pass_header.setMinimumSectionSize(50)
         pass_header.setDefaultAlignment(Qt.AlignCenter)
-        pass_header.setFixedHeight(36)
-        for col in (1,2,3,4):
+        pass_header.setFixedHeight(max(46,self.pass_table.fontMetrics().height()*2+14))
+        for col in (0,1,2,3,4):
             pass_header.setSectionResizeMode(col,QHeaderView.ResizeToContents)
-        # v1.3.16: Satélite e Modos ocupam a largura livre do painel.
-        for col in (0,5):
-            pass_header.setSectionResizeMode(col,QHeaderView.Stretch)
-        self.pass_table.setWordWrap(True)
+        pass_header.setSectionResizeMode(5,QHeaderView.Stretch)
+        self.pass_table.setWordWrap(False)
         self.pass_table.setTextElideMode(Qt.ElideNone)
-        self.pass_table.verticalHeader().setMinimumSectionSize(23)
-        self.pass_table.verticalHeader().setDefaultSectionSize(28)
+        self.pass_table.verticalHeader().setMinimumSectionSize(max(28,self.pass_table.fontMetrics().height()+10))
+        self.pass_table.verticalHeader().setDefaultSectionSize(max(30,self.pass_table.fontMetrics().height()+12))
         self.pass_table.verticalHeader().hide()
         # Sem altura máxima: a tabela cresce no espaço livre abaixo da telemetria.
         self.pass_table.setMinimumHeight(160)
@@ -2892,13 +2890,19 @@ class MainWindow(QMainWindow):
                 peak=p['tca'].astimezone().strftime('%d/%m %H:%M') if p.get('tca') else '—'
                 los=p['los'].astimezone().strftime('%d/%m %H:%M')
                 modes=self.suggested_mode_text(p['id'])
-                for j,value in enumerate((p['name'],aos,peak,los,f"{p['max_el']:.0f}",modes)):
+                seconds=max(0,int((p['los']-p['aos']).total_seconds()))
+                duration=format_duration(seconds)
+                for j,value in enumerate((aos,peak,los,duration,f"{p['max_el']:.0f}°",modes)):
                     cell=QTableWidgetItem(value)
-                    cell.setTextAlignment(
-                        Qt.AlignVCenter | (Qt.AlignCenter if j in (1,2,3,4) else Qt.AlignLeft))
-                    cell.setToolTip(value)  # texto integral se coluna for comprimida
+                    cell.setTextAlignment(Qt.AlignVCenter | (Qt.AlignLeft if j==5 else Qt.AlignCenter))
+                    cell.setToolTip(value)
+                    if j==0:
+                        cell.setData(Qt.UserRole,str(p['id']))
                     self.pass_table.setItem(i,j,cell)
             self.pass_table.resizeRowsToContents()
+            for i in range(self.pass_table.rowCount()):
+                self.pass_table.setRowHeight(i,max(self.pass_table.rowHeight(i),
+                    self.pass_table.fontMetrics().height()+12))
             self.log(f'Previsão: {len(data)} passagens nas próximas 36 h (lista limitada a 100)')
             self.update_next_indicator()
             self.prefetch_upcoming_modes()
