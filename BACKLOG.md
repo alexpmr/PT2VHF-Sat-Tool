@@ -1,3 +1,40 @@
+# Auditoria do backlog ativo — 05/11/2026 (código v1.3.17)
+
+> **Escopo:** esta seção consolida pendências atuais; o histórico abaixo é preservado. **Registrar não significa implementar.** Não anunciar CAT contínuo como homologado sem teste com TS-2000 real.
+>
+> **Requisitos substituídos:** o relógio UTC menor e CAT compacto de 05/11 substituem solicitações antigas de elementos grandes no topo. O AOS a 10 s com contagem substitui o alerta simples de 30 s ainda presente no código. Windows 7 está fora da matriz de distribuição atual.
+
+## Sprint ativa — prioridades e aceite
+
+### P0 · Controle CAT contínuo — homologação de campo pendente
+- [ ] Validar com TS-2000 físico por **10 minutos sem reconectar nem clicar**, múltiplas correções Doppler FA/FB e respectivos readbacks com timestamps, dentro/fora da visada, sem PTT. Corrigir starvation, concorrência ou estados inconsistentes quando reproduzidos. Diferenciar porta aberta, leitura CAT validada e Auto CAT efetivamente ativo.
+- [ ] Tratar porta ausente (ex.: COM15 / FileNotFoundError) com mensagem clara "Porta CAT indisponível", orientação sobre cabo/driver/COM e atalho para Configurações; registrar detalhes técnicos em LOGs/CAT. Não confundir falha de conexão com sintonia bloqueada.
+
+### P1 · Responsividade da aba Operação — capturas de 05/11
+- [ ] **Topo:** manter título/versão e atualização juntos; trocar indicador CAT largo por **botão compacto CAT** (verde só com comunicação validada, vermelho desconectado/erro, âmbar conectando/degradado), clicável, com tooltip e texto acessível; sincronizar os controles de conexão.
+- [ ] **Relógio UTC:** reduzir fonte, altura e largura, sem cortar data/hora; usar fonte tabular. Prevalece sobre pedido antigo de relógio maior.
+- [ ] **Frequências:** **agrupar RX/DOWNLINK e TX/UPLINK em um único painel horizontal compacto**, MHz e modos legíveis, sem os dois cartões altos de 108 px; liberar espaço para mapa/passagens.
+- [ ] **Resumo do catálogo:** evitar quebra vertical palavra a palavra no cabeçalho ("12.273 satélites no catálogo de múltiplas categorias · CelesTrak OMM/TLE"); mostrar versão curta em uma linha e tooltip/segunda linha para detalhes.
+- [ ] **Passagens 36 h:** remover coluna Satélite redundante, acrescentar **Duração = LOS − AOS** entre LOS e Máx °; manter AOS/TCA/LOS locais e Modos; preservar NORAD por dados ocultos de linha e duplo clique; ajustar índices e testes.
+- [ ] **Fontes e telemetria:** dimensionar cabeçalhos AOS/TCA/LOS, alturas das linhas, margens e valores orbitais por métricas de fonte/DPI. Não cortar caracteres, esconder dados críticos ou comprimir tabela com altura fixa.
+- [ ] **Aceite visual:** capturar 1280×720, 1366×768 e 1920×1080, normal/maximizada, DPI 100/125/150/200%, idiomas disponíveis, nomes longos como RS-44 & BREEZE-KM R/B, zero/uma/muitas passagens, teclado/mouse e CAT.
+- [ ] **Controles redundantes:** revisar indicador CAT superior e botão inferior Conectar; manter uma fonte de estado e acesso claro às Configurações sem perder recursos.
+
+### P1 · Aviso AOS 10 s — não entregue na v1.3.17
+- [ ] Código atual ainda usa selected_aos_alarm(...,30), opção "Avisar 30 segundos" e QMessageBox com QApplication.beep(). Substituir por popup **não modal** e contagem 10→0 atualizada a cada segundo, bip por segundo e som diferente no AOS; silenciar/testar som, antecedência configurável (padrão 10 s), áudio confiável em Windows/Linux/macOS, sem roubar foco nem comandar CAT/PTT.
+- [ ] Testar satélite/estação/taxa de elevação trocados, relógio atrasado, janela minimizada, retomada e um disparo por passagem.
+
+### P1/P2 · Pendências anteriores mantidas
+- [ ] Homologar Auto CAT e trajetória futura 2 h conforme persistência, sem reabilitar preferência explicitamente desativada; confirmar disponibilidade dos sete satélites padrão e suas efemérides.
+- [ ] Implementar e testar filtro múltiplo de categorias na aba Satélites e responsividade das Configurações.
+- [ ] Exportar LOGs/CAT completos (histórico e rotações), preservando dados sensíveis e evidências diagnósticas.
+- [ ] Avaliar isoladamente, com critérios de segurança e rádio real, bloqueio de escritas CAT durante TX, orientação invertida MAIN/SUB e ISS mesma banda/SPLIT.
+
+### Critério de liberação
+- [ ] Não encerrar sem teste/evidência por sistema, versão e hardware quando aplicável. CI verde, distribuição e OTA não substituem homologação CAT em rádio físico.
+
+---
+
 ## Pendentes
 
 - **Aviso sonoro de AOS 10 s antes, com contagem regressiva em popup** (registrado em 05/11/2026)
