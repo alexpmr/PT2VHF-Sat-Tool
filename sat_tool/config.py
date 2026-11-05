@@ -20,6 +20,7 @@ DEFAULTS = {
     "satellite_selection": list(DEFAULT_SATELLITES), "tle_update_hours": 4,
     "poll_interval_s": 1, "tle_source": "CelesTrak",
     "orbit_groups": ["amateur","stations","cubesat","starlink","oneweb","weather","science","visual"],
+    "catalog_category_filter": ["amateur","stations","cubesat","starlink","oneweb","weather","science","visual"],
     "cat_auto_select": True, "cat_auto_connect_startup": True,
     "cat_tracking_interval_s": 1, "cat_doppler_out_of_view": True,
     "cat_live_v137_migrated": True,
