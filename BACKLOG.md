@@ -20,6 +20,12 @@
   - Revisar tamanho da fonte, altura das linhas (`resizeRowsToContents`), padding das células e
     largura mínima das colunas de horário para o texto não ficar espremido nem cortado em
     janelas normais; validar com captura de tela em 1366×768 e 1920×1080.
+  - Reforço (05/11/2026, monitor pequeno): `docs/backlog/fontes-colapsadas-monitor-pequeno-v1.3.16.png`.
+    - Cabeçalhos "AOS/TCA/LOS local" cortados na segunda linha (altura fixa de 36 px no cabeçalho).
+    - Nome "RS-44 & BREEZE-KM R/B" quebrando em três linhas e Modos "CW/FM/SSB" em duas.
+    - Telemetria orbital: valores (−52,4°, 230,2°, +1726,9 m/s…) cortados na vertical — linhas
+      com altura menor que a fonte; também afeta a aba inteira em resoluções baixas.
+    - Ajustar alturas mínimas pelo `fontMetrics` em vez de valores fixos; testar em 1280×720 e 1366×768.
 
 ## v1.3.16 — backlog resolvido + Linux e macOS (04/11/2026)
 
