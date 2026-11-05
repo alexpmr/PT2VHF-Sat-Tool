@@ -31,8 +31,8 @@ def test_operator_window_constructs_with_new_layout():
             application=gui.QApplication([])
             window=gui.MainWindow()
             assert window.tabs.count()==5
-            assert window.pred_rx.minimumHeight()>=100
-            assert window.pred_tx.minimumHeight()>=100
+            assert 58<=window.pred_rx.minimumHeight()<100
+            assert 58<=window.pred_tx.minimumHeight()<100
             assert window.mode_combo.parent() is not None
             assert window.ports.parent() is not None
             assert window.cat_rx.parent() is not None
@@ -42,11 +42,12 @@ def test_operator_window_constructs_with_new_layout():
                                           for i in range(window.catalog_table.columnCount())]
             assert window.cat_operating_detail.parent() is not None
             header=window.pass_table.horizontalHeader()
-            for col in (1,2,3,4):
+            for col in (0,1,2,3,4):
                 assert header.sectionResizeMode(col)==gui.QHeaderView.ResizeToContents
-            for col in (0,5):
-                assert header.sectionResizeMode(col)==gui.QHeaderView.Stretch
-            assert window.pass_table.wordWrap() is True
+            assert header.sectionResizeMode(5)==gui.QHeaderView.Stretch
+            assert window.pass_table.wordWrap() is False
+            assert window.pass_table.horizontalHeaderItem(0).text().startswith('AOS')
+            assert window.pass_table.horizontalHeaderItem(3).text()=='Duração'
             assert window.connection.text()=="Conectar"
             assert not hasattr(window,"cat_tune_now")
             assert window.auto_cat.text().startswith("Auto CAT contínuo")
@@ -57,18 +58,19 @@ def test_operator_window_constructs_with_new_layout():
                 is_open=True
                 def close(self):self.is_open=False
             window.radio.port=FakePort()
-            window.cat_indicator.setText("● TS-2000 CONECTADO · COM1")
+            window.cat_indicator.setText("CAT")
             observed_jobs=[]
             window.background=lambda key, fn: observed_jobs.append(key)
             window.background_error("cat-autotune","Rádio não confirmou frequências FA/FB")
-            assert "CONECTADO" in window.cat_indicator.text()
+            assert window.cat_indicator.text()=="CAT"
+            assert "SINTONIA NÃO APLICADA" in window.cat_tune_status.text()
             assert "SINTONIA NÃO APLICADA" in window.cat_tune_status.text()
             assert "FA/FB" in window.cat_tune_status.text()
             assert "cat-poll" in observed_jobs
             # A *real* closed port may be marked disconnected.
             window.radio.port=None
             window.background_error("cat-autotune","TS-2000 desconectado")
-            assert "DESCONECTADO" in window.cat_indicator.text()
+            assert window.cat_indicator.text()=="CAT"
             window.tracked_search.setText("ISS")
             assert window.tracked_search_summary.text().startswith("0 resultados")
             window.tick_timer.stop()
