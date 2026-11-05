@@ -1,5 +1,14 @@
 ## Pendentes
 
+- **Topo da aba Operação — reduzir espaço desperdiçado** (registrado em 05/11/2026)
+  - Indicador CAT: trocar o botão largo "● RÁDIO DESCONECTADO / ! CAT DESCONECTADO / ERRO" por um
+    ícone compacto "CAT" em verde (conectado) ou vermelho (desconectado/erro), mantendo o clique para
+    conectar/desconectar e o detalhe no tooltip.
+  - "DATA/HORA UTC": fonte menor (hoje 17 px, negrito, largura mínima 235 px).
+  - Bloco SATÉLITE · FREQUÊNCIAS: RX/DOWNLINK e TX/UPLINK com fonte menor e menos altura,
+    liberando espaço vertical para mapa e passagens.
+  - Validar com captura de tela em 1366×768 e 1920×1080.
+
 - **Passagens 36 h — coluna com a duração da janela (LOS − AOS)** (registrado em 05/11/2026)
   - Nova coluna "Duração" na tabela "Passagens do satélite selecionado · 36 h", entre LOS e Máx °,
     no formato mm:ss (ou h:mm:ss se passar de 1 h), calculada de `los - aos` de cada passagem.
