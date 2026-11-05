@@ -194,6 +194,7 @@ class MainWindow(QMainWindow):
         self.apply_language()
         self.populate_catalog(load_orbits(self.config.dir))
         self.update_ports()
+        self.init_sdr_dock()
         if age_hours(self.config.dir,"amateur_omm.json") is None or age_hours(self.config.dir,"amateur_omm.json")>self.config.values.get("tle_update_hours",4):
             self.refresh_catalog()
         self.tick_timer = QTimer(self)
@@ -307,6 +308,10 @@ class MainWindow(QMainWindow):
         self.cat_indicator.setFixedWidth(66)
         self.cat_indicator.setStyleSheet("font-size:12px;font-weight:800;color:#ef9a9a;padding:4px;background:#243143;border-radius:5px")
         header.addWidget(self.cat_indicator)
+        self.sdr_toggle=QPushButton("SDR")
+        self.sdr_toggle.setToolTip("Mostrar/ocultar o painel SDR · Equipamentos RX/TX · Telemetria")
+        self.sdr_toggle.setStyleSheet("font-size:12px;font-weight:800")
+        header.addWidget(self.sdr_toggle)
         self.utc = QLabel("DATA/HORA UTC —")
         self.utc.setStyleSheet("font-size:12px;font-weight:700;color:#dff9ff;padding:4px;background:#153751;border:1px solid #34758c;border-radius:5px")
         self.utc.setWordWrap(False)
@@ -969,6 +974,51 @@ class MainWindow(QMainWindow):
         about_layout.addWidget(btn);about_layout.addStretch()
         root.addTab(about,"Sobre")
         self.statusBar().showMessage("PT2VHF Sat Tool | Mapa offline Natural Earth | CAT passivo · PTT não controlado | CelesTrak OMM / SatNOGS")
+
+    def init_sdr_dock(self):
+        """v1.4.0: painel acoplável SDR · Equipamentos RX/TX · Telemetria."""
+        from .sdr_panel import make_dock
+        self.sdr_dock,self.sdr_panel=make_dock(self)
+        self.addDockWidget(Qt.BottomDockWidgetArea,self.sdr_dock)
+        self.sdr_dock.setVisible(bool(self.config.values.get("sdr_dock_visible",False)))
+        self.resizeDocks([self.sdr_dock],[230],Qt.Vertical)
+        self.sdr_dock.visibilityChanged.connect(self._remember_sdr_dock)
+        self.sdr_toggle.clicked.connect(lambda:self.sdr_dock.setVisible(not self.sdr_dock.isVisible()))
+
+    def _remember_sdr_dock(self,visible):
+        if self.isVisible():
+            self.config.values["sdr_dock_visible"]=bool(visible)
+
+    def doppler_snapshot(self):
+        """Estado Doppler atual para SDR/equipamentos (chamado a 4 Hz; nunca escreve CAT)."""
+        if not self.sat:
+            return None
+        ul,dl=self.nominal_hz()
+        from .operations import frequency_prediction
+        from .telemetry import pipeline_for
+        pos=position(self.sat,self.saved_station(),ts=self.ts)
+        calc=frequency_prediction({"downlink_hz":dl,"uplink_hz":ul},pos["radial_m_s"])
+        i=self.mode_combo.currentData()
+        opt=self.options[i] if isinstance(i,int) and 0<=i<len(self.options) else {"mode":self.rx_mode.currentText()}
+        band=None
+        if opt.get("downlink_high",0)>opt.get("downlink",0):
+            band=(opt["downlink"]+calc["rx_offset_hz"],opt["downlink_high"]+calc["rx_offset_hz"])
+        return {"norad":str(self.sat_combo.currentData() or ""),"name":self.sat.name,
+                "rx_hz":int(calc["rx_hz"]),"tx_hz":int(calc["tx_hz"]) if calc["tx_hz"] else None,
+                "rx_offset_hz":int(calc["rx_offset_hz"]),"rx_mode":self.rx_mode.currentText(),
+                "tx_mode":self.tx_mode.currentText(),"visible":bool(pos["visible"]),
+                "pipeline":pipeline_for(opt),"band":band}
+
+    def retune_nominal_downlink(self,delta_hz):
+        """Clique no waterfall: move a frequência nominal; em lineares o uplink acompanha."""
+        try:
+            dl=parse_mhz_input(self.down_edit.text())
+        except ValueError:
+            return
+        self.down_edit.setText(f"{(dl+int(delta_hz))/1e6:.6f}")
+        self.pair_linear()
+        self.preview_doppler()
+        self.log(f"Sintonia pelo waterfall: {delta_hz:+d} Hz")
 
     def load_fields(self):
         c=self.config.values
@@ -2863,6 +2913,9 @@ class MainWindow(QMainWindow):
 
     def background_result(self,key,data):
         self.pending_jobs.discard(key)
+        if key=="rig":
+            self.sdr_panel.rig_result(data)
+            return
         if key.startswith('photo:'):
             if key.split(':')[1]==str(self.sat_combo.currentData()):
                 self.photo.setHtml(photo_html(data),QUrl("https://commons.wikimedia.org/"))
@@ -3476,6 +3529,9 @@ class MainWindow(QMainWindow):
             'orbit':orbit,
         })
     def closeEvent(self,event):
+        if getattr(self,"sdr_panel",None) is not None:
+            self.sdr_panel.shutdown()
+        self.config.save()
         if self.web_server is not None:
             self.web_server.stop()
             self.web_server=None

@@ -5,6 +5,13 @@ import json, os, sys
 DEFAULT_SATELLITES = ("25544", "27607", "40931", "7530", "24278", "44909", "59112")
 
 DEFAULTS = {
+    # v1.4.0: SDR, equipamentos RX/TX separados e telemetria.
+    "rx_device": "TS-2000", "tx_device": "TS-2000",
+    "ft817_port": "", "ft817_baud": 9600, "rigctld_host": "127.0.0.1:4532",
+    "rtl_tcp": "", "sdr_ppm": 0, "sdr_bias_tee": False, "sdr_gain_db": None,
+    "sdr_audio_device": "", "sdr_record": False, "sdr_record_iq": False,
+    "sdr_volume": 0.8, "sdr_squelch_db": -120, "sdr_autostart": True, "sdr_dock_visible": False,
+    "kiss_enabled": False, "kiss_host": "127.0.0.1:8100", "satnogs_upload": False,
     "callsign": "PT2VHF", "lat": "", "lon": "", "altitude_m": 0,
     "min_elevation": 10, "port": "", "baud": 9600, "stopbits": 1,
     "update_interval_s": 1, "tune_threshold_hz": 1,
