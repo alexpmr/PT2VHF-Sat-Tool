@@ -58,6 +58,27 @@
 
 ## Pendentes
 
+- **RTL-SDR plug and play: driver/permissões instalados pelo próprio programa** (registrado em 06/11/2026)
+  - Objetivo: conectar o dongle e usar, sem Zadig, sem terminal e sem ler instruções.
+  - **Windows:** embarcar a libwdi (`wdi-simple.exe`, LGPL, a mesma base do Zadig) no instalador e no portátil.
+    - Detectar pelo PnP do Windows o RTL-SDR (0BDA:2838/2832, **somente a interface 0**) e o driver associado
+      (RTL2832UUSB/DVB-T, nenhum, WinUSB, libusbK).
+    - Sem WinUSB: aviso único "O RTL-SDR precisa do driver WinUSB. Instalar agora?" → executa o wdi-simple
+      elevado (um único UAC), confere o resultado, reabre o dispositivo e inicia o SDR sem reconectar.
+    - Instalador Inno Setup: tarefa opcional, marcada por padrão, "Preparar RTL-SDR (driver WinUSB)",
+      que roda na instalação se o dongle estiver conectado e fica disponível no programa depois.
+    - Registrar no log o antes/depois do driver; informar que o dongle deixa de servir para apps de TV e
+      como reverter (Gerenciador de Dispositivos → Reverter driver); nunca alterar a interface 1.
+    - Validar assinatura/certificado gerado pela libwdi no Windows 10/11 e falsos positivos de antivírus.
+  - **Linux:** `.deb` instala sozinho a regra udev e o blacklist do `dvb_usb_rtl28xxu` (postinst) e
+    recarrega o udev; `.tar.gz`/AppImage: botão/aviso "Configurar RTL-SDR" que aplica regra + blacklist via
+    `pkexec` (senha uma vez) e descarrega o módulo de TV, sem reiniciar.
+  - **macOS:** nada a instalar; apenas detectar e usar.
+  - Ao detectar e preparar o dongle: selecionar o SDR como RX (com confirmação já existente), abrir o painel,
+    aplicar ganho automático e começar a ouvir o satélite selecionado — zero configuração obrigatória.
+  - Diagnóstico "Diagnosticar RTL-SDR" (item P0) reaproveitado para explicar qualquer etapa que falhe.
+  - Validar com RTL-SDR real (inclusive RTL-SDR Blog V4) em Windows 10/11, Ubuntu e macOS.
+
 - **P0 · RTL-SDR não reconhecido no Windows mesmo após instalar o driver WinUSB (Zadig)** (registrado em 06/11/2026)
   - Imagem: `docs/backlog/rtlsdr-nao-reconhecido-v1.4.0.webp` (v1.4.0, Windows): "Nenhum RTL-SDR detectado" + texto do Zadig.
   - A mensagem atual é genérica: aparece sempre que `rtlsdr_get_device_count()` retorna 0, sem distinguir
