@@ -4,16 +4,16 @@
 
 ## Downloads — Windows, Linux e macOS
 
-**PT2VHF Sat Tool v1.3.17 — Windows 10/11 x64, Linux x64 e macOS Apple Silicon**.
+**PT2VHF Sat Tool v1.3.18 — Windows 10/11 x64, Linux x64 e macOS Apple Silicon**.
 
 **Novo site oficial: [www.PT2VHF.com](https://www.pt2vhf.com/sat)** — downloads (Setup e Portátil), novas versões e somas SHA-256 ficam no site. A partir da v1.3.14 o atualizador consulta exclusivamente `https://www.pt2vhf.com/update.php?product=sat`.
 
 | Edição | Download direto |
 | --- | --- |
-| **Instalável x64** | [Setup (.exe)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.3.17-Win11-x64-Setup.exe) |
-| **Portátil x64** | [Portable (.exe)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.3.17-Win11-x64-Portable.exe) |
-| **Linux x64** | [Pacote (.tar.gz)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.3.17-Linux-x64.tar.gz) |
-| **macOS ARM64** | [Imagem (.dmg)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.3.17-macOS-arm64.dmg) |
+| **Instalável x64** | [Setup (.exe)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.3.18-Win11-x64-Setup.exe) |
+| **Portátil x64** | [Portable (.exe)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.3.18-Win11-x64-Portable.exe) |
+| **Linux x64** | [Pacote (.tar.gz)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.3.18-Linux-x64.tar.gz) |
+| **macOS ARM64** | [Imagem (.dmg)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.3.18-macOS-arm64.dmg) |
 
 O sufixo `Win11-x64` é mantido para compatibilidade com o atualizador e também atende ao Windows 10 1809+.
 
@@ -21,6 +21,13 @@ O sufixo `Win11-x64` é mantido para compatibilidade com o atualizador e também
 
 ---
 
+## Novidades v1.3.18 — interface compacta, AOS 10 s e Web local/LAN
+
+- **Operação otimizada:** topo com CAT compacto, relógio UTC menor, RX/TX reunidos em painel de menor altura e telemetria orbital com linhas legíveis.
+- **Passagens 36 h:** coluna redundante Satélite removida, coluna Duração (LOS − AOS) adicionada, cabeçalhos dinâmicos e células adaptadas à resolução.
+- **Alerta AOS:** antecedência configurável (padrão 10 segundos), popup não modal com contagem regressiva, sinais sonoros por segundo e sinal distinto no início da passagem.
+- **Painel Web:** Configurações → Interface Web; acesso localhost ou LAN opcional e protegido por chave temporária, mostrando mapa orbital, previsões, CAT e telemetria. O painel Web é deliberadamente somente leitura, não aciona CAT nem PTT.
+- **CAT:** erros de COM com instruções mais claras e status em botão compacto. **Controle Doppler CAT contínuo depende de homologação com TS-2000 físico**; testes simulados não bastam.
 ## Novidades v1.3.17 — atualização completa e distribuição multi-plataforma
 
 - Compilação e teste nativo dos quatro pacotes: Windows Setup/Portable x64, Linux x64 e macOS Apple Silicon.
