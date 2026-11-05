@@ -1,4 +1,16 @@
-# Auditoria do backlog ativo — 05/11/2026 (código v1.3.17)
+## Escopo implementado na branch release/v1.3.18 — verificar CI e instalação real
+
+- [x] Botão CAT compacto verde/vermelho/âmbar, relógio UTC menor, topo e cartões RX/TX compactados; telemetria com altura mínima calculada pela fonte.
+- [x] Tabela 36 h sem coluna Satélite, com nova coluna Duração e alturas adaptadas; mantém dados NORAD e duplo clique.
+- [x] Alarme AOS com antecedência configurável (10 s por padrão), popup não modal, silêncio e arquivo WAV sintético (QtMultimedia com fallback).
+- [x] Interface Web de consulta com mapa, frequências, estado CAT, telemetria e passagens: localhost e LAN opt-in com token temporário; sem controles CAT/PTT via HTTP.
+- [x] Filtro múltiplo de categorias de satélites, persistente e independente das fontes de download orbital.
+- [x] Erro de porta COM tratado com indicação compreensível e log técnico preservado.
+- [ ] Testar builds e execução real Windows/Linux/macOS e entrega no site/OTA antes de declarar a release final concluída.
+- [ ] **P0 permanece aberto:** homologar Auto CAT com TS-2000 real por 10 min, com correções sucessivas FA/FB, log, SAT ON e PTT inativo.
+
+---
+# Auditoria do backlog ativo — 05/11/2026 (revisado para v1.3.18)
 
 > **Escopo:** esta seção consolida pendências atuais; o histórico abaixo é preservado. **Registrar não significa implementar.** Não anunciar CAT contínuo como homologado sem teste com TS-2000 real.
 >

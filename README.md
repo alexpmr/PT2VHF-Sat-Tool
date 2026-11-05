@@ -21,6 +21,14 @@ O sufixo `Win11-x64` é mantido para compatibilidade com o atualizador e também
 
 ---
 
+## Abrir no navegador (local ou rede LAN)
+
+1. Abra o Sat Tool no computador onde os elementos orbitais e o CAT estão configurados.
+2. Em **Configurações → Interface Web**, habilite o painel Web, escolha a porta TCP (padrão **8094**) e clique em **Abrir interface Web**.
+3. O acesso local usa `http://127.0.0.1:8094/`. Para outros dispositivos da mesma LAN, marque **Permitir outros dispositivos da rede local (LAN)** e use **Copiar endereço**; a URL inclui uma chave temporária e a primeira visita cria um cookie de sessão.
+4. Se outro computador/celular não alcançar a página, confira o IPv4 do computador e libere a porta TCP de entrada **apenas na rede privada** no firewall local. Não configure redirecionamento de porta no roteador.
+
+**Escopo do painel Web v1.3.18:** consulta em tempo real ao satélite, frequências previstas, CAT, telemetria, mapa vetorial offline e passagens. **Somente leitura:** o navegador não muda satélite/configurações nem executa comandos CAT/PTT. O desktop deve permanecer aberto. O HTTP na LAN não é criptografado; não divulgue a URL fora da rede.
 ## Novidades v1.3.18 — interface compacta, AOS 10 s e Web local/LAN
 
 - **Operação otimizada:** topo com CAT compacto, relógio UTC menor, RX/TX reunidos em painel de menor altura e telemetria orbital com linhas legíveis.

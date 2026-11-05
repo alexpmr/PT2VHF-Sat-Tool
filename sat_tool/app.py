@@ -962,7 +962,7 @@ class MainWindow(QMainWindow):
         root.addTab(logs,"LOGs / CAT")
         about=QWidget();about_layout=QVBoxLayout(about)
         about_layout.addWidget(label(f"PT2VHF Sat Tool v{__version__} — Controle CAT do TS-2000"))
-        about_layout.addWidget(label("Distribuição: Windows 10/11 x64; instalador Setup EXE e portátil EXE único. Win7 pausado."))
+        about_layout.addWidget(label("Distribuição: Windows 10/11 x64 (Setup e Portátil), Linux x64 e macOS Apple Silicon. Win7 pausado."))
         about_layout.addWidget(label("Elementos orbitais: CelesTrak OMM/TLE. Transponders e modos: SatNOGS (créditos e licenças nos provedores)."))
         about_layout.addWidget(label("Site oficial e downloads: https://www.pt2vhf.com/sat · Licença MIT"))
         btn=QPushButton("Verificar versão");btn.clicked.connect(lambda:self.request_update(manual=True))
@@ -1498,7 +1498,7 @@ class MainWindow(QMainWindow):
         self.cat_connect_was_startup=bool(startup)
         self.cat_indicator.setText("CAT")
         self.cat_indicator.setToolTip("CAT conectando · "+port)
-        self.cat_indicator.setStyleSheet("font-size:12px;font-weight:800;color:#f2c16b")
+        self.cat_indicator.setStyleSheet("font-size:12px;font-weight:800;color:#ffe4b0;background:#755225;border:1px solid #e0aa55")
         self.cat_indicator.setEnabled(False)
         self.connection.setEnabled(False)
         self.cat_tune_status.setText("CAT: conectando "+port+" (somente leitura inicial)…")
@@ -1522,7 +1522,7 @@ class MainWindow(QMainWindow):
         self.last_cat_success=None
         self.cat_indicator.setText("CAT")
         self.cat_indicator.setToolTip("CAT desconectado · clique para conectar")
-        self.cat_indicator.setStyleSheet("font-size:12px;font-weight:800;color:#ff9595")
+        self.cat_indicator.setStyleSheet("font-size:12px;font-weight:800;color:#ffe7e7;background:#783437;border:1px solid #db565e")
         self.connection.setText("Conectar")
         self.radio_label.setText("Desconectado")
         self.map_radio_label.setText("CAT desconectado · RX — MHz · TX — MHz · Modo —")
@@ -1556,7 +1556,7 @@ class MainWindow(QMainWindow):
         self.last_cat_success=now_utc()
         self.cat_indicator.setText("CAT")
         self.cat_indicator.setToolTip("CAT conectado e validado · "+self.ports.currentText()+" · clique para desconectar")
-        self.cat_indicator.setStyleSheet("font-size:12px;font-weight:800;color:#67efb2")
+        self.cat_indicator.setStyleSheet("font-size:12px;font-weight:800;color:#ddfff0;background:#12533f;border:1px solid #36b88a")
         self.cat_live_label.setText(
             "RÁDIO REAL (CAT) · MAIN RX [FA] "+self.radio_freq(st.downlink)+
             "  |  SAT UPLINK [FB] "+self.radio_freq(st.uplink)+
@@ -2849,7 +2849,7 @@ class MainWindow(QMainWindow):
                 self.map_radio_label.setStyleSheet("color:#e3ad61;font-weight:700")
                 self.cat_indicator.setText("CAT")
                 self.cat_indicator.setToolTip(f"CAT sem resposta há {age:.0f}s · confira a porta")
-                self.cat_indicator.setStyleSheet("font-size:12px;font-weight:800;color:#ffbf6f")
+                self.cat_indicator.setStyleSheet("font-size:12px;font-weight:800;color:#ffead3;background:#755225;border:1px solid #e0aa55")
                 self.cat_status.setText(f"● CAT desatualizado há {age:.0f}s")
                 self.cat_status.setStyleSheet("color:#efc17b;font-size:12px")
                 self.cat_details.setText("Leitura CAT vencida · conferir cabo e porta COM")
@@ -3101,7 +3101,7 @@ class MainWindow(QMainWindow):
             self.cat_diagnose.setEnabled(False)
             self.cat_indicator.setText("CAT")
             self.cat_indicator.setToolTip("CAT indisponível · "+message[:160])
-            self.cat_indicator.setStyleSheet("font-size:12px;font-weight:800;color:#ff9595")
+            self.cat_indicator.setStyleSheet("font-size:12px;font-weight:800;color:#ffe7e7;background:#783437;border:1px solid #db565e")
             friendly=("Porta CAT indisponível. Confira COM, cabo, driver e Configurações."
                       if any(marker in message.casefold() for marker in
                              ("file not found","filenotfound","could not open port","cannot find","no such file","não foi possível encontrar"))
@@ -3160,7 +3160,7 @@ class MainWindow(QMainWindow):
                 self.last_cat_success=None
                 self.cat_indicator.setText("CAT")
                 self.cat_indicator.setToolTip("CAT desconectado · clique para conectar")
-                self.cat_indicator.setStyleSheet("font-size:12px;font-weight:800;color:#ff9595")
+                self.cat_indicator.setStyleSheet("font-size:12px;font-weight:800;color:#ffe7e7;background:#783437;border:1px solid #db565e")
             if was_manual:
                 QMessageBox.warning(self,"Falha ao sintonizar TS-2000",
                                     "O rádio não confirmou a sintonia solicitada. "
@@ -3185,7 +3185,7 @@ class MainWindow(QMainWindow):
             self.cat_sat_orientation.setText("SAT: sem resposta atual")
             self.cat_indicator.setText("CAT")
             self.cat_indicator.setToolTip("CAT sem resposta atual · ver LOGs / CAT")
-            self.cat_indicator.setStyleSheet("font-size:12px;font-weight:800;color:#ffbf6f")
+            self.cat_indicator.setStyleSheet("font-size:12px;font-weight:800;color:#ffead3;background:#755225;border:1px solid #e0aa55")
             self.map_radio_label.setText("CAT erro de leitura · dados desatualizados")
             self.map_radio_label.setStyleSheet("color:#e98b81;font-weight:700")
             self.cat_status.setText("● Erro de leitura CAT")
