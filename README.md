@@ -4,16 +4,16 @@
 
 ## Downloads — Windows, Linux e macOS
 
-**PT2VHF Sat Tool v1.3.18 — Windows 10/11 x64, Linux x64 e macOS Apple Silicon**.
+**PT2VHF Sat Tool v1.4.0 — Windows 10/11 x64, Linux x64 e macOS Apple Silicon**.
 
 **Novo site oficial: [www.PT2VHF.com](https://www.pt2vhf.com/sat)** — downloads (Setup e Portátil), novas versões e somas SHA-256 ficam no site. A partir da v1.3.14 o atualizador consulta exclusivamente `https://www.pt2vhf.com/update.php?product=sat`.
 
 | Edição | Download direto |
 | --- | --- |
-| **Instalável x64** | [Setup (.exe)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.3.18-Win11-x64-Setup.exe) |
-| **Portátil x64** | [Portable (.exe)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.3.18-Win11-x64-Portable.exe) |
-| **Linux x64** | [Pacote (.tar.gz)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.3.18-Linux-x64.tar.gz) |
-| **macOS ARM64** | [Imagem (.dmg)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.3.18-macOS-arm64.dmg) |
+| **Instalável x64** | [Setup (.exe)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.4.0-Win11-x64-Setup.exe) |
+| **Portátil x64** | [Portable (.exe)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.4.0-Win11-x64-Portable.exe) |
+| **Linux x64** | [Pacote (.tar.gz)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.4.0-Linux-x64.tar.gz) |
+| **macOS ARM64** | [Imagem (.dmg)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.4.0-macOS-arm64.dmg) |
 
 O sufixo `Win11-x64` é mantido para compatibilidade com o atualizador e também atende ao Windows 10 1809+.
 
@@ -28,7 +28,17 @@ O sufixo `Win11-x64` é mantido para compatibilidade com o atualizador e também
 3. O acesso local usa `http://127.0.0.1:8094/`. Para outros dispositivos da mesma LAN, marque **Permitir outros dispositivos da rede local (LAN)** e use **Copiar endereço**; a URL inclui uma chave temporária e a primeira visita cria um cookie de sessão.
 4. Se outro computador/celular não alcançar a página, confira o IPv4 do computador e libere a porta TCP de entrada **apenas na rede privada** no firewall local. Não configure redirecionamento de porta no roteador.
 
-**Escopo do painel Web v1.3.18:** consulta em tempo real ao satélite, frequências previstas, CAT, telemetria, mapa vetorial offline e passagens. **Somente leitura:** o navegador não muda satélite/configurações nem executa comandos CAT/PTT. O desktop deve permanecer aberto. O HTTP na LAN não é criptografado; não divulgue a URL fora da rede.
+**Escopo do painel Web v1.4.0:** consulta em tempo real ao satélite, frequências previstas, CAT, telemetria, mapa vetorial offline e passagens. **Somente leitura:** o navegador não muda satélite/configurações nem executa comandos CAT/PTT. O desktop deve permanecer aberto. O HTTP na LAN não é criptografado; não divulgue a URL fora da rede.
+## Novidades v1.4.0 — SDR, waterfall, FT-817 e telemetria
+
+- **RTL-SDR embutido para RX:** detectado automaticamente na USB (pergunta se deve usar para RX); Doppler em tempo real por deslocamento digital do canal (sem ressintonizar o dongle a cada passo); FM, USB, LSB e CW conforme o transponder; áudio com volume/squelch e saída selecionável (ex.: cabo virtual para o SoundModem); ganho, correção PPM, bias-tee e `rtl_tcp`.
+- **Waterfall** no painel acoplável "SDR" (botão no topo): sinais parados com o Doppler corrigido, zoom ±12–480 kHz, marcação do canal/filtro e do transponder, clique para sintonizar (o uplink acompanha em lineares).
+- **Equipamentos RX/TX separados:** Yaesu FT-817/818/857/897 (CAT 5 bytes; split VFO A/B quando RX e TX no mesmo rádio) e Hamlib `rigctld` (IC-9700, IC-910, SDR++, gqrx…). Doppler só com autorização; **nunca aciona PTT** e não muda o TX durante a transmissão. O TS-2000 continua com o Auto CAT.
+- **Telemetria por pipeline (ideia do SatDump):** voz, AFSK 1200 interno (APRS/ISS) ou dados via **SoundModem UZ7HO por KISS TCP** (convive com o GetKISS+ do DK3WN); decodificação com `satnogs-decoders`, log CSV diário e envio opcional ao SatNOGS DB.
+- **Gravação automática das passagens** (AOS→LOS) em WAV, com IQ do canal opcional.
+- **Linux:** pacote inclui `rtl-sdr.rules` e `LEIA-ME-RTL-SDR.txt`. **Windows:** o RTL-SDR precisa do driver WinUSB instalado uma vez com o Zadig (o programa orienta).
+- Validado com sinais e equipamentos simulados; **homologação com RTL-SDR, FT-817 e SoundModem reais pendente.**
+
 ## Novidades v1.3.18 — interface compacta, AOS 10 s e Web local/LAN
 
 - **Operação otimizada:** topo com CAT compacto, relógio UTC menor, RX/TX reunidos em painel de menor altura e telemetria orbital com linhas legíveis.
