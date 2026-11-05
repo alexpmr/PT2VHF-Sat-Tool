@@ -10,6 +10,8 @@ import unicodedata
 import sys
 import threading
 import traceback
+import wave
+import struct
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from .qt_compat import Qt, QTimer, QObject, Signal, Slot, QUrl
@@ -19,7 +21,7 @@ from .qt_compat import QDoubleValidator, QFont, QIcon, QPixmap, QColor, QBrush
 from .qt_compat import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
     QLabel, QPushButton, QLineEdit, QComboBox, QGroupBox, QTabWidget, QPlainTextEdit,
-    QSplitter, QMessageBox, QCheckBox, QTableWidget, QTableWidgetItem, QHeaderView,
+    QSplitter, QMessageBox, QDialog, QCheckBox, QTableWidget, QTableWidgetItem, QHeaderView,
     QDoubleSpinBox, QAbstractItemView, QProgressDialog, QScrollArea, QProgressBar, QFileDialog,
 )
 from .qt_compat import QWebEngineView, QGeoPositionInfoSource, qt_exec, QT_BINDING
@@ -147,6 +149,11 @@ class MainWindow(QMainWindow):
         self.orbit_progress_dialog = None
         self.aos_alarm_dialog = None
         self.aos_alarm_target = None
+        self.aos_alarm_title = None
+        self.aos_alarm_detail = None
+        self.aos_alarm_silenced = False
+        self.aos_alarm_last_second = None
+        self._alarm_sound_effect = None
         self.cat_selection_generation = 0
         self.cat_autotune_requested_generation = -1
         self.cat_retry_after = 0.0
@@ -823,14 +830,24 @@ class MainWindow(QMainWindow):
         button.clicked.connect(self.save_tle_settings);tg.addWidget(button)
         cfg.addWidget(tle_group)
         alert_group,alert_layout=group("ALARMES DE PASSAGEM")
-        self.aos_enabled=QCheckBox("Avisar 30 segundos antes da entrada do satélite selecionado")
+        self.aos_enabled=QCheckBox("Avisar antes da entrada do satélite selecionado (AOS)")
         self.aos_enabled.toggled.connect(lambda v:self.set_alarm_option("aos_alarm_enabled",v))
         self.aos_sound=QCheckBox("Alarme sonoro")
         self.aos_sound.toggled.connect(lambda v:self.set_alarm_option("aos_alarm_sound",v))
         alert_layout.addWidget(self.aos_enabled)
         alert_layout.addWidget(self.aos_sound)
+        lead_row=QHBoxLayout()
+        lead_row.addWidget(label("Antecedência do AOS"))
+        self.aos_lead=QDoubleSpinBox()
+        self.aos_lead.setRange(1,120)
+        self.aos_lead.setDecimals(0)
+        self.aos_lead.setSuffix(" s")
+        self.aos_lead.setValue(int(self.config.values.get("aos_alarm_lead_seconds",10)))
+        self.aos_lead.valueChanged.connect(self.save_aos_lead)
+        lead_row.addWidget(self.aos_lead)
+        alert_layout.addLayout(lead_row)
         alarm_test=QPushButton("Testar som")
-        alarm_test.clicked.connect(QApplication.beep)
+        alarm_test.clicked.connect(lambda:self.play_aos_sound(critical=True))
         alert_layout.addWidget(alarm_test)
         cfg.addWidget(alert_group)
         advanced,adv=group("DOPPLER E SEGURANÇA")
@@ -2596,45 +2613,129 @@ class MainWindow(QMainWindow):
             self.map_desc.setText(f"Erro ao atualizar a órbita: {exc}")
             self.log(f"Mapa/órbita: {exc}")
 
+    def save_aos_lead(self,value):
+        self.config.values['aos_alarm_lead_seconds']=int(value)
+        self.config.save()
+
+    def play_aos_sound(self,critical=False):
+        '''Short synthetic WAV alarm; QtMultimedia on all platforms, Windows fallback.'''
+        if not self.config.values.get('aos_alarm_sound',True):
+            return
+        try:
+            path=self.config.dir/('aos_start.wav' if critical else 'aos_tick.wav')
+            if not path.exists():
+                rate=22050
+                duration=0.32 if critical else 0.12
+                freq=1100 if critical else 680
+                samples=int(rate*duration)
+                frames=bytearray()
+                for i in range(samples):
+                    envelope=min(1.0,i/250,(samples-i)/350)
+                    value=int(14000*max(0,envelope)*math.sin(2*math.pi*freq*i/rate))
+                    frames.extend(struct.pack('<h',value))
+                with wave.open(str(path),'wb') as f:
+                    f.setnchannels(1);f.setsampwidth(2);f.setframerate(rate);f.writeframes(frames)
+            try:
+                if QT_BINDING=='PySide6':
+                    from PySide6.QtMultimedia import QSoundEffect
+                else:
+                    from PySide2.QtMultimedia import QSoundEffect
+                if self._alarm_sound_effect is None:
+                    self._alarm_sound_effect=QSoundEffect(self)
+                    self._alarm_sound_effect.setVolume(0.85)
+                self._alarm_sound_effect.stop()
+                self._alarm_sound_effect.setSource(QUrl.fromLocalFile(str(path)))
+                self._alarm_sound_effect.play()
+            except (ImportError,RuntimeError,OSError):
+                if sys.platform=='win32':
+                    import winsound
+                    winsound.PlaySound(str(path),winsound.SND_FILENAME|winsound.SND_ASYNC)
+                else:
+                    QApplication.beep()
+        except Exception as exc:
+            self.log('AOS áudio indisponível: '+str(exc))
+            QApplication.beep()
+
+    def _clear_aos_dialog(self):
+        self.aos_alarm_dialog=None
+        self.aos_alarm_target=None
+        self.aos_alarm_title=None
+        self.aos_alarm_detail=None
+
+    def _update_aos_countdown(self,now):
+        if self.aos_alarm_dialog is None or self.aos_alarm_target is None:
+            return
+        _,row,_=self.aos_alarm_target
+        remaining=math.ceil((row['aos']-now).total_seconds())
+        if remaining < -4:
+            self.aos_alarm_dialog.close()
+            self._clear_aos_dialog()
+            return
+        if self.aos_alarm_title is not None:
+            self.aos_alarm_title.setText(
+                f"{row.get('name','Satélite')} · NORAD {row.get('id','')}\n"
+                + (f'AOS em {remaining} s' if remaining>0 else 'AOS · PASSAGEM INICIADA'))
+        if self.aos_alarm_detail is not None:
+            self.aos_alarm_detail.setText(
+                f"AOS {row['aos'].astimezone():%d/%m/%Y %H:%M:%S} local · "
+                f"UTC {row['aos']:%H:%M:%S} · Máx {row.get('max_el',0):.0f}°")
+        if remaining != self.aos_alarm_last_second:
+            if not self.aos_alarm_silenced and remaining>=0:
+                self.play_aos_sound(critical=(remaining==0))
+            elif (not self.aos_alarm_silenced and remaining<0
+                    and self.aos_alarm_last_second is not None
+                    and self.aos_alarm_last_second>0):
+                self.play_aos_sound(critical=True)
+            self.aos_alarm_last_second=remaining
+
     def check_selected_aos_alarm(self,now):
-        """Alert for selected NORAD only; never write to the radio."""
-        if not self.config.values.get("aos_alarm_enabled",True):
+        '''Read-only audible AOS countdown; never commands radio or CAT.'''
+        if not self.config.values.get('aos_alarm_enabled',True):
+            if self.aos_alarm_dialog is not None:
+                self.aos_alarm_dialog.close()
+                self._clear_aos_dialog()
+            return
+        if self.aos_alarm_dialog is not None:
+            self._update_aos_countdown(now)
             return
         selected=self.sat_combo.currentData()
-        seen=set(self.config.values.get("aos_alarm_fired",[]))
-        found=selected_aos_alarm(self.passes,selected,now,seen,30)
-        if not found:
-            if self.aos_alarm_dialog is not None and self.aos_alarm_target is not None:
-                _,row,_=self.aos_alarm_target
-                remaining=max(0,int((row["aos"]-now).total_seconds()))
-                self.aos_alarm_dialog.setInformativeText(
-                    f"AOS em {format_duration(remaining)} · "
-                    f"horário local {row['aos'].astimezone():%H:%M:%S} · "
-                    f"UTC {row['aos']:%H:%M:%S} · "
-                    f"elevação máxima {row.get('max_el',0):.0f}°")
+        seen=set(self.config.values.get('aos_alarm_fired',[]))
+        lead=int(self.config.values.get('aos_alarm_lead_seconds',10))
+        found=selected_aos_alarm(self.passes,selected,now,seen,lead)
+        if found is None:
             return
         key,row,remaining=found
-        self.config.values["aos_alarm_fired"]=(list(seen)+[key])[-160:]
+        self.config.values['aos_alarm_fired']=(list(seen)+[key])[-160:]
         self.config.save()
         self.aos_alarm_target=found
-        dialog=QMessageBox(self)
-        dialog.setWindowTitle("Alerta de aproximação — AOS")
-        dialog.setIcon(QMessageBox.Information)
-        dialog.setText(f"Satélite {row.get('name',selected)} · NORAD {selected}\n"
-                       f"Entrará no horizonte em {format_duration(remaining)}!")
-        dialog.setInformativeText(f"AOS {row['aos'].astimezone():%d/%m %H:%M:%S} local · "
-                                  f"{row['aos']:%H:%M:%S} UTC · "
-                                  f"elevação máxima {row.get('max_el',0):.0f}°")
-        go=dialog.addButton("Ir para Operação",QMessageBox.ActionRole)
-        dialog.addButton("Silenciar / Fechar",QMessageBox.RejectRole)
-        go.clicked.connect(lambda:self.tabs.setCurrentIndex(0))
-        dialog.finished.connect(lambda *_:setattr(self,"aos_alarm_dialog",None))
-        dialog.setWindowFlag(Qt.WindowStaysOnTopHint,True)
+        self.aos_alarm_silenced=False
+        self.aos_alarm_last_second=None
+        dialog=QDialog(self)
+        dialog.setWindowTitle('Alerta AOS · contagem regressiva')
+        dialog.setWindowModality(Qt.NonModal)
+        dialog.setAttribute(Qt.WA_ShowWithoutActivating,True)
+        layout=QVBoxLayout(dialog)
+        self.aos_alarm_title=QLabel()
+        self.aos_alarm_title.setStyleSheet('font-size:21px;font-weight:800;color:#73eac9')
+        self.aos_alarm_detail=QLabel()
+        self.aos_alarm_detail.setWordWrap(True)
+        layout.addWidget(self.aos_alarm_title)
+        layout.addWidget(self.aos_alarm_detail)
+        actions=QHBoxLayout()
+        jump=QPushButton('Ir para Operação')
+        mute=QPushButton('Silenciar')
+        dismiss=QPushButton('Fechar')
+        jump.clicked.connect(lambda:self.tabs.setCurrentIndex(0))
+        mute.clicked.connect(lambda:setattr(self,'aos_alarm_silenced',True))
+        dismiss.clicked.connect(dialog.close)
+        for button in (jump,mute,dismiss):
+            actions.addWidget(button)
+        layout.addLayout(actions)
+        dialog.finished.connect(lambda *_:self._clear_aos_dialog())
         self.aos_alarm_dialog=dialog
+        self._update_aos_countdown(now)
         dialog.show()
-        if self.config.values.get("aos_alarm_sound",True):
-            QApplication.beep()
-        self.log(f"Alarme AOS: NORAD {selected} em {remaining:.0f} s")
+        self.log(f'Alarme AOS: NORAD {selected} em {remaining:.0f} s')
 
     def tick(self):
         # No network calls in the GUI tick; asynchronous check respects the configured period.
