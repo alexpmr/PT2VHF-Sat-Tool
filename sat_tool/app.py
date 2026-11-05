@@ -10,6 +10,8 @@ import unicodedata
 import sys
 import threading
 import traceback
+import wave
+import struct
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from .qt_compat import Qt, QTimer, QObject, Signal, Slot, QUrl
@@ -19,7 +21,7 @@ from .qt_compat import QDoubleValidator, QFont, QIcon, QPixmap, QColor, QBrush
 from .qt_compat import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
     QLabel, QPushButton, QLineEdit, QComboBox, QGroupBox, QTabWidget, QPlainTextEdit,
-    QSplitter, QMessageBox, QCheckBox, QTableWidget, QTableWidgetItem, QHeaderView,
+    QSplitter, QMessageBox, QDialog, QMenu, QCheckBox, QTableWidget, QTableWidgetItem, QHeaderView,
     QDoubleSpinBox, QAbstractItemView, QProgressDialog, QScrollArea, QProgressBar, QFileDialog,
 )
 from .qt_compat import QWebEngineView, QGeoPositionInfoSource, qt_exec, QT_BINDING
@@ -39,6 +41,7 @@ from .updater import check_for_update, download_update, install_flavor, launch_s
 from .profile import choose_satellites, capability, render_service, CANDIDATES
 from .selection import change_selection, transmitter_batch_ids
 from .alerts import eta_seconds, format_duration, selected_aos_alarm
+from .web_ui import LocalStatusServer
 from .media import find_photo, photo_html
 from .operations import (select_next_pass, select_selected_satellite_pass,
                          frequency_prediction, status_at, orbital_age_days)
@@ -147,6 +150,13 @@ class MainWindow(QMainWindow):
         self.orbit_progress_dialog = None
         self.aos_alarm_dialog = None
         self.aos_alarm_target = None
+        self.aos_alarm_title = None
+        self.aos_alarm_detail = None
+        self.aos_alarm_silenced = False
+        self.aos_alarm_last_second = None
+        self._alarm_sound_effect = None
+        self.web_server = None
+        self._web_last_push = 0.0
         self.cat_selection_generation = 0
         self.cat_autotune_requested_generation = -1
         self.cat_retry_after = 0.0
@@ -201,6 +211,8 @@ class MainWindow(QMainWindow):
         QTimer.singleShot(12000, self.check_for_updates)
         if self.config.values.get("cat_auto_connect_startup",True) and self.config.values.get("port","").strip():
             QTimer.singleShot(1200, self.startup_cat_connect)
+        if self.config.values.get("web_enabled",False):
+            QTimer.singleShot(700,self.start_web_server)
 
     def show_official_site_notice(self):
         """Aviso do site oficial no mesmo padrão dos demais projetos PT2VHF (v1.3.16)."""
@@ -268,8 +280,8 @@ class MainWindow(QMainWindow):
         root = QTabWidget()
         self.tabs = root
         self.setCentralWidget(root)
-        operation = QWidget(); op = QVBoxLayout(operation); op.setContentsMargins(12,12,12,10)
-        op.setSpacing(9)
+        operation = QWidget(); op = QVBoxLayout(operation); op.setContentsMargins(8,6,8,6)
+        op.setSpacing(5)
         header = QHBoxLayout()
         logo_path=branding_asset('icon-256.png')
         if logo_path.exists():
@@ -285,16 +297,20 @@ class MainWindow(QMainWindow):
         self.version_btn.setStyleSheet('background:#155a3e;border:1px solid #30a579;color:#e6fff4')
         header.addWidget(self.version_btn)
         self.summary = label("Dados orbitais não carregados")
-        self.summary.setStyleSheet('color:#85aaba')
+        self.summary.setStyleSheet('color:#85aaba;font-size:11px')
+        self.summary.setWordWrap(False)
+        self.summary.setMinimumWidth(80)
         header.addWidget(self.summary, 1)
-        self.cat_indicator=QPushButton("● RÁDIO DESCONECTADO")
+        self.cat_indicator=QPushButton("CAT")
         self.cat_indicator.setToolTip("Clique para conectar ou desconectar o TS-2000 pela porta CAT configurada")
         self.cat_indicator.clicked.connect(self.toggle_connection)
-        self.cat_indicator.setStyleSheet("font-size:14px;font-weight:800;color:#ef9a9a;padding:6px;background:#243143;border-radius:5px")
+        self.cat_indicator.setFixedWidth(66)
+        self.cat_indicator.setStyleSheet("font-size:12px;font-weight:800;color:#ef9a9a;padding:4px;background:#243143;border-radius:5px")
         header.addWidget(self.cat_indicator)
         self.utc = QLabel("DATA/HORA UTC —")
-        self.utc.setStyleSheet("font-size:17px;font-weight:800;color:#dff9ff;padding:6px;background:#153751;border:1px solid #34758c;border-radius:5px")
-        self.utc.setMinimumWidth(235)
+        self.utc.setStyleSheet("font-size:12px;font-weight:700;color:#dff9ff;padding:4px;background:#153751;border:1px solid #34758c;border-radius:5px")
+        self.utc.setWordWrap(False)
+        self.utc.setMinimumWidth(0)
         header.addWidget(self.utc)
         op.addLayout(header)
         upcoming,upcoming_layout=group("PRÓXIMA PASSAGEM DO SATÉLITE SELECIONADO · CONTAGEM REGRESSIVA")
@@ -410,14 +426,18 @@ class MainWindow(QMainWindow):
         selectors.addWidget(self.mode_combo,3)
         ov.addLayout(selectors)
         frequency_cards=QHBoxLayout()
+        frequency_cards.setSpacing(4)
+        frequency_cards.setContentsMargins(2,0,2,0)
         self.pred_rx=label("RX / DOWNLINK\nAguardando satélite")
         self.pred_tx=label("TX / UPLINK\nAguardando satélite")
         for card,color in ((self.pred_rx,"#68ebcd"),(self.pred_tx,"#8fd8ff")):
             card.setAlignment(Qt.AlignCenter)
-            card.setMinimumHeight(108)
-            card.setMinimumWidth(210)
+            card.setMinimumHeight(62)
+            card.setMaximumHeight(78)
+            card.setMinimumWidth(0)
+            card.setWordWrap(False)
             card.setStyleSheet("font-size:15px;font-weight:800;color:"+color+
-                               ";background:transparent;border:0;padding:4px")
+                               ";background:#10263b;border:1px solid #284e6e;border-radius:5px;padding:3px")
             frequency_cards.addWidget(card,1)
         ov.addLayout(frequency_cards)
         self.corrected_label=label("Previsão orbital sem CAT e sem transmissão")
@@ -509,7 +529,9 @@ class MainWindow(QMainWindow):
         for key,title in (("elevation","Elevação"),("azimuth","Azimute"),("range_km","Distância"),
                           ("radial_m_s","Velocidade radial"),("height_km","Altitude orbital")):
             r=QHBoxLayout();r.addWidget(label(title));v=label("—");v.setAlignment(Qt.AlignRight)
-            v.setStyleSheet("font-size:15px;font-weight:600;color:#90e7df")
+            v.setStyleSheet("font-size:14px;font-weight:600;color:#90e7df")
+            v.setWordWrap(False)
+            v.setMinimumHeight(max(28,v.fontMetrics().height()+10))
             self.orbit_metrics[key]=v;r.addWidget(v);sv.addLayout(r)
         self.visibility=label("Aguardando localização")
         self.visibility.setObjectName('metric')
@@ -519,24 +541,22 @@ class MainWindow(QMainWindow):
         self._upcoming_group=upcoming
         rv.addWidget(stat)
         nextpass,np=group("PASSAGENS DO SATÉLITE SELECIONADO · 36 H")
-        # Datas em uma linha; nomes/modos longos ainda quebram se a janela for estreita.
         nextpass.setMinimumWidth(0)
         self.pass_table=QTableWidget(0,6)
-        self.pass_table.setHorizontalHeaderLabels(["Satélite","AOS\nlocal","TCA\nlocal","LOS\nlocal","Máx °","Modos"])
+        # Selected satellite appears in the combo; redundant table column removed.
+        self.pass_table.setHorizontalHeaderLabels(["AOS\nlocal","TCA\nlocal","LOS\nlocal","Duração","Máx °","Modos"])
         pass_header=self.pass_table.horizontalHeader()
         pass_header.setStretchLastSection(False)
-        pass_header.setMinimumSectionSize(36)
+        pass_header.setMinimumSectionSize(50)
         pass_header.setDefaultAlignment(Qt.AlignCenter)
-        pass_header.setFixedHeight(36)
-        for col in (1,2,3,4):
+        pass_header.setFixedHeight(max(46,self.pass_table.fontMetrics().height()*2+14))
+        for col in (0,1,2,3,4):
             pass_header.setSectionResizeMode(col,QHeaderView.ResizeToContents)
-        # v1.3.16: Satélite e Modos ocupam a largura livre do painel.
-        for col in (0,5):
-            pass_header.setSectionResizeMode(col,QHeaderView.Stretch)
-        self.pass_table.setWordWrap(True)
+        pass_header.setSectionResizeMode(5,QHeaderView.Stretch)
+        self.pass_table.setWordWrap(False)
         self.pass_table.setTextElideMode(Qt.ElideNone)
-        self.pass_table.verticalHeader().setMinimumSectionSize(23)
-        self.pass_table.verticalHeader().setDefaultSectionSize(28)
+        self.pass_table.verticalHeader().setMinimumSectionSize(max(28,self.pass_table.fontMetrics().height()+10))
+        self.pass_table.verticalHeader().setDefaultSectionSize(max(30,self.pass_table.fontMetrics().height()+12))
         self.pass_table.verticalHeader().hide()
         # Sem altura máxima: a tabela cresce no espaço livre abaixo da telemetria.
         self.pass_table.setMinimumHeight(160)
@@ -619,10 +639,22 @@ class MainWindow(QMainWindow):
         self.catalog_search.setPlaceholderText("Filtrar nome, NORAD, modo ou frequência…")
         self.catalog_search.textChanged.connect(self.refresh_satellite_table)
         catalog_layout.addWidget(self.catalog_search)
-        self.catalog_category=QComboBox()
-        self.catalog_category.addItem("Todas as categorias","all")
-        for name in DEFAULT_GROUPS:self.catalog_category.addItem(name.upper(),name)
-        self.catalog_category.currentIndexChanged.connect(self.refresh_satellite_table)
+        self.catalog_category=QPushButton("Categorias · múltipla seleção")
+        self.catalog_category_menu=QMenu(self.catalog_category)
+        self.catalog_category_actions={}
+        initial=set(self.config.values.get("catalog_category_filter",list(DEFAULT_GROUPS)))
+        for name in DEFAULT_GROUPS:
+            action=self.catalog_category_menu.addAction(name.upper())
+            action.setCheckable(True)
+            action.setChecked(name in initial)
+            action.toggled.connect(self.change_catalog_categories)
+            self.catalog_category_actions[name]=action
+        self.catalog_category_menu.addSeparator()
+        mark_all=self.catalog_category_menu.addAction("Marcar todas")
+        mark_all.triggered.connect(lambda:self.set_catalog_categories(True))
+        clear_all=self.catalog_category_menu.addAction("Limpar filtro")
+        clear_all.triggered.connect(lambda:self.set_catalog_categories(False))
+        self.catalog_category.setMenu(self.catalog_category_menu)
         catalog_layout.addWidget(self.catalog_category)
         catalog_actions=QHBoxLayout()
         self.scope_filtered=QCheckBox("Somente resultados filtrados")
@@ -815,16 +847,61 @@ class MainWindow(QMainWindow):
         button.clicked.connect(self.save_tle_settings);tg.addWidget(button)
         cfg.addWidget(tle_group)
         alert_group,alert_layout=group("ALARMES DE PASSAGEM")
-        self.aos_enabled=QCheckBox("Avisar 30 segundos antes da entrada do satélite selecionado")
+        self.aos_enabled=QCheckBox("Avisar antes da entrada do satélite selecionado (AOS)")
         self.aos_enabled.toggled.connect(lambda v:self.set_alarm_option("aos_alarm_enabled",v))
         self.aos_sound=QCheckBox("Alarme sonoro")
         self.aos_sound.toggled.connect(lambda v:self.set_alarm_option("aos_alarm_sound",v))
         alert_layout.addWidget(self.aos_enabled)
         alert_layout.addWidget(self.aos_sound)
+        lead_row=QHBoxLayout()
+        lead_row.addWidget(label("Antecedência do AOS"))
+        self.aos_lead=QDoubleSpinBox()
+        self.aos_lead.setRange(1,120)
+        self.aos_lead.setDecimals(0)
+        self.aos_lead.setSuffix(" s")
+        self.aos_lead.setValue(int(self.config.values.get("aos_alarm_lead_seconds",10)))
+        self.aos_lead.valueChanged.connect(self.save_aos_lead)
+        lead_row.addWidget(self.aos_lead)
+        alert_layout.addLayout(lead_row)
         alarm_test=QPushButton("Testar som")
-        alarm_test.clicked.connect(QApplication.beep)
+        alarm_test.clicked.connect(lambda:self.play_aos_sound(critical=True))
         alert_layout.addWidget(alarm_test)
         cfg.addWidget(alert_group)
+        web_group,wg=group("INTERFACE WEB · LOCAL E REDE LAN")
+        self.web_enabled=QCheckBox("Habilitar painel Web ao abrir o Sat Tool")
+        self.web_enabled.setChecked(bool(self.config.values.get("web_enabled",False)))
+        self.web_enabled.toggled.connect(self.change_web_settings)
+        wg.addWidget(self.web_enabled)
+        webrow=QHBoxLayout()
+        self.web_lan=QCheckBox("Permitir outros dispositivos da rede local (LAN)")
+        self.web_lan.setChecked(bool(self.config.values.get("web_allow_lan",False)))
+        self.web_lan.toggled.connect(self.change_web_settings)
+        webrow.addWidget(self.web_lan)
+        webrow.addWidget(label("Porta TCP"))
+        self.web_port=QDoubleSpinBox()
+        self.web_port.setDecimals(0)
+        self.web_port.setRange(1024,65535)
+        self.web_port.setValue(int(self.config.values.get("web_port",8094)))
+        self.web_port.valueChanged.connect(self.change_web_settings)
+        webrow.addWidget(self.web_port)
+        wg.addLayout(webrow)
+        controls=QHBoxLayout()
+        web_launch=QPushButton("Abrir interface Web")
+        web_launch.clicked.connect(self.open_web_dashboard)
+        web_copy=QPushButton("Copiar endereço")
+        web_copy.clicked.connect(self.copy_web_url)
+        controls.addWidget(web_launch)
+        controls.addWidget(web_copy)
+        wg.addLayout(controls)
+        self.web_status=label("Interface Web desativada")
+        self.web_status.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        self.web_status.setStyleSheet("color:#98d8e7;font-size:11px")
+        wg.addWidget(self.web_status)
+        wg.addWidget(label("Acesso local: 127.0.0.1. LAN: requer chave temporária do endereço copiado. "
+                           "Somente leitura: navegador não aciona CAT, PTT ou alterações no rádio. "
+                           "Libere a porta TCP apenas na rede privada do firewall, se necessário. "
+                           "HTTP na LAN não tem criptografia; nunca encaminhe a porta à Internet."))
+        cfg.addWidget(web_group)
         advanced,adv=group("DOPPLER E SEGURANÇA")
         self.interval=QDoubleSpinBox();self.interval.setRange(0.25,15);self.interval.setSingleStep(0.25);self.interval.setDecimals(2);self.interval.setSuffix(' segundos')
         self.threshold=QDoubleSpinBox();self.threshold.setRange(1,1000);self.threshold.setDecimals(0);self.threshold.setSuffix(' Hz')
@@ -885,7 +962,7 @@ class MainWindow(QMainWindow):
         root.addTab(logs,"LOGs / CAT")
         about=QWidget();about_layout=QVBoxLayout(about)
         about_layout.addWidget(label(f"PT2VHF Sat Tool v{__version__} — Controle CAT do TS-2000"))
-        about_layout.addWidget(label("Distribuição: Windows 10/11 x64; instalador Setup EXE e portátil EXE único. Win7 pausado."))
+        about_layout.addWidget(label("Distribuição: Windows 10/11 x64 (Setup e Portátil), Linux x64 e macOS Apple Silicon. Win7 pausado."))
         about_layout.addWidget(label("Elementos orbitais: CelesTrak OMM/TLE. Transponders e modos: SatNOGS (créditos e licenças nos provedores)."))
         about_layout.addWidget(label("Site oficial e downloads: https://www.pt2vhf.com/sat · Licença MIT"))
         btn=QPushButton("Verificar versão");btn.clicked.connect(lambda:self.request_update(manual=True))
@@ -1419,8 +1496,9 @@ class MainWindow(QMainWindow):
         stopbits=int(self.stops_combo.currentText())
         self.cat_connecting=True
         self.cat_connect_was_startup=bool(startup)
-        self.cat_indicator.setText("◌ CONECTANDO AO RÁDIO…")
-        self.cat_indicator.setStyleSheet("font-size:14px;font-weight:800;color:#f2c16b")
+        self.cat_indicator.setText("CAT")
+        self.cat_indicator.setToolTip("CAT conectando · "+port)
+        self.cat_indicator.setStyleSheet("font-size:12px;font-weight:800;color:#ffe4b0;background:#755225;border:1px solid #e0aa55")
         self.cat_indicator.setEnabled(False)
         self.connection.setEnabled(False)
         self.cat_tune_status.setText("CAT: conectando "+port+" (somente leitura inicial)…")
@@ -1442,8 +1520,9 @@ class MainWindow(QMainWindow):
         self.cat_live_label.setText("RÁDIO REAL (CAT) · desconectado")
         self.cat_sat_orientation.setText("SAT: rádio desconectado")
         self.last_cat_success=None
-        self.cat_indicator.setText("● RÁDIO DESCONECTADO")
-        self.cat_indicator.setStyleSheet("font-size:14px;font-weight:800;color:#ff9595")
+        self.cat_indicator.setText("CAT")
+        self.cat_indicator.setToolTip("CAT desconectado · clique para conectar")
+        self.cat_indicator.setStyleSheet("font-size:12px;font-weight:800;color:#ffe7e7;background:#783437;border:1px solid #db565e")
         self.connection.setText("Conectar")
         self.radio_label.setText("Desconectado")
         self.map_radio_label.setText("CAT desconectado · RX — MHz · TX — MHz · Modo —")
@@ -1475,8 +1554,9 @@ class MainWindow(QMainWindow):
         self.radio_label.setText(f"{st.model} · SAT {'ON' if st.sat else 'OFF'} · RX {self.radio_freq(st.downlink)} | TX {self.radio_freq(st.uplink)} · Modo {st.mode}")
         self.radio_label.setStyleSheet("color:#69e3bc" if st.sat else "color:#f0c186")
         self.last_cat_success=now_utc()
-        self.cat_indicator.setText("● TS-2000 CONECTADO · "+self.ports.currentText())
-        self.cat_indicator.setStyleSheet("font-size:14px;font-weight:800;color:#67efb2")
+        self.cat_indicator.setText("CAT")
+        self.cat_indicator.setToolTip("CAT conectado e validado · "+self.ports.currentText()+" · clique para desconectar")
+        self.cat_indicator.setStyleSheet("font-size:12px;font-weight:800;color:#ddfff0;background:#12533f;border:1px solid #36b88a")
         self.cat_live_label.setText(
             "RÁDIO REAL (CAT) · MAIN RX [FA] "+self.radio_freq(st.downlink)+
             "  |  SAT UPLINK [FB] "+self.radio_freq(st.uplink)+
@@ -1563,7 +1643,8 @@ class MainWindow(QMainWindow):
         if old:
             idx=self.sat_combo.findData(str(old))
             if idx>=0:self.sat_combo.setCurrentIndex(idx)
-        self.summary.setText(f"{len(self.omm)} satélites no catálogo de múltiplas categorias  •  CelesTrak OMM/TLE")
+        self.summary.setText(f"{len(self.omm):,} satélites · OMM/TLE".replace(",","."))
+        self.summary.setToolTip(f"{len(self.omm)} satélites no catálogo de múltiplas categorias · CelesTrak OMM/TLE")
         self.refresh_satellite_table()
         self.refresh_tracked_table()
         self.refresh_passes()
@@ -1647,6 +1728,19 @@ class MainWindow(QMainWindow):
             self.frequency_progress_dialog.setLabelText(
                 "Cancelamento solicitado; aguardando a consulta SatNOGS atual…")
 
+    def change_catalog_categories(self,*args):
+        selected=[name for name,action in self.catalog_category_actions.items() if action.isChecked()]
+        self.config.values["catalog_category_filter"]=selected
+        self.config.save()
+        self.catalog_category.setText(f"Categorias: {len(selected)}/{len(self.catalog_category_actions)}")
+        self.refresh_satellite_table()
+
+    def set_catalog_categories(self,checked):
+        for action in self.catalog_category_actions.values():
+            action.blockSignals(True)
+            action.setChecked(bool(checked))
+            action.blockSignals(False)
+        self.change_catalog_categories()
     def refresh_satellite_table(self, text=None):
         """Virtualized search: thousands of cached satellites must not freeze Qt."""
         query=normalized_satellite_search(
@@ -1655,10 +1749,11 @@ class MainWindow(QMainWindow):
         previous=self.catalog_table.item(old_row,0) if old_row>=0 else None
         previous_id=str(previous.data(Qt.UserRole)) if previous is not None else None
         checked=set(self.enabled_satellite_ids())
-        selected_category=self.catalog_category.currentData() if hasattr(self,"catalog_category") else "all"
+        categories={name for name,action in self.catalog_category_actions.items()
+                    if action.isChecked()} if hasattr(self,"catalog_category_actions") else set(DEFAULT_GROUPS)
         ids=[]
         for ident,obj in self.omm.items():
-            if selected_category!="all" and selected_category not in obj.get("CATEGORIES",["amateur"]):
+            if not categories.intersection(obj.get("CATEGORIES",["amateur"])):
                 continue
             if query and query not in satellite_search_text(ident,obj):
                 continue
@@ -2584,51 +2679,136 @@ class MainWindow(QMainWindow):
             self.map_desc.setText(f"Erro ao atualizar a órbita: {exc}")
             self.log(f"Mapa/órbita: {exc}")
 
+    def save_aos_lead(self,value):
+        self.config.values['aos_alarm_lead_seconds']=int(value)
+        self.config.save()
+
+    def play_aos_sound(self,critical=False):
+        '''Short synthetic WAV alarm; QtMultimedia on all platforms, Windows fallback.'''
+        if not self.config.values.get('aos_alarm_sound',True):
+            return
+        try:
+            path=self.config.dir/('aos_start.wav' if critical else 'aos_tick.wav')
+            if not path.exists():
+                rate=22050
+                duration=0.32 if critical else 0.12
+                freq=1100 if critical else 680
+                samples=int(rate*duration)
+                frames=bytearray()
+                for i in range(samples):
+                    envelope=min(1.0,i/250,(samples-i)/350)
+                    value=int(14000*max(0,envelope)*math.sin(2*math.pi*freq*i/rate))
+                    frames.extend(struct.pack('<h',value))
+                with wave.open(str(path),'wb') as f:
+                    f.setnchannels(1);f.setsampwidth(2);f.setframerate(rate);f.writeframes(frames)
+            try:
+                if QT_BINDING=='PySide6':
+                    from PySide6.QtMultimedia import QSoundEffect
+                else:
+                    from PySide2.QtMultimedia import QSoundEffect
+                if self._alarm_sound_effect is None:
+                    self._alarm_sound_effect=QSoundEffect(self)
+                    self._alarm_sound_effect.setVolume(0.85)
+                self._alarm_sound_effect.stop()
+                self._alarm_sound_effect.setSource(QUrl.fromLocalFile(str(path)))
+                self._alarm_sound_effect.play()
+            except (ImportError,RuntimeError,OSError):
+                if sys.platform=='win32':
+                    import winsound
+                    winsound.PlaySound(str(path),winsound.SND_FILENAME|winsound.SND_ASYNC)
+                else:
+                    QApplication.beep()
+        except Exception as exc:
+            self.log('AOS áudio indisponível: '+str(exc))
+            QApplication.beep()
+
+    def _clear_aos_dialog(self):
+        self.aos_alarm_dialog=None
+        self.aos_alarm_target=None
+        self.aos_alarm_title=None
+        self.aos_alarm_detail=None
+
+    def _update_aos_countdown(self,now):
+        if self.aos_alarm_dialog is None or self.aos_alarm_target is None:
+            return
+        _,row,_=self.aos_alarm_target
+        remaining=math.ceil((row['aos']-now).total_seconds())
+        if remaining < -4:
+            self.aos_alarm_dialog.close()
+            self._clear_aos_dialog()
+            return
+        if self.aos_alarm_title is not None:
+            self.aos_alarm_title.setText(
+                f"{row.get('name','Satélite')} · NORAD {row.get('id','')}\n"
+                + (f'AOS em {remaining} s' if remaining>0 else 'AOS · PASSAGEM INICIADA'))
+        if self.aos_alarm_detail is not None:
+            self.aos_alarm_detail.setText(
+                f"AOS {row['aos'].astimezone():%d/%m/%Y %H:%M:%S} local · "
+                f"UTC {row['aos']:%H:%M:%S} · Máx {row.get('max_el',0):.0f}°")
+        if remaining != self.aos_alarm_last_second:
+            if not self.aos_alarm_silenced and remaining>=0:
+                self.play_aos_sound(critical=(remaining==0))
+            elif (not self.aos_alarm_silenced and remaining<0
+                    and self.aos_alarm_last_second is not None
+                    and self.aos_alarm_last_second>0):
+                self.play_aos_sound(critical=True)
+            self.aos_alarm_last_second=remaining
+
     def check_selected_aos_alarm(self,now):
-        """Alert for selected NORAD only; never write to the radio."""
-        if not self.config.values.get("aos_alarm_enabled",True):
+        '''Read-only audible AOS countdown; never commands radio or CAT.'''
+        if not self.config.values.get('aos_alarm_enabled',True):
+            if self.aos_alarm_dialog is not None:
+                self.aos_alarm_dialog.close()
+                self._clear_aos_dialog()
+            return
+        if self.aos_alarm_dialog is not None:
+            self._update_aos_countdown(now)
             return
         selected=self.sat_combo.currentData()
-        seen=set(self.config.values.get("aos_alarm_fired",[]))
-        found=selected_aos_alarm(self.passes,selected,now,seen,30)
-        if not found:
-            if self.aos_alarm_dialog is not None and self.aos_alarm_target is not None:
-                _,row,_=self.aos_alarm_target
-                remaining=max(0,int((row["aos"]-now).total_seconds()))
-                self.aos_alarm_dialog.setInformativeText(
-                    f"AOS em {format_duration(remaining)} · "
-                    f"horário local {row['aos'].astimezone():%H:%M:%S} · "
-                    f"UTC {row['aos']:%H:%M:%S} · "
-                    f"elevação máxima {row.get('max_el',0):.0f}°")
+        seen=set(self.config.values.get('aos_alarm_fired',[]))
+        lead=int(self.config.values.get('aos_alarm_lead_seconds',10))
+        found=selected_aos_alarm(self.passes,selected,now,seen,lead)
+        if found is None:
             return
         key,row,remaining=found
-        self.config.values["aos_alarm_fired"]=(list(seen)+[key])[-160:]
+        self.config.values['aos_alarm_fired']=(list(seen)+[key])[-160:]
         self.config.save()
         self.aos_alarm_target=found
-        dialog=QMessageBox(self)
-        dialog.setWindowTitle("Alerta de aproximação — AOS")
-        dialog.setIcon(QMessageBox.Information)
-        dialog.setText(f"Satélite {row.get('name',selected)} · NORAD {selected}\n"
-                       f"Entrará no horizonte em {format_duration(remaining)}!")
-        dialog.setInformativeText(f"AOS {row['aos'].astimezone():%d/%m %H:%M:%S} local · "
-                                  f"{row['aos']:%H:%M:%S} UTC · "
-                                  f"elevação máxima {row.get('max_el',0):.0f}°")
-        go=dialog.addButton("Ir para Operação",QMessageBox.ActionRole)
-        dialog.addButton("Silenciar / Fechar",QMessageBox.RejectRole)
-        go.clicked.connect(lambda:self.tabs.setCurrentIndex(0))
-        dialog.finished.connect(lambda *_:setattr(self,"aos_alarm_dialog",None))
-        dialog.setWindowFlag(Qt.WindowStaysOnTopHint,True)
+        self.aos_alarm_silenced=False
+        self.aos_alarm_last_second=None
+        dialog=QDialog(self)
+        dialog.setWindowTitle('Alerta AOS · contagem regressiva')
+        dialog.setWindowModality(Qt.NonModal)
+        dialog.setAttribute(Qt.WA_ShowWithoutActivating,True)
+        layout=QVBoxLayout(dialog)
+        self.aos_alarm_title=QLabel()
+        self.aos_alarm_title.setStyleSheet('font-size:21px;font-weight:800;color:#73eac9')
+        self.aos_alarm_detail=QLabel()
+        self.aos_alarm_detail.setWordWrap(True)
+        layout.addWidget(self.aos_alarm_title)
+        layout.addWidget(self.aos_alarm_detail)
+        actions=QHBoxLayout()
+        jump=QPushButton('Ir para Operação')
+        mute=QPushButton('Silenciar')
+        dismiss=QPushButton('Fechar')
+        jump.clicked.connect(lambda:self.tabs.setCurrentIndex(0))
+        mute.clicked.connect(lambda:setattr(self,'aos_alarm_silenced',True))
+        dismiss.clicked.connect(dialog.close)
+        for button in (jump,mute,dismiss):
+            actions.addWidget(button)
+        layout.addLayout(actions)
+        dialog.finished.connect(lambda *_:self._clear_aos_dialog())
         self.aos_alarm_dialog=dialog
+        self._update_aos_countdown(now)
         dialog.show()
-        if self.config.values.get("aos_alarm_sound",True):
-            QApplication.beep()
-        self.log(f"Alarme AOS: NORAD {selected} em {remaining:.0f} s")
+        self.log(f'Alarme AOS: NORAD {selected} em {remaining:.0f} s')
 
     def tick(self):
         # No network calls in the GUI tick; asynchronous check respects the configured period.
         if int(now_utc().timestamp()) % 60 == 0:
             self.check_for_updates()
-        now=now_utc();self.utc.setText(now.strftime('DATA/HORA UTC · %d/%m/%Y %H:%M:%S'))
+        now=now_utc();self.utc.setText(now.strftime('UTC · %d/%m %H:%M:%S'))
+        self.utc.setToolTip(now.strftime('DATA/HORA UTC · %d/%m/%Y %H:%M:%S'))
         self.update_next_indicator()
         if (self.sat is not None and time.monotonic()-self._pass_refresh_last>=300
                 and "passes" not in self.pending_jobs):
@@ -2667,8 +2847,9 @@ class MainWindow(QMainWindow):
             if age>10:
                 self.map_radio_label.setText(f"CAT sem leitura há {age:.0f}s · valores desatualizados")
                 self.map_radio_label.setStyleSheet("color:#e3ad61;font-weight:700")
-                self.cat_indicator.setText(f"! CAT SEM RESPOSTA HÁ {age:.0f}s")
-                self.cat_indicator.setStyleSheet("font-size:14px;font-weight:800;color:#ffbf6f")
+                self.cat_indicator.setText("CAT")
+                self.cat_indicator.setToolTip(f"CAT sem resposta há {age:.0f}s · confira a porta")
+                self.cat_indicator.setStyleSheet("font-size:12px;font-weight:800;color:#ffead3;background:#755225;border:1px solid #e0aa55")
                 self.cat_status.setText(f"● CAT desatualizado há {age:.0f}s")
                 self.cat_status.setStyleSheet("color:#efc17b;font-size:12px")
                 self.cat_details.setText("Leitura CAT vencida · conferir cabo e porta COM")
@@ -2677,6 +2858,8 @@ class MainWindow(QMainWindow):
                 self.cat_telemetry.setText("Potência/medidores: dados desatualizados")
                 for widget in (self.smeter_main,self.smeter_sub):
                     widget.setValue(0);widget.setFormat("sem leitura")
+
+        self.publish_web_snapshot()
 
     def background_result(self,key,data):
         self.pending_jobs.discard(key)
@@ -2876,13 +3059,19 @@ class MainWindow(QMainWindow):
                 peak=p['tca'].astimezone().strftime('%d/%m %H:%M') if p.get('tca') else '—'
                 los=p['los'].astimezone().strftime('%d/%m %H:%M')
                 modes=self.suggested_mode_text(p['id'])
-                for j,value in enumerate((p['name'],aos,peak,los,f"{p['max_el']:.0f}",modes)):
+                seconds=max(0,int((p['los']-p['aos']).total_seconds()))
+                duration=format_duration(seconds)
+                for j,value in enumerate((aos,peak,los,duration,f"{p['max_el']:.0f}°",modes)):
                     cell=QTableWidgetItem(value)
-                    cell.setTextAlignment(
-                        Qt.AlignVCenter | (Qt.AlignCenter if j in (1,2,3,4) else Qt.AlignLeft))
-                    cell.setToolTip(value)  # texto integral se coluna for comprimida
+                    cell.setTextAlignment(Qt.AlignVCenter | (Qt.AlignLeft if j==5 else Qt.AlignCenter))
+                    cell.setToolTip(value)
+                    if j==0:
+                        cell.setData(Qt.UserRole,str(p['id']))
                     self.pass_table.setItem(i,j,cell)
             self.pass_table.resizeRowsToContents()
+            for i in range(self.pass_table.rowCount()):
+                self.pass_table.setRowHeight(i,max(self.pass_table.rowHeight(i),
+                    self.pass_table.fontMetrics().height()+12))
             self.log(f'Previsão: {len(data)} passagens nas próximas 36 h (lista limitada a 100)')
             self.update_next_indicator()
             self.prefetch_upcoming_modes()
@@ -2910,9 +3099,15 @@ class MainWindow(QMainWindow):
             self.connection.setEnabled(True)
             self.connection.setText("Conectar")
             self.cat_diagnose.setEnabled(False)
-            self.cat_indicator.setText("! CAT DESCONECTADO / ERRO")
-            self.cat_indicator.setStyleSheet("font-size:14px;font-weight:800;color:#ff9595")
-            self.cat_tune_status.setText("CAT: conexão falhou · "+message)
+            self.cat_indicator.setText("CAT")
+            self.cat_indicator.setToolTip("CAT indisponível · "+message[:160])
+            self.cat_indicator.setStyleSheet("font-size:12px;font-weight:800;color:#ffe7e7;background:#783437;border:1px solid #db565e")
+            friendly=("Porta CAT indisponível. Confira COM, cabo, driver e Configurações."
+                      if any(marker in message.casefold() for marker in
+                             ("file not found","filenotfound","could not open port","cannot find","no such file","não foi possível encontrar"))
+                      else "Falha de conexão CAT. Confira a porta e veja LOGs / CAT.")
+            self.cat_tune_status.setText(friendly)
+            self.cat_tune_status.setToolTip(message)
             self.log("CAT: falha ao conectar: "+message)
             if not self.cat_connect_was_startup:
                 QMessageBox.warning(self,"Falha de conexão CAT",message)
@@ -2963,8 +3158,9 @@ class MainWindow(QMainWindow):
                 self.background("cat-poll",self.radio.poll)
             else:
                 self.last_cat_success=None
-                self.cat_indicator.setText("● RÁDIO DESCONECTADO")
-                self.cat_indicator.setStyleSheet("font-size:14px;font-weight:800;color:#ff9595")
+                self.cat_indicator.setText("CAT")
+                self.cat_indicator.setToolTip("CAT desconectado · clique para conectar")
+                self.cat_indicator.setStyleSheet("font-size:12px;font-weight:800;color:#ffe7e7;background:#783437;border:1px solid #db565e")
             if was_manual:
                 QMessageBox.warning(self,"Falha ao sintonizar TS-2000",
                                     "O rádio não confirmou a sintonia solicitada. "
@@ -2987,8 +3183,9 @@ class MainWindow(QMainWindow):
         if key=="cat-poll":
             self.cat_live_label.setText("RÁDIO REAL (CAT) · erro de leitura")
             self.cat_sat_orientation.setText("SAT: sem resposta atual")
-            self.cat_indicator.setText("! ERRO DE LEITURA CAT")
-            self.cat_indicator.setStyleSheet("font-size:14px;font-weight:800;color:#ffbf6f")
+            self.cat_indicator.setText("CAT")
+            self.cat_indicator.setToolTip("CAT sem resposta atual · ver LOGs / CAT")
+            self.cat_indicator.setStyleSheet("font-size:12px;font-weight:800;color:#ffead3;background:#755225;border:1px solid #e0aa55")
             self.map_radio_label.setText("CAT erro de leitura · dados desatualizados")
             self.map_radio_label.setStyleSheet("color:#e98b81;font-weight:700")
             self.cat_status.setText("● Erro de leitura CAT")
@@ -3164,7 +3361,124 @@ class MainWindow(QMainWindow):
         self.config.values["tle_update_hours"]=int(self.tle_hours.value())
         self.config.save();self.log("Intervalo de atualização orbital salvo.")
 
+    def change_web_settings(self,*args):
+        self.config.values['web_enabled']=self.web_enabled.isChecked()
+        self.config.values['web_allow_lan']=self.web_lan.isChecked()
+        self.config.values['web_port']=int(self.web_port.value())
+        self.config.save()
+        if self.web_server is not None:
+            self.web_server.stop()
+            self.web_server=None
+        if self.web_enabled.isChecked():
+            self.start_web_server()
+        else:
+            self.web_status.setText('Interface Web desativada')
+
+    def start_web_server(self):
+        if self.web_server is not None:
+            return True
+        try:
+            server=LocalStatusServer(
+                lan=bool(self.config.values.get('web_allow_lan',False)),
+                port=int(self.config.values.get('web_port',8094)),
+                map_path=Path(__file__).with_name('map.html'))
+            server.start()
+            self.web_server=server
+            self.publish_web_snapshot(force=True)
+            access=server.url
+            if not access:
+                access=f'http://IP-DA-REDE:{server.port}/?key={server.key}'
+            self.web_status.setText('Interface Web ativa · '+access)
+            self.web_status.setToolTip('Link de acesso LAN com chave temporária; não compartilhe fora da rede.')
+            self.log('Painel Web iniciado · LAN habilitada' if server.lan else 'Painel Web local iniciado')
+            return True
+        except (OSError,ValueError) as exc:
+            self.web_server=None
+            self.web_status.setText('Falha ao iniciar Web: '+str(exc))
+            self.log('Falha ao iniciar painel Web: '+str(exc))
+            return False
+
+    def open_web_dashboard(self):
+        if not self.start_web_server():
+            QMessageBox.warning(self,'Interface Web','Não foi possível iniciar o servidor. Confira a porta TCP nas Configurações.')
+            return
+        import webbrowser
+        url=self.web_server.url
+        if not url:
+            self.web_status.setText('IP da LAN não detectado · use o IP local do computador e o link com chave')
+            return
+        webbrowser.open(url)
+
+    def copy_web_url(self):
+        if not self.start_web_server():
+            return
+        url=self.web_server.url
+        if not url:
+            url=f'http://IP-DA-REDE:{self.web_server.port}/?key={self.web_server.key}'
+        QApplication.clipboard().setText(url)
+        self.web_status.setText('Endereço copiado: '+url)
+
+    def publish_web_snapshot(self,force=False):
+        server=self.web_server
+        if server is None:
+            return
+        stamp=time.monotonic()
+        if not force and stamp-self._web_last_push<2.5:
+            return
+        self._web_last_push=stamp
+        def txt(name):
+            item=getattr(self,name,None)
+            return item.text() if item is not None else '—'
+        state='desconectado'
+        if self.radio.connected:
+            if self.last_cat_success is None:
+                state='degradado'
+            else:
+                age=(now_utc()-self.last_cat_success).total_seconds()
+                state='conectado' if age<=10 else 'degradado'
+        passes=[]
+        for i in range(min(self.pass_table.rowCount(),75)):
+            cells=[self.pass_table.item(i,j) for j in range(6)]
+            items=[x.text() if x is not None else '—' for x in cells]
+            passes.append(dict(zip(('aos','tca','los','duration','max_el','modes'),items)))
+        names={'elevation':'Elevação','azimuth':'Azimute','range_km':'Distância',
+               'radial_m_s':'Velocidade radial','height_km':'Altitude orbital'}
+        metrics={names[k]:w.text() for k,w in self.orbit_metrics.items()}
+        orbit=None
+        try:
+            pos=self.last_pos
+            station=self.saved_station()
+            if pos and station:
+                orbit={
+                    'name':self.sat_combo.currentText(),
+                    'satellite':{'lat':pos['sat_lat'],'lon':pos['sat_lon'],
+                                 'height_km':pos.get('height_km',0)},
+                    'station':{'lat':station.lat,'lon':station.lon,'callsign':station.callsign},
+                    'track_past':self.track_cache.get('past',[]),
+                    'track_future':self.track_cache.get('future',[]),
+                    'footprint':footprint(pos['sat_lat'],pos['sat_lon'],pos['footprint_radius_deg']),
+                    'label':self.sat_combo.currentText()+' · elevação '+str(round(pos['elevation'],1))+'°'}
+        except (KeyError,ValueError,TypeError,AttributeError):
+            pass
+        server.publish({
+            'version':__version__,
+            'utc':now_utc().strftime('UTC · %d/%m/%Y %H:%M:%S'),
+            'satellite':self.sat_combo.currentText(),
+            'catalog_count':len(self.omm),
+            'cat_state':state,
+            'cat_detail':txt('cat_tune_status'),
+            'rx':txt('pred_rx').replace('\n',' · '),
+            'tx':txt('pred_tx').replace('\n',' · '),
+            'nextpass':txt('next_countdown'),
+            'metrics':metrics,
+            'visibility':txt('visibility'),
+            'passes':passes,
+            'orbit':orbit,
+        })
     def closeEvent(self,event):
+        if self.web_server is not None:
+            self.web_server.stop()
+            self.web_server=None
         self.doppler_checkbox.setChecked(False)
         self.radio.disconnect()
         event.accept()
