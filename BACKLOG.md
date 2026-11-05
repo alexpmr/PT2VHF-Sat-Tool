@@ -1,6 +1,16 @@
 ## Pendentes
 
-(nenhum)
+- **Passagens 36 h — coluna com a duração da janela (LOS − AOS)** (registrado em 05/11/2026)
+  - Nova coluna "Duração" na tabela "Passagens do satélite selecionado · 36 h", entre LOS e Máx °,
+    no formato mm:ss (ou h:mm:ss se passar de 1 h), calculada de `los - aos` de cada passagem.
+  - Tooltip e alinhamento iguais às demais colunas de horário; incluir no teste de layout.
+
+- **Passagens 36 h — fontes "colapsadas" após a v1.3.16** (registrado em 05/11/2026)
+  - Com as colunas Satélite/Modos em `Stretch` e datas em uma linha, o texto da tabela ficou
+    comprimido/cortado (cabeçalhos AOS/TCA/LOS e células com fonte apertada).
+  - Revisar tamanho da fonte, altura das linhas (`resizeRowsToContents`), padding das células e
+    largura mínima das colunas de horário para o texto não ficar espremido nem cortado em
+    janelas normais; validar com captura de tela em 1366×768 e 1920×1080.
 
 ## v1.3.16 — backlog resolvido + Linux e macOS (04/11/2026)
 
