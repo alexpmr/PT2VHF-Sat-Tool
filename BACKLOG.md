@@ -49,6 +49,34 @@
 
 ## Pendentes
 
+- **SDR para RX dos satélites — detecção automática, áudio e decodificação** (registrado em 05/11/2026)
+  - Detectar RTL-SDR na USB (RTL2832U, 0bda:2838/2832, inclusive RTL-SDR Blog V3/V4) ao abrir e
+    periodicamente; perguntar "Usar para RX?" e passar o TS-2000 (ou outro rádio) só para TX.
+  - `librtlsdr` embutida nos instaladores; Windows: detectar driver errado e orientar o Zadig (WinUSB);
+    Linux: regra udev no pacote; macOS: sem driver extra. Opcional: `rtl_tcp` (dongle remoto).
+  - Demodulação interna conforme o transponder: FM (SO-50, AO-91, ISS), USB/LSB/CW (RS-44, FO-29, AO-7);
+    áudio nos alto-falantes com volume/squelch e saída opcional para cabo virtual (SoundModem UZ7HO).
+  - Decodificação conforme o protocolo do satélite: AFSK 1200 interno (APRS/digipeater ISS); demais
+    (ex.: 9k6 GMSK) via SoundModem por KISS TCP/AGW; telemetria decodificada com `satnogs-decoders`,
+    log/CSV e envio opcional ao SatNOGS (convivendo com GetKISS+ do DK3WN no mesmo SoundModem).
+  - Configurações: ganho, correção PPM, bias-tee, escolha do dongle. Indicador "SDR" verde/vermelho.
+
+- **Waterfall do SDR** (registrado em 05/11/2026)
+  - Painel recolhível na aba Operação; zoom de ±12 kHz a ±500 kHz; FFT 2048–8192 a 20–30 fps.
+  - Doppler já corrigido (sinais parados); marcas da escuta e largura do filtro, do transponder/canal
+    (SatNOGS) e do eco previsto do próprio uplink; clique sintoniza (RX e TX acompanham em lineares).
+  - Ajustes de contraste, faixa em dB, paleta, velocidade; espectro em linha opcional.
+
+- **Doppler em tempo real no SDR** (registrado em 05/11/2026)
+  - O motor Doppler atual (já usado no CAT do TS-2000) passa a sintonizar o SDR diretamente,
+    várias vezes por segundo, com RX e TX em equipamentos separados (SDR RX + rádio TX, ou só RX).
+
+- **Yaesu FT-817/818 e similares para TX/RX** (registrado em 05/11/2026)
+  - Driver CAT do FT-817/818 (protocolo binário de 5 bytes; 4800/9600/38400 baud) e similares
+    (FT-857/897); sem modo SAT: usar como TX com o SDR em RX, ou split VFO A/B com Doppler do uplink.
+  - Avaliar suporte genérico via Hamlib (`rigctld`) para cobrir IC-9700, IC-910, FT-847 e outros.
+  - Escolha de equipamento separada para RX e TX nas Configurações; validação com rádio real.
+
 - **Aviso sonoro de AOS 10 s antes, com contagem regressiva em popup** (registrado em 05/11/2026)
   - Hoje existe o alerta "Avisar 30 segundos antes da entrada do satélite selecionado"
     (Configurações; diálogo "Alerta de aproximação — AOS" com `QApplication.beep()`).
