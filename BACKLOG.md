@@ -58,6 +58,22 @@
 
 ## Pendentes
 
+- **Passagens 36 h — coluna "Qualidade" de 1 a 5 estrelas** (registrado em 06/11/2026)
+  - Nota composta, não só elevação máxima ou duração: estimar a qualidade real do contato.
+  - Fatores sugeridos (pesos ajustáveis, documentados no tooltip de cada linha):
+    - geometria: elevação máxima, tempo acima de 10°/20°/30° e distância mínima (perda no espaço livre);
+    - duração útil da janela (LOS − AOS) e se o tempo acima do horizonte mínimo da estação basta para um QSO;
+    - obstruções: horizonte/máscara da estação por azimute, quando configurado (inclui azimute de entrada/saída);
+    - Doppler: taxa máxima de variação (Hz/s) perto do TCA, que dificulta SSB/CW em passagens altas e rápidas;
+    - satélite: estado operacional (SatNOGS "alive"/status), modo do transponder (FM vs. linear) e,
+      se possível, iluminação/eclipse (satélites que só operam no sol);
+    - concorrência: horário (dia/noite local, fim de semana) como indicador de congestionamento em FM;
+    - equipamento da estação: bandas/modos disponíveis e, com rotor, se o giro cobre o arco (450°/flip).
+  - Exibir ★☆☆☆☆…★★★★★ com tooltip explicando os principais motivos (ex.: "máx. 62°, 9 min, Doppler
+    rápido para SSB, entra por trás do morro a leste").
+  - Permitir ordenar a tabela pela qualidade; manter a ordem cronológica como padrão.
+  - Testes com passagens sintéticas (baixa/curta, alta/rápida, obstruída, eclipse) cobrindo a pontuação.
+
 - **Aviso sonoro de AOS 10 s antes, com contagem regressiva em popup** (registrado em 05/11/2026)
   - Hoje existe o alerta "Avisar 30 segundos antes da entrada do satélite selecionado"
     (Configurações; diálogo "Alerta de aproximação — AOS" com `QApplication.beep()`).
