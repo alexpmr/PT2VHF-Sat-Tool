@@ -21,7 +21,7 @@ from .qt_compat import QDoubleValidator, QFont, QIcon, QPixmap, QColor, QBrush
 from .qt_compat import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
     QLabel, QPushButton, QLineEdit, QComboBox, QGroupBox, QTabWidget, QPlainTextEdit,
-    QSplitter, QMessageBox, QDialog, QCheckBox, QTableWidget, QTableWidgetItem, QHeaderView,
+    QSplitter, QMessageBox, QDialog, QMenu, QCheckBox, QTableWidget, QTableWidgetItem, QHeaderView,
     QDoubleSpinBox, QAbstractItemView, QProgressDialog, QScrollArea, QProgressBar, QFileDialog,
 )
 from .qt_compat import QWebEngineView, QGeoPositionInfoSource, qt_exec, QT_BINDING
@@ -639,10 +639,22 @@ class MainWindow(QMainWindow):
         self.catalog_search.setPlaceholderText("Filtrar nome, NORAD, modo ou frequência…")
         self.catalog_search.textChanged.connect(self.refresh_satellite_table)
         catalog_layout.addWidget(self.catalog_search)
-        self.catalog_category=QComboBox()
-        self.catalog_category.addItem("Todas as categorias","all")
-        for name in DEFAULT_GROUPS:self.catalog_category.addItem(name.upper(),name)
-        self.catalog_category.currentIndexChanged.connect(self.refresh_satellite_table)
+        self.catalog_category=QPushButton("Categorias · múltipla seleção")
+        self.catalog_category_menu=QMenu(self.catalog_category)
+        self.catalog_category_actions={}
+        initial=set(self.config.values.get("catalog_category_filter",list(DEFAULT_GROUPS)))
+        for name in DEFAULT_GROUPS:
+            action=self.catalog_category_menu.addAction(name.upper())
+            action.setCheckable(True)
+            action.setChecked(name in initial)
+            action.toggled.connect(self.change_catalog_categories)
+            self.catalog_category_actions[name]=action
+        self.catalog_category_menu.addSeparator()
+        mark_all=self.catalog_category_menu.addAction("Marcar todas")
+        mark_all.triggered.connect(lambda:self.set_catalog_categories(True))
+        clear_all=self.catalog_category_menu.addAction("Limpar filtro")
+        clear_all.triggered.connect(lambda:self.set_catalog_categories(False))
+        self.catalog_category.setMenu(self.catalog_category_menu)
         catalog_layout.addWidget(self.catalog_category)
         catalog_actions=QHBoxLayout()
         self.scope_filtered=QCheckBox("Somente resultados filtrados")
@@ -1716,6 +1728,19 @@ class MainWindow(QMainWindow):
             self.frequency_progress_dialog.setLabelText(
                 "Cancelamento solicitado; aguardando a consulta SatNOGS atual…")
 
+    def change_catalog_categories(self,*args):
+        selected=[name for name,action in self.catalog_category_actions.items() if action.isChecked()]
+        self.config.values["catalog_category_filter"]=selected
+        self.config.save()
+        self.catalog_category.setText(f"Categorias: {len(selected)}/{len(self.catalog_category_actions)}")
+        self.refresh_satellite_table()
+
+    def set_catalog_categories(self,checked):
+        for action in self.catalog_category_actions.values():
+            action.blockSignals(True)
+            action.setChecked(bool(checked))
+            action.blockSignals(False)
+        self.change_catalog_categories()
     def refresh_satellite_table(self, text=None):
         """Virtualized search: thousands of cached satellites must not freeze Qt."""
         query=normalized_satellite_search(
@@ -1724,10 +1749,11 @@ class MainWindow(QMainWindow):
         previous=self.catalog_table.item(old_row,0) if old_row>=0 else None
         previous_id=str(previous.data(Qt.UserRole)) if previous is not None else None
         checked=set(self.enabled_satellite_ids())
-        selected_category=self.catalog_category.currentData() if hasattr(self,"catalog_category") else "all"
+        categories={name for name,action in self.catalog_category_actions.items()
+                    if action.isChecked()} if hasattr(self,"catalog_category_actions") else set(DEFAULT_GROUPS)
         ids=[]
         for ident,obj in self.omm.items():
-            if selected_category!="all" and selected_category not in obj.get("CATEGORIES",["amateur"]):
+            if not categories.intersection(obj.get("CATEGORIES",["amateur"])):
                 continue
             if query and query not in satellite_search_text(ident,obj):
                 continue
