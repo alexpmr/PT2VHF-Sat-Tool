@@ -76,11 +76,11 @@ def test_selected_pass_ui_no_manual_recalculate_button_and_periodic_refresh():
     assert "refresh_passes_btn" not in app
     assert 'group("PASSAGENS DO SATÉLITE SELECIONADO · 36 H")' in app
     assert "nextpass.setMinimumWidth(0)" in app
-    assert "self.pass_table.setWordWrap(True)" in app
+    assert "self.pass_table.setWordWrap(False)" in app
     assert "self.pass_table.resizeRowsToContents()" in app
-    assert "for col in (1,2,3,4):" in app
+    assert "for col in (0,1,2,3,4):" in app
     assert "pass_header.setSectionResizeMode(col,QHeaderView.ResizeToContents)" in app
-    assert "pass_header.setSectionResizeMode(col,QHeaderView.Stretch)" in app
+    assert "pass_header.setSectionResizeMode(5,QHeaderView.Stretch)" in app
     assert "setMaximumHeight(230)" not in app
     assert "cell.setToolTip(value)" in app
     assert "cell.setTextAlignment(" in app
