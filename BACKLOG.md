@@ -71,6 +71,16 @@
     o dispositivo (código libusb) e recomendação específica; incluir no log exportável.
   - Só sugerir o Zadig quando o driver associado não for WinUSB/libusbK; detectar o caso "Interface 1".
   - Validar com RTL-SDR real no Windows 10/11 (inclusive V4) antes de fechar.
+  - **Causa confirmada (06/11/2026, 2ª captura do painel SDR):** "Falha ao listar RTL-SDR: argument 2:
+    TypeError: expected LP_c_ubyte instance instead of c_char_Array_256". O driver e a biblioteca estão OK e
+    o dongle É enumerado (count ≥ 1); o erro é do PT2VHF: `sdr.detect_devices()` passa
+    `ctypes.create_string_buffer(256)` (c_char) para `rtlsdr_get_device_usb_strings`, cujos argtypes no
+    pyrtlsdr são `POINTER(c_ubyte)`. A exceção descarta a lista inteira e a GUI mostra a mensagem do Zadig.
+    - Correção: buffers `(ctypes.c_ubyte * 256)()` e decodificação via `bytes(buf).split(b"\0")[0]`;
+      falha ao ler o número de série não pode descartar o dispositivo (fica sem S/N).
+    - Teste de regressão com biblioteca falsa que imita os argtypes do pyrtlsdr (count=1). O CI não pegou
+      porque os runners não têm dongle (count=0, o laço nunca executa).
+    - Só mostrar o texto do Zadig quando a abertura falhar com erro de driver, nunca para erro de listagem.
 
 - **Passagens 36 h — coluna "Qualidade" de 1 a 5 estrelas** (registrado em 06/11/2026)
   - Nota composta, não só elevação máxima ou duração: estimar a qualidade real do contato.
