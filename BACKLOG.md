@@ -1,5 +1,15 @@
 ## Pendentes
 
+- **Aviso sonoro de AOS 10 s antes, com contagem regressiva em popup** (registrado em 05/11/2026)
+  - Hoje existe o alerta "Avisar 30 segundos antes da entrada do satélite selecionado"
+    (Configurações; diálogo "Alerta de aproximação — AOS" com `QApplication.beep()`).
+  - Novo comportamento: 10 s antes do AOS abrir um popup não modal com contagem regressiva
+    10 → 0 atualizada a cada segundo (satélite, AOS local, azimute de entrada, Máx °) e um
+    bipe por segundo, com som distinto no AOS; fechar sozinho alguns segundos depois do AOS.
+  - Som audível em Windows, Linux e macOS (`QApplication.beep` pode ficar mudo: avaliar
+    QSoundEffect/WAV embutido); botão "Silenciar" no popup e opção de antecedência
+    (padrão 10 s) e de som nas Configurações; não roubar foco nem disparar duas vezes por passagem.
+
 - **Passagens 36 h — remover a coluna Satélite (redundante)** (registrado em 05/11/2026)
   - Imagem: `docs/backlog/passagens-coluna-satelite-redundante-v1.3.16.png`.
   - A tabela só lista passagens do satélite escolhido no seletor "Satélite" do topo; repetir o nome
