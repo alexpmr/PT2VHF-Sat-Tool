@@ -2833,6 +2833,8 @@ class MainWindow(QMainWindow):
                 for widget in (self.smeter_main,self.smeter_sub):
                     widget.setValue(0);widget.setFormat("sem leitura")
 
+        self.publish_web_snapshot()
+
     def background_result(self,key,data):
         self.pending_jobs.discard(key)
         if key.startswith('photo:'):
@@ -3333,7 +3335,124 @@ class MainWindow(QMainWindow):
         self.config.values["tle_update_hours"]=int(self.tle_hours.value())
         self.config.save();self.log("Intervalo de atualização orbital salvo.")
 
+    def change_web_settings(self,*args):
+        self.config.values['web_enabled']=self.web_enabled.isChecked()
+        self.config.values['web_allow_lan']=self.web_lan.isChecked()
+        self.config.values['web_port']=int(self.web_port.value())
+        self.config.save()
+        if self.web_server is not None:
+            self.web_server.stop()
+            self.web_server=None
+        if self.web_enabled.isChecked():
+            self.start_web_server()
+        else:
+            self.web_status.setText('Interface Web desativada')
+
+    def start_web_server(self):
+        if self.web_server is not None:
+            return True
+        try:
+            server=LocalStatusServer(
+                lan=bool(self.config.values.get('web_allow_lan',False)),
+                port=int(self.config.values.get('web_port',8094)),
+                map_path=Path(__file__).with_name('map.html'))
+            server.start()
+            self.web_server=server
+            self.publish_web_snapshot(force=True)
+            access=server.url
+            if not access:
+                access=f'http://IP-DA-REDE:{server.port}/?key={server.key}'
+            self.web_status.setText('Interface Web ativa · '+access)
+            self.web_status.setToolTip('Link de acesso LAN com chave temporária; não compartilhe fora da rede.')
+            self.log('Painel Web iniciado · LAN habilitada' if server.lan else 'Painel Web local iniciado')
+            return True
+        except (OSError,ValueError) as exc:
+            self.web_server=None
+            self.web_status.setText('Falha ao iniciar Web: '+str(exc))
+            self.log('Falha ao iniciar painel Web: '+str(exc))
+            return False
+
+    def open_web_dashboard(self):
+        if not self.start_web_server():
+            QMessageBox.warning(self,'Interface Web','Não foi possível iniciar o servidor. Confira a porta TCP nas Configurações.')
+            return
+        import webbrowser
+        url=self.web_server.url
+        if not url:
+            self.web_status.setText('IP da LAN não detectado · use o IP local do computador e o link com chave')
+            return
+        webbrowser.open(url)
+
+    def copy_web_url(self):
+        if not self.start_web_server():
+            return
+        url=self.web_server.url
+        if not url:
+            url=f'http://IP-DA-REDE:{self.web_server.port}/?key={self.web_server.key}'
+        QApplication.clipboard().setText(url)
+        self.web_status.setText('Endereço copiado: '+url)
+
+    def publish_web_snapshot(self,force=False):
+        server=self.web_server
+        if server is None:
+            return
+        stamp=time.monotonic()
+        if not force and stamp-self._web_last_push<2.5:
+            return
+        self._web_last_push=stamp
+        def txt(name):
+            item=getattr(self,name,None)
+            return item.text() if item is not None else '—'
+        state='desconectado'
+        if self.radio.connected:
+            if self.last_cat_success is None:
+                state='degradado'
+            else:
+                age=(now_utc()-self.last_cat_success).total_seconds()
+                state='conectado' if age<=10 else 'degradado'
+        passes=[]
+        for i in range(min(self.pass_table.rowCount(),75)):
+            cells=[self.pass_table.item(i,j) for j in range(6)]
+            items=[x.text() if x is not None else '—' for x in cells]
+            passes.append(dict(zip(('aos','tca','los','duration','max_el','modes'),items)))
+        names={'elevation':'Elevação','azimuth':'Azimute','range_km':'Distância',
+               'radial_m_s':'Velocidade radial','height_km':'Altitude orbital'}
+        metrics={names[k]:w.text() for k,w in self.orbit_metrics.items()}
+        orbit=None
+        try:
+            pos=self.last_pos
+            station=self.saved_station()
+            if pos and station:
+                orbit={
+                    'name':self.sat_combo.currentText(),
+                    'satellite':{'lat':pos['sat_lat'],'lon':pos['sat_lon'],
+                                 'height_km':pos.get('height_km',0)},
+                    'station':{'lat':station.lat,'lon':station.lon,'callsign':station.callsign},
+                    'track_past':self.track_cache.get('past',[]),
+                    'track_future':self.track_cache.get('future',[]),
+                    'footprint':footprint(pos['sat_lat'],pos['sat_lon'],pos['footprint_radius_deg']),
+                    'label':self.sat_combo.currentText()+' · elevação '+str(round(pos['elevation'],1))+'°'}
+        except (KeyError,ValueError,TypeError,AttributeError):
+            pass
+        server.publish({
+            'version':__version__,
+            'utc':now_utc().strftime('UTC · %d/%m/%Y %H:%M:%S'),
+            'satellite':self.sat_combo.currentText(),
+            'catalog_count':len(self.omm),
+            'cat_state':state,
+            'cat_detail':txt('cat_tune_status'),
+            'rx':txt('pred_rx').replace('\n',' · '),
+            'tx':txt('pred_tx').replace('\n',' · '),
+            'nextpass':txt('next_countdown'),
+            'metrics':metrics,
+            'visibility':txt('visibility'),
+            'passes':passes,
+            'orbit':orbit,
+        })
     def closeEvent(self,event):
+        if self.web_server is not None:
+            self.web_server.stop()
+            self.web_server=None
         self.doppler_checkbox.setChecked(False)
         self.radio.disconnect()
         event.accept()
