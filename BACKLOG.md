@@ -1,5 +1,13 @@
 ## Pendentes
 
+- **Passagens 36 h — remover a coluna Satélite (redundante)** (registrado em 05/11/2026)
+  - Imagem: `docs/backlog/passagens-coluna-satelite-redundante-v1.3.16.png`.
+  - A tabela só lista passagens do satélite escolhido no seletor "Satélite" do topo; repetir o nome
+    em cada linha gasta largura e força quebras ("RS-44 & BREEZE-KM R/B" em três linhas).
+  - Colunas: AOS, TCA, LOS, Duração (item acima), Máx °, Modos; o nome pode ir no título do painel
+    ("PASSAGENS · RS-44 · 36 H") ou no tooltip. Manter duplo clique na linha funcionando.
+  - Ajustar testes que verificam 6 colunas / coluna 0 elástica.
+
 - **Topo da aba Operação — reduzir espaço desperdiçado** (registrado em 05/11/2026)
   - Indicador CAT: trocar o botão largo "● RÁDIO DESCONECTADO / ! CAT DESCONECTADO / ERRO" por um
     ícone compacto "CAT" em verde (conectado) ou vermelho (desconectado/erro), mantendo o clique para
