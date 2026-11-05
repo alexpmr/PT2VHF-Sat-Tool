@@ -41,6 +41,7 @@ from .updater import check_for_update, download_update, install_flavor, launch_s
 from .profile import choose_satellites, capability, render_service, CANDIDATES
 from .selection import change_selection, transmitter_batch_ids
 from .alerts import eta_seconds, format_duration, selected_aos_alarm
+from .web_ui import LocalStatusServer
 from .media import find_photo, photo_html
 from .operations import (select_next_pass, select_selected_satellite_pass,
                          frequency_prediction, status_at, orbital_age_days)
@@ -154,6 +155,8 @@ class MainWindow(QMainWindow):
         self.aos_alarm_silenced = False
         self.aos_alarm_last_second = None
         self._alarm_sound_effect = None
+        self.web_server = None
+        self._web_last_push = 0.0
         self.cat_selection_generation = 0
         self.cat_autotune_requested_generation = -1
         self.cat_retry_after = 0.0
@@ -208,6 +211,8 @@ class MainWindow(QMainWindow):
         QTimer.singleShot(12000, self.check_for_updates)
         if self.config.values.get("cat_auto_connect_startup",True) and self.config.values.get("port","").strip():
             QTimer.singleShot(1200, self.startup_cat_connect)
+        if self.config.values.get("web_enabled",False):
+            QTimer.singleShot(700,self.start_web_server)
 
     def show_official_site_notice(self):
         """Aviso do site oficial no mesmo padrão dos demais projetos PT2VHF (v1.3.16)."""
@@ -850,6 +855,41 @@ class MainWindow(QMainWindow):
         alarm_test.clicked.connect(lambda:self.play_aos_sound(critical=True))
         alert_layout.addWidget(alarm_test)
         cfg.addWidget(alert_group)
+        web_group,wg=group("INTERFACE WEB · LOCAL E REDE LAN")
+        self.web_enabled=QCheckBox("Habilitar painel Web ao abrir o Sat Tool")
+        self.web_enabled.setChecked(bool(self.config.values.get("web_enabled",False)))
+        self.web_enabled.toggled.connect(self.change_web_settings)
+        wg.addWidget(self.web_enabled)
+        webrow=QHBoxLayout()
+        self.web_lan=QCheckBox("Permitir outros dispositivos da rede local (LAN)")
+        self.web_lan.setChecked(bool(self.config.values.get("web_allow_lan",False)))
+        self.web_lan.toggled.connect(self.change_web_settings)
+        webrow.addWidget(self.web_lan)
+        webrow.addWidget(label("Porta TCP"))
+        self.web_port=QDoubleSpinBox()
+        self.web_port.setDecimals(0)
+        self.web_port.setRange(1024,65535)
+        self.web_port.setValue(int(self.config.values.get("web_port",8094)))
+        self.web_port.valueChanged.connect(self.change_web_settings)
+        webrow.addWidget(self.web_port)
+        wg.addLayout(webrow)
+        controls=QHBoxLayout()
+        web_launch=QPushButton("Abrir interface Web")
+        web_launch.clicked.connect(self.open_web_dashboard)
+        web_copy=QPushButton("Copiar endereço")
+        web_copy.clicked.connect(self.copy_web_url)
+        controls.addWidget(web_launch)
+        controls.addWidget(web_copy)
+        wg.addLayout(controls)
+        self.web_status=label("Interface Web desativada")
+        self.web_status.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        self.web_status.setStyleSheet("color:#98d8e7;font-size:11px")
+        wg.addWidget(self.web_status)
+        wg.addWidget(label("Acesso local: 127.0.0.1. LAN: requer chave temporária do endereço copiado. "
+                           "Somente leitura: navegador não aciona CAT, PTT ou alterações no rádio. "
+                           "Libere a porta TCP apenas na rede privada do firewall, se necessário. "
+                           "HTTP na LAN não tem criptografia; nunca encaminhe a porta à Internet."))
+        cfg.addWidget(web_group)
         advanced,adv=group("DOPPLER E SEGURANÇA")
         self.interval=QDoubleSpinBox();self.interval.setRange(0.25,15);self.interval.setSingleStep(0.25);self.interval.setDecimals(2);self.interval.setSuffix(' segundos')
         self.threshold=QDoubleSpinBox();self.threshold.setRange(1,1000);self.threshold.setDecimals(0);self.threshold.setSuffix(' Hz')
