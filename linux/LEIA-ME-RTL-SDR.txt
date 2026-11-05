@@ -7,3 +7,6 @@ PT2VHF Sat Tool — RTL-SDR no Linux (uma vez só)
    echo 'blacklist dvb_usb_rtl28xxu' | sudo tee /etc/modprobe.d/blacklist-rtl-sdr.conf
    sudo modprobe -r dvb_usb_rtl28xxu
 3. Reconecte o RTL-SDR e abra o PT2VHF Sat Tool: ele detecta o dongle e pergunta se deve usá-lo para RX.
+
+Áudio: o programa usa o PulseAudio/PipeWire do sistema (pacote libpulse0, já presente nas
+distribuições com ambiente gráfico). Em instalações mínimas: sudo apt install libpulse0
