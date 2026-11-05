@@ -49,6 +49,14 @@
 
 ## Pendentes
 
+- **Ideias do SatDump (github.com/satdump/satdump)** (registrado em 05/11/2026)
+  - Entram na v1.4.0: arquitetura de "pipelines" por satélite/protocolo (demodulador → deframer →
+    decodificador → produtos), escolhida pelo transponder; gravação automática de cada passagem
+    (áudio WAV e IQ opcional) com agendador que liga o SDR no AOS e encerra no LOS; log de quadros.
+  - Futuro (avaliar depois da v1.4): imagens de satélites meteorológicos (Meteor-M LRPT/HRPT, APT),
+    decodificação offline de gravações IQ, suporte amplo a SDRs via SoapySDR (Airspy, SDRplay, HackRF)
+    e produtos/mapas a partir da telemetria.
+
 - **SDR para RX dos satélites — detecção automática, áudio e decodificação** (registrado em 05/11/2026)
   - Detectar RTL-SDR na USB (RTL2832U, 0bda:2838/2832, inclusive RTL-SDR Blog V3/V4) ao abrir e
     periodicamente; perguntar "Usar para RX?" e passar o TS-2000 (ou outro rádio) só para TX.
