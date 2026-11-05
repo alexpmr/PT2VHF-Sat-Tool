@@ -2,22 +2,30 @@
 
 # PT2VHF Sat Tool
 
-## Downloads — Windows 10/11 x64
+## Downloads — Windows, Linux e macOS
 
-**PT2VHF Sat Tool v1.3.16 — Windows 10/11 x64, Linux x64 e macOS Apple Silicon**.
+**PT2VHF Sat Tool v1.3.17 — Windows 10/11 x64, Linux x64 e macOS Apple Silicon**.
 
 **Novo site oficial: [www.PT2VHF.com](https://www.pt2vhf.com/sat)** — downloads (Setup e Portátil), novas versões e somas SHA-256 ficam no site. A partir da v1.3.14 o atualizador consulta exclusivamente `https://www.pt2vhf.com/update.php?product=sat`.
 
 | Edição | Download direto |
 | --- | --- |
-| **Instalável x64** | [Setup (.exe)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.3.16-Win11-x64-Setup.exe) |
-| **Portátil x64** | [Portable (.exe)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.3.16-Win11-x64-Portable.exe) |
+| **Instalável x64** | [Setup (.exe)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.3.17-Win11-x64-Setup.exe) |
+| **Portátil x64** | [Portable (.exe)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.3.17-Win11-x64-Portable.exe) |
+| **Linux x64** | [Pacote (.tar.gz)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.3.17-Linux-x64.tar.gz) |
+| **macOS ARM64** | [Imagem (.dmg)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.3.17-macOS-arm64.dmg) |
 
 O sufixo `Win11-x64` é mantido para compatibilidade com o atualizador e também atende ao Windows 10 1809+.
 
 **Homologação física:** testes automatizados emulam CAT/TS-2000; a validação com rádio real, COM física e Windows de destino continua necessária.
 
 ---
+
+## Novidades v1.3.17 — atualização completa e distribuição multi-plataforma
+
+- Compilação e teste nativo dos quatro pacotes: Windows Setup/Portable x64, Linux x64 e macOS Apple Silicon.
+- Publicação via GitHub Releases, sem armazenamento temporário do GitHub Actions (cota de artefatos atingida), seguida de sincronização com o site oficial.
+- Inclui o código acumulado no `main` desde a v1.3.16, incluindo melhorias do aviso de AOS. A validação CAT com TS-2000 físico continua necessária.
 
 ## Novidades v1.3.16 — Linux, macOS e satélites padrão
 
