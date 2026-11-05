@@ -1429,8 +1429,9 @@ class MainWindow(QMainWindow):
         stopbits=int(self.stops_combo.currentText())
         self.cat_connecting=True
         self.cat_connect_was_startup=bool(startup)
-        self.cat_indicator.setText("◌ CONECTANDO AO RÁDIO…")
-        self.cat_indicator.setStyleSheet("font-size:14px;font-weight:800;color:#f2c16b")
+        self.cat_indicator.setText("CAT")
+        self.cat_indicator.setToolTip("CAT conectando · "+port)
+        self.cat_indicator.setStyleSheet("font-size:12px;font-weight:800;color:#f2c16b")
         self.cat_indicator.setEnabled(False)
         self.connection.setEnabled(False)
         self.cat_tune_status.setText("CAT: conectando "+port+" (somente leitura inicial)…")
@@ -1452,8 +1453,9 @@ class MainWindow(QMainWindow):
         self.cat_live_label.setText("RÁDIO REAL (CAT) · desconectado")
         self.cat_sat_orientation.setText("SAT: rádio desconectado")
         self.last_cat_success=None
-        self.cat_indicator.setText("● RÁDIO DESCONECTADO")
-        self.cat_indicator.setStyleSheet("font-size:14px;font-weight:800;color:#ff9595")
+        self.cat_indicator.setText("CAT")
+        self.cat_indicator.setToolTip("CAT desconectado · clique para conectar")
+        self.cat_indicator.setStyleSheet("font-size:12px;font-weight:800;color:#ff9595")
         self.connection.setText("Conectar")
         self.radio_label.setText("Desconectado")
         self.map_radio_label.setText("CAT desconectado · RX — MHz · TX — MHz · Modo —")
@@ -1485,8 +1487,9 @@ class MainWindow(QMainWindow):
         self.radio_label.setText(f"{st.model} · SAT {'ON' if st.sat else 'OFF'} · RX {self.radio_freq(st.downlink)} | TX {self.radio_freq(st.uplink)} · Modo {st.mode}")
         self.radio_label.setStyleSheet("color:#69e3bc" if st.sat else "color:#f0c186")
         self.last_cat_success=now_utc()
-        self.cat_indicator.setText("● TS-2000 CONECTADO · "+self.ports.currentText())
-        self.cat_indicator.setStyleSheet("font-size:14px;font-weight:800;color:#67efb2")
+        self.cat_indicator.setText("CAT")
+        self.cat_indicator.setToolTip("CAT conectado e validado · "+self.ports.currentText()+" · clique para desconectar")
+        self.cat_indicator.setStyleSheet("font-size:12px;font-weight:800;color:#67efb2")
         self.cat_live_label.setText(
             "RÁDIO REAL (CAT) · MAIN RX [FA] "+self.radio_freq(st.downlink)+
             "  |  SAT UPLINK [FB] "+self.radio_freq(st.uplink)+
@@ -2679,8 +2682,9 @@ class MainWindow(QMainWindow):
             if age>10:
                 self.map_radio_label.setText(f"CAT sem leitura há {age:.0f}s · valores desatualizados")
                 self.map_radio_label.setStyleSheet("color:#e3ad61;font-weight:700")
-                self.cat_indicator.setText(f"! CAT SEM RESPOSTA HÁ {age:.0f}s")
-                self.cat_indicator.setStyleSheet("font-size:14px;font-weight:800;color:#ffbf6f")
+                self.cat_indicator.setText("CAT")
+                self.cat_indicator.setToolTip(f"CAT sem resposta há {age:.0f}s · confira a porta")
+                self.cat_indicator.setStyleSheet("font-size:12px;font-weight:800;color:#ffbf6f")
                 self.cat_status.setText(f"● CAT desatualizado há {age:.0f}s")
                 self.cat_status.setStyleSheet("color:#efc17b;font-size:12px")
                 self.cat_details.setText("Leitura CAT vencida · conferir cabo e porta COM")
@@ -2922,9 +2926,15 @@ class MainWindow(QMainWindow):
             self.connection.setEnabled(True)
             self.connection.setText("Conectar")
             self.cat_diagnose.setEnabled(False)
-            self.cat_indicator.setText("! CAT DESCONECTADO / ERRO")
-            self.cat_indicator.setStyleSheet("font-size:14px;font-weight:800;color:#ff9595")
-            self.cat_tune_status.setText("CAT: conexão falhou · "+message)
+            self.cat_indicator.setText("CAT")
+            self.cat_indicator.setToolTip("CAT indisponível · "+message[:160])
+            self.cat_indicator.setStyleSheet("font-size:12px;font-weight:800;color:#ff9595")
+            friendly=("Porta CAT indisponível. Confira COM, cabo, driver e Configurações."
+                      if any(marker in message.casefold() for marker in
+                             ("file not found","filenotfound","could not open port","cannot find","no such file","não foi possível encontrar"))
+                      else "Falha de conexão CAT. Confira a porta e veja LOGs / CAT.")
+            self.cat_tune_status.setText(friendly)
+            self.cat_tune_status.setToolTip(message)
             self.log("CAT: falha ao conectar: "+message)
             if not self.cat_connect_was_startup:
                 QMessageBox.warning(self,"Falha de conexão CAT",message)
@@ -2975,8 +2985,9 @@ class MainWindow(QMainWindow):
                 self.background("cat-poll",self.radio.poll)
             else:
                 self.last_cat_success=None
-                self.cat_indicator.setText("● RÁDIO DESCONECTADO")
-                self.cat_indicator.setStyleSheet("font-size:14px;font-weight:800;color:#ff9595")
+                self.cat_indicator.setText("CAT")
+                self.cat_indicator.setToolTip("CAT desconectado · clique para conectar")
+                self.cat_indicator.setStyleSheet("font-size:12px;font-weight:800;color:#ff9595")
             if was_manual:
                 QMessageBox.warning(self,"Falha ao sintonizar TS-2000",
                                     "O rádio não confirmou a sintonia solicitada. "
@@ -2999,8 +3010,9 @@ class MainWindow(QMainWindow):
         if key=="cat-poll":
             self.cat_live_label.setText("RÁDIO REAL (CAT) · erro de leitura")
             self.cat_sat_orientation.setText("SAT: sem resposta atual")
-            self.cat_indicator.setText("! ERRO DE LEITURA CAT")
-            self.cat_indicator.setStyleSheet("font-size:14px;font-weight:800;color:#ffbf6f")
+            self.cat_indicator.setText("CAT")
+            self.cat_indicator.setToolTip("CAT sem resposta atual · ver LOGs / CAT")
+            self.cat_indicator.setStyleSheet("font-size:12px;font-weight:800;color:#ffbf6f")
             self.map_radio_label.setText("CAT erro de leitura · dados desatualizados")
             self.map_radio_label.setStyleSheet("color:#e98b81;font-weight:700")
             self.cat_status.setText("● Erro de leitura CAT")
