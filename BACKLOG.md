@@ -7,7 +7,7 @@
 - [x] Filtro múltiplo de categorias de satélites, persistente e independente das fontes de download orbital.
 - [x] Erro de porta COM tratado com indicação compreensível e log técnico preservado.
 - [ ] Testar builds e execução real Windows/Linux/macOS e entrega no site/OTA antes de declarar a release final concluída.
-- [ ] **P0 permanece aberto:** homologar Auto CAT com TS-2000 real por 10 min, com correções sucessivas FA/FB, log, SAT ON e PTT inativo.
+- [x] **P0:** homologar Auto CAT com TS-2000 real por 10 min, com correções sucessivas FA/FB, log, SAT ON e PTT inativo — **homologado pelo operador em 06/11/2026 (v1.5.0, TS-2000 físico): "controle de CAT no TS-2000 funcionando perfeitamente".**
 
 ---
 # Auditoria do backlog ativo — 05/11/2026 (revisado para v1.3.18)
@@ -18,8 +18,8 @@
 
 ## Sprint ativa — prioridades e aceite
 
-### P0 · Controle CAT contínuo — homologação de campo pendente
-- [ ] Validar com TS-2000 físico por **10 minutos sem reconectar nem clicar**, múltiplas correções Doppler FA/FB e respectivos readbacks com timestamps, dentro/fora da visada, sem PTT. Corrigir starvation, concorrência ou estados inconsistentes quando reproduzidos. Diferenciar porta aberta, leitura CAT validada e Auto CAT efetivamente ativo.
+### P0 · Controle CAT contínuo — HOMOLOGADO em 06/11/2026 (v1.5.0)
+- [x] Validar com TS-2000 físico por **10 minutos sem reconectar nem clicar**, múltiplas correções Doppler FA/FB e respectivos readbacks com timestamps, dentro/fora da visada, sem PTT. Corrigir starvation, concorrência ou estados inconsistentes quando reproduzidos. Diferenciar porta aberta, leitura CAT validada e Auto CAT efetivamente ativo.
 - [ ] Tratar porta ausente (ex.: COM15 / FileNotFoundError) com mensagem clara "Porta CAT indisponível", orientação sobre cabo/driver/COM e atalho para Configurações; registrar detalhes técnicos em LOGs/CAT. Não confundir falha de conexão com sintonia bloqueada.
 
 ### P1 · Responsividade da aba Operação — capturas de 05/11
@@ -63,7 +63,7 @@
 - [x] CAT autodetectado: varredura de portas/velocidades (TS-2000 ID019; FT-817 com validação dupla), cancelável, sem PTT.
 - [x] Qualidade da passagem em estrelas (quality.py) com tooltip e ordenação; janela configurável (6 h–7 dias).
 - [x] Popup do satélite (mapa, seletor, catálogo) com cache offline; popup de boas-vindas com convite e botão Fechar.
-- [ ] Validar com RTL-SDR real (inclusive V4) no Windows 10/11 e Ubuntu; FT-817 e TS-2000 reais na varredura.
+- [ ] Validar com RTL-SDR real (inclusive V4) no Windows 10/11 e Ubuntu; FT-817 real na varredura. (TS-2000: CAT homologado em 06/11/2026.)
 
 ## Pendentes
 
@@ -252,7 +252,7 @@
 - [x] **Auto CAT:** scheduler periódico tenta aplicar a próxima correção FA/FB antes do readback periódico; fluxo de seleção inicial e acompanhamento contínuo preservados, independente do horizonte.
 - [x] **Visibilidade de falhas:** log com causas de espera/bloqueio do scheduler, setpoints e confirmações.
 - [x] **Passagens compactas:** coluna lateral sem largura mínima arbitrária de 520 px; data/hora em 2 linhas, nomes e modos completos com wrap; tabela com menor altura e scroll.
-- [ ] **Homologação P0 pendente:** testar TS-2000 físico por ≥10 min para confirmar múltiplas correções FA/FB sem segundo clique ou reconexão, preferencialmente com LOGs completos. Não afirmar bug de campo resolvido antes desse teste.
+- [x] **Homologação P0 concluída (06/11/2026, v1.5.0):** testar TS-2000 físico por ≥10 min para confirmar múltiplas correções FA/FB sem segundo clique ou reconexão, preferencialmente com LOGs completos. Não afirmar bug de campo resolvido antes desse teste.
 
 ### P0 — Evidência adicional: seleção manual provoca sintonia única (16/10/2026)
 
@@ -278,7 +278,7 @@
 
 **Issue:** https://github.com/alexpmr/PT2VHF-Sat-Tool/issues/19
 
-- [ ] **P0 | Bug Auto CAT / TS-2000:** com Auto CAT ativado, rádio recebe a primeira sintonia Doppler corrigida, mas deixa de acompanhar as mudanças seguintes. Investigar `cat_live_tick`, workers `cat-track`/`cat-readback`, `cat_tracking_armed`, limiar/cadência, readback real FA/FB, slots concorrentes, erros e visibilidade; manter controle contínuo confirmado pelo rádio, sem PTT ou ativação silenciosa de SAT. Regressão prolongada e **teste físico obrigatório**.
+- [x] **P0 | Bug Auto CAT / TS-2000 (resolvido; homologado 06/11/2026):** com Auto CAT ativado, rádio recebe a primeira sintonia Doppler corrigida, mas deixa de acompanhar as mudanças seguintes. Investigar `cat_live_tick`, workers `cat-track`/`cat-readback`, `cat_tracking_armed`, limiar/cadência, readback real FA/FB, slots concorrentes, erros e visibilidade; manter controle contínuo confirmado pelo rádio, sem PTT ou ativação silenciosa de SAT. Regressão prolongada e **teste físico obrigatório**.
 - [ ] **P1 | Auto CAT padrão:** exibir habilitado por padrão em novas instalações/perfis e restaurar seleção persistida. Não reativar uma desativação explícita nem sintonizar sem condições seguras (CAT conectado, SAT ON e perfil válido).
 - [ ] **P1 | Trajetória futura:** padrão `Trajetória=2 h` e `Direção=Futuro` ao iniciar, **mostrando efetivamente** a trajetória das próximas duas horas no mapa; persistir modificações do operador. Não confundir com tabela de passagens de 36 h.
 - [ ] **P2 | Configurações responsivas:** alinhar rótulos e campos; largura útil conforme o valor esperado em Porta COM, fabricante/modelo, baud/stop bits, duração de trajetória, direção `Futuro` e outros controles, sem alongamento exagerado; testar janelas/DPI/idiomas.
@@ -289,7 +289,7 @@
 
 ### Teste físico adicional — Auto CAT só volta a corrigir após reconexão (16/10/2026)
 
-- [ ] **P0 | Defeito reproduzido no TS-2000 real:** com Auto CAT ligado, conectar a porta sintoniza a frequência corrigida; durante a conexão as frequências não acompanham continuamente o Doppler; **desconectar/reconectar** produz um bip no rádio e força nova atualização, que novamente não prossegue de forma contínua. Bip não substitui readback FA/FB e não prova qual VFO atualizou.
+- [x] **P0 | Defeito reproduzido no TS-2000 real (resolvido; homologado 06/11/2026):** com Auto CAT ligado, conectar a porta sintoniza a frequência corrigida; durante a conexão as frequências não acompanham continuamente o Doppler; **desconectar/reconectar** produz um bip no rádio e força nova atualização, que novamente não prossegue de forma contínua. Bip não substitui readback FA/FB e não prova qual VFO atualizou.
 - [ ] **Foco de diagnóstico:** comparar o caminho da sintonia inicial/reconexão com o laço contínuo (`cat_live_tick` em 250 ms, `track_cat_frequencies`, `cat-readback`, `cat-track`, `cat-poll`, `cat_tracking_armed`, `pending_jobs`, `last_freqs`, frequência prevista/efetiva FA/FB, limites, stale readback e `cat_retry_after`). Instrumentar todos os *retornos antecipados* do laço com causa e contadores; investigar starvation de escrita por readback/telemetria e erros recuperáveis, **sem supor causa definitiva**.
 - [ ] **Aceite reforçado:** conectado continuamente por pelo menos 10 minutos, com correções Doppler acima do limiar, rádio deve receber **múltiplas** atualizações FA/FB com readback confirmado sem qualquer reconexão. Simular serial lenta/readback concorrente, mudança de satélite/transponder e recuperação de erro; finalizar com TS-2000 físico, sem PTT automático.
 - [ ] **Coleta de prova:** exportar ZIP de LOGs/CAT durante sessão estática com Doppler mudando e logo após reconectar, contendo timestamps TX/RX SA/FA/FB, jobs e bloqueios; correlacionar previsão Doppler e frequência real.
