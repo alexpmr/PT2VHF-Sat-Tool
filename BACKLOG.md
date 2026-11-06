@@ -67,6 +67,24 @@
 
 ## Pendentes
 
+- **Frequências num "LCD de rádio" âmbar, de matriz de pontos (estilo Yaesu FT-891)** (registrado em 06/11/2026)
+  - Referência: `docs/backlog/referencia-lcd-ft891.webp` (painel do FT-891: frequência grande em pixels,
+    linha secundária menor, rótulos invertidos "A"/"USB", barra de S-meter e menu de teclas).
+  - Substituir os blocos "RX / DOWNLINK" e "TX / UPLINK" (Satélite · Frequências) por um **display LCD
+    simulado**: fundo âmbar com leve gradiente/retroiluminação, pixels escuros, **fonte de matriz de pontos
+    (bitmap), não de 7 segmentos**, com a grade de pixels levemente visível.
+  - Layout inspirado no FT-891:
+    - linha principal grande: **RX (downlink)** com etiqueta invertida "RX" e o modo (FM/USB/LSB/CW);
+    - linha secundária menor: **TX (uplink)** com etiqueta "TX" e modo;
+    - barra estilo S-meter mostrando **elevação** (ou nível do SDR/S-meter do CAT quando disponível);
+    - linha inferior com indicadores invertidos: Doppler (±Hz), SAT, CAT/SDR, AUTO, visível/abaixo do horizonte.
+  - Dígitos com casas de 10 Hz como no rádio (ex.: 435.637.71), separadores de MHz/kHz, dígito de 1 Hz menor.
+  - Implementação: widget Qt próprio (QPainter) com fonte bitmap embutida (sem dependência externa), escala
+    nítida por DPI, mantendo os mesmos dados/atualização de hoje; texto acessível no tooltip; tema alternativo
+    (âmbar padrão, opcional verde/azul) nas Configurações.
+  - Compacto: altura menor que os dois cartões atuais (ajuda nos itens de espaço da aba Operação).
+  - Validar captura em 1366×768 e 1920×1080, DPI 100–200 %, e leitura a distância.
+
 - **SDR religa sozinho depois de desligado** (registrado em 06/11/2026, v1.5.0)
   - Relato: desligo o SDR (botão "SDR") e, ao clicar de novo no mapa, ele volta a ligar.
   - Causa provável: `SdrPanel.detect()` roda a cada 5 s e, com `rx_device == "SDR"` e `sdr_autostart`,
