@@ -67,6 +67,17 @@
 
 ## Pendentes
 
+- **Tabela de passagens: distribuir a largura das colunas de forma otimizada** (registrado em 06/11/2026)
+  - Imagem: `docs/backlog/passagens-largura-colunas.png` — AOS/TCA/LOS/Duração/Máx ° espremidas à esquerda e
+    a coluna "Modos" ocupando todo o resto, com muito espaço vazio.
+  - Distribuir a largura disponível entre todas as colunas: AOS/TCA/LOS com a mesma largura, Duração/Máx °/
+    Qualidade proporcionais ao conteúdo, Modos com largura limitada ao texto (sem esticar sozinha); o espaço
+    que sobrar é repartido proporcionalmente (texto centralizado), sem rolagem horizontal.
+  - Recalcular ao redimensionar a janela/divisor, ao mudar de satélite (modos mais longos) e com DPI 100–200 %;
+    em painel estreito, abreviar cabeçalhos ("AOS", "TCA", "LOS") antes de cortar dados; tooltip com o texto completo.
+  - Mesmo critério para a coluna Qualidade (estrelas cheias) e no painel Web.
+  - Teste de layout: nenhuma coluna com espaço vazio > X % da largura e nenhuma célula cortada em 1280–1920 px.
+
 - **Estrelas de qualidade: só estrelas cheias amarelas** (registrado em 06/11/2026)
   - Hoje `PassQuality.label` mostra cheias + vazias ("★★★☆☆"). Mostrar **apenas estrelas cheias amarelas**:
     1 a 5 "★" conforme a nota (quanto melhor, mais estrelas), sem "☆".
