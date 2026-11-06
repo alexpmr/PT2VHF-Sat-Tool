@@ -88,6 +88,20 @@
     operador vai encomendar (arquitetura de "skins"/renderizadores plugáveis, cada um com nome, prévia e as mesmas
     informações de estado). Agrupar aqui as opções visuais: tema âmbar/verde/azul, fonte Normal/Negrito,
     prévia ao vivo do display escolhido. Padrão: estilo TS-2000 com fonte Normal (confirmar com o operador).
+  - **Modelos aprovados pelo operador (06/11/2026)** — todos selecionáveis em Apresentação → "Tipo de display",
+    com o mesmo layout TS-2000 (MAIN e SUB lado a lado, dígito de 1 Hz menor, S-meter/PO-SWR, indicadores
+    incluindo "LOS m:ss", teclas A/B e RX ONLY, estados normal / A/B com ON AIR / Somente RX com TX OFF):
+    1. **Matriz de pontos âmbar** — fonte Normal ou Negrito (`docs/backlog/lcd-mockup-ts2000-normal.png`,
+       `docs/backlog/lcd-mockup-ts2000-negrito.png`); temas âmbar/verde/azul.
+    2. **LED de 7 segmentos âmbar** — fundo escuro fumê, segmentos acesos com brilho suave, apagados quase invisíveis.
+    3. **LCD de 7 segmentos âmbar** — segmentos escuros sobre retroiluminação âmbar, apagados levemente visíveis
+       (visual do próprio TS-2000).
+    4. **Digital (TFT colorido)** — números lisos em fundo azul-escuro, RX verde / TX vermelho, barras em cores
+       (verde/amarelo/vermelho), "MHz" e ON AIR em vermelho.
+    5. **Clássico v1.6.0** (FT-891, RX em cima / TX embaixo), mantido por compatibilidade.
+    Referência dos modelos 2–4: `docs/backlog/display-mockup-led-lcd-digital.png`. Segmentos desenhados por
+    polígonos vetoriais (nítidos em qualquer DPI), mesma fonte de estado (`LcdState`) para todos os modelos, e a
+    tecla A/B / RX ONLY clicável em todos. Novos modelos encomendados entram como renderizadores adicionais.
   - **Aba "Estação"**: mover para cá as configurações da estação (indicativo, localização/coordenadas, locator,
     altitude, fuso etc.), hoje espalhadas em outras abas.
   - **Aba "Rádio"**: mover para cá os blocos de conexão rádio-CAT (porta/autodetecção, fabricante/modelo, velocidade,
