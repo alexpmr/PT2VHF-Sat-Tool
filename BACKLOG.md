@@ -67,6 +67,18 @@
 
 ## Pendentes
 
+- **Display LCD: botão para inverter TX/RX (MAIN/SUB)** (registrado em 06/11/2026; complementa o item do display âmbar)
+  - Botão no próprio display (estilo tecla "A/B" do FT-891) que troca os papéis: qual banda do TS-2000 recebe
+    (MAIN/FA) e qual transmite (SUB/FB), e o que o display mostra em cada linha.
+  - Uso: satélites cujo uplink/downlink ficam invertidos em relação ao padrão do rádio, troca rápida de banda
+    sem reconfigurar o transponder, e o caso já registrado de "orientação invertida MAIN/SUB".
+  - TS-2000: aplicar com os comandos de banda/VFO do modo SAT só com SAT ON e somente fora de transmissão;
+    confirmar por readback FA/FB; nunca acionar PTT. Rádios sem modo SAT (FT-817/rigctld): trocar os
+    equipamentos/VFOs de RX e TX. SDR: só o rótulo/papel (o SDR continua sendo RX).
+  - Estado visível no display (etiqueta invertida "MAIN↔SUB"), persistido por satélite, com tooltip e
+    confirmação na primeira vez; o Auto CAT continua corrigindo o Doppler nas bandas trocadas.
+  - Testes com rádio simulado (comandos e readback) e validação física no TS-2000.
+
 - **Revisar as linhas das órbitas no mapa** (registrado em 06/11/2026; aguardando captura do operador com o problema observado)
   - Conferir no mapa vetorial (`map.html`, `ground_track_between`, `track_cache`, `footprint`):
     - quebra na linha de data (±180°): sem traços atravessando o mapa inteiro nem lacunas;
