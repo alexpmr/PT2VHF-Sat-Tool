@@ -67,6 +67,20 @@
 
 ## Pendentes
 
+- **Confirmar que cada OTA conta um download no site** (registrado em 06/11/2026)
+  - Desenho atual (análise do código): o updater baixa `https://www.pt2vhf.com/downloads/sat-tool/<arquivo>` com
+    um único `GET` sem `Range` nem `HEAD` prévio; o `.htaccess` reescreve para `download.php?product=sat&file=…`,
+    que **conta +1 por GET** na categoria do arquivo (win-setup-x64, win-portable-x64…) e serve o EXE remontado.
+    Teste local (servidor PHP) da v1.5.0 já mostrou o contador subindo. Linux/macOS: o aviso abre a página e o
+    download pelo botão da tabela também passa pelo `download.php`.
+  - A confirmar em produção (www.pt2vhf.com): ler `download.php?mode=stats` antes/depois de um OTA real do
+    Windows (Setup e Portátil) e verificar +1 exatamente.
+  - Riscos a cobrir: download interrompido e repetido pelo app conta de novo (aceitável? marcar retentativas com
+    um parâmetro para não recontar); antivírus/proxy que fazem pré-busca (HEAD/GET extra); falha do contador
+    nunca pode bloquear a atualização.
+  - Teste automatizado no site: GET pelo caminho `/downloads/sat-tool/…` conta 1; HEAD/Range contam 0; e no
+    app: o updater faz exatamente um GET por atualização.
+
 - **P0 · OTA não conclui: baixa, fecha o programa, começa a instalar e não termina** (registrado em 06/11/2026)
   - Fluxo atual: `updater.download_update` (SHA-256 ok) → `launch_staged_update` copia `apply-update.ps1` para o
     temp e o executa → espera o PID do app sair → `Start-Process Setup.exe /SILENT /SUPPRESSMSGBOXES /NORESTART -Wait`
