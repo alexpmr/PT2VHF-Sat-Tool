@@ -81,6 +81,22 @@
 
 ## Pendentes
 
+- **Configurações reorganizadas em abas: Apresentação, Estação e Rádio; escolha do tipo de display** (registrado em 06/11/2026)
+  - **Aba "Apresentação"** (nova): opção **"Tipo de display"** com os modelos disponíveis — por ora os **dois atuais**:
+    (1) display da v1.6.0 (estilo FT-891: RX grande em cima, TX embaixo) e (2) display **estilo TS-2000** (MAIN e
+    SUB na mesma linha, mockup aprovado em `docs/backlog/lcd-mockup-ts2000-*.png`). Prever **novos modelos** que o
+    operador vai encomendar (arquitetura de "skins"/renderizadores plugáveis, cada um com nome, prévia e as mesmas
+    informações de estado). Agrupar aqui as opções visuais: tema âmbar/verde/azul, fonte Normal/Negrito,
+    prévia ao vivo do display escolhido. Padrão: estilo TS-2000 com fonte Normal (confirmar com o operador).
+  - **Aba "Estação"**: mover para cá as configurações da estação (indicativo, localização/coordenadas, locator,
+    altitude, fuso etc.), hoje espalhadas em outras abas.
+  - **Aba "Rádio"**: mover para cá os blocos de conexão rádio-CAT (porta/autodetecção, fabricante/modelo, velocidade,
+    Auto CAT, diagnóstico, papéis RX/TX, FT-817/rigctld) — e, quando implementado, o rotor pode ficar ao lado.
+  - Preservar todos os valores salvos (`settings.json`) e atalhos existentes para as configurações (ex.: botão CAT do
+    topo abre direto a aba Rádio); responsividade/DPI das abas conforme itens anteriores.
+  - Testes: troca de display aplicada na hora sem reiniciar e persistida; nenhuma configuração perdida após migrar
+    de abas; navegação por teclado.
+
 - **Display LCD: tempo restante da passagem corrente** (registrado em 06/11/2026)
   - Durante a passagem (satélite selecionado acima do horizonte), mostrar no display o **tempo restante até o LOS**,
     atualizado a cada segundo, ex.: "LOS 342S" (abaixo de 10 min) ou "LOS 5:42" — mesma fonte de matriz de pontos,
