@@ -67,6 +67,20 @@
 
 ## Pendentes
 
+- **Modo "Somente RX"** (registrado em 06/11/2026)
+  - Opção (seletor no display/aba Operação e em Equipamentos RX/TX) para operar só em recepção — escuta,
+    telemetria, beacons, SSTV/APRS da ISS — sem nenhum uplink.
+  - Com "Somente RX": o display mostra **apenas a frequência de RX** do satélite, com Doppler, no modo do
+    canal/transponder escolhido (FM, USB/LSB, CW, dados/AFSK/GMSK → modo de recepção adequado); a linha de TX,
+    o par linear e indicadores de TX somem; a lista de serviços inclui também canais só de downlink
+    (beacons/telemetria) e prioriza-os.
+  - RX por **SDR** (receptor embutido, waterfall e decodificação conforme o pipeline) ou por **CAT** (TS-2000,
+    FT-817/818, rigctld): no CAT, sintoniza só a banda/VFO de recepção, **sem ativar SAT, sem escrever FB/uplink
+    e sem PTT**; no TS-2000 funciona inclusive com SAT OFF (só FA/MAIN).
+  - Auto CAT/Doppler continuam valendo para o RX; a escolha fica salva e é indicada no topo ("RX ONLY").
+  - Testes: rádio simulado confirmando que nenhum comando de TX/uplink é enviado; SDR acompanhando o
+    downlink; troca entre modos RX/TX e Somente RX sem perder o satélite/canal.
+
 - **Linha da trajetória passada ("Passado reconstruído") não aparece mais no mapa** (registrado em 06/11/2026)
   - Imagem: `docs/backlog/orbita-sem-passado-v1.4.png` (ISS; só aparecem as linhas tracejadas "Futuro
     previsto"; a linha contínua "Passado reconstruído" da legenda sumiu nas últimas versões).
