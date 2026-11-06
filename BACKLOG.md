@@ -81,6 +81,22 @@
 
 ## Pendentes
 
+- **OTA automático, sem perguntar, assim que houver versão nova (opção em Configurações; ligado por padrão)** (registrado em 06/11/2026)
+  - Nova opção em Configurações: **"Atualizar automaticamente"** (Sim/Não), **Sim por padrão** em instalações novas e
+    nas existentes ao migrar (salva em `settings.json`).
+  - Com "Sim": ao detectar versão nova em `https://www.pt2vhf.com/update.php?product=sat` (início e verificação
+    periódica), baixar em segundo plano, conferir SHA-256 e aplicar **sem o popup "Atualizar agora/Depois"**;
+    com "Não": manter o fluxo atual (popup + botão do topo).
+  - Segurança operacional: **não interromper operação em curso** — adiar a aplicação durante passagem visível
+    com CAT/SDR ativo, TX/PTT, gravação ou telemetria em andamento; aplicar no próximo intervalo livre ou ao fechar
+    o programa. Aviso discreto (bandeja/barra de status) "Atualizando para vX.Y.Z…" e resultado no próximo início.
+  - Windows (Setup e Portátil) aplica sozinho; Linux/macOS: baixar e avisar (sem instalador automático), salvo
+    implementação futura.
+  - Contagem no site continua **uma vez por download** (`download.php`); falha no download/validação não repete em
+    laço (backoff) e nunca bloqueia o uso do programa.
+  - Testes: padrão ligado, opção desligada mantém o popup, adiamento durante passagem/TX, um único download por
+    versão, migração de configurações antigas.
+
 - **Telemetria orbital: velocidade radial em km/h** (registrado em 06/11/2026)
   - Hoje o campo "Velocidade radial" é exibido em **m/s** (`'radial_m_s': f"{...:+.1f} m/s"`). Passar a mostrar em
     **km/h** (×3,6), com sinal (+ afastando / − aproximando) e separador de milhar conforme o idioma,
