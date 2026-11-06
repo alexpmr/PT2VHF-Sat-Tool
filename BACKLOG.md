@@ -81,6 +81,16 @@
 
 ## Pendentes
 
+- **Informações de CAT na parte inferior da aba Operação: ocultas por padrão** (registrado em 06/11/2026)
+  - O bloco inferior ("RÁDIO REAL (CAT) · FA/FB/FC/MD", status do Auto CAT e botão "Diagnosticar comunicação
+    CAT") fica **recolhido por padrão** para não poluir a tela; o display LCD e o botão CAT do topo continuam
+    mostrando o essencial.
+  - Mostrar/ocultar por um controle discreto (seta "Detalhes CAT ▸/▾" ou menu de contexto do display), com a
+    escolha salva em `settings.json`; o espaço liberado vai para passagens/mapa.
+  - Erros e bloqueios importantes de CAT (porta indisponível, SAT OFF, CTRL em SUB) continuam visíveis mesmo com
+    o bloco oculto (aviso no display/botão CAT ou tooltip), e o diagnóstico segue acessível.
+  - Testes: padrão oculto em instalação nova, persistência da escolha, alerta de erro visível com o bloco oculto.
+
 - **Bloco "Passagens do satélite selecionado": sempre justificado, sem barra de rolagem horizontal** (registrado em 06/11/2026)
   - A tabela deve ocupar exatamente a largura do bloco (colunas justificadas/fixas), **sem barra de rolagem
     inferior**, e mostrar **sempre todos os campos** (AOS, TCA, LOS, Duração, Máx °, Qualidade, Modos) sem cortar
