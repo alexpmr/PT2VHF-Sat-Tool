@@ -67,6 +67,22 @@
 
 ## Pendentes
 
+- **Telemetria e waterfall em janelas destacáveis; conteúdo dos pacotes APRS decodificado** (registrado em 06/11/2026)
+  - **Telemetria** e **waterfall** podem ser abertos cada um em **janela própria (popup destacável)**,
+    redimensionável, movível para outro monitor, sempre-no-topo opcional; posição/tamanho lembrados;
+    "reacoplar" devolve ao painel SDR. Independentes entre si (dá para ver os dois lado a lado).
+  - **Conteúdo dos pacotes APRS** (ISS/digipeaters, SO-50 não; satélites com APRS/AX.25): além da linha TNC2,
+    mostrar os campos decodificados de forma legível:
+    - origem/destino/caminho (digipeater usado, ex.: ARISS, RS0ISS*), horário UTC/local;
+    - posição (lat/lon, Maidenhead, distância e azimute até a sua estação) e símbolo APRS;
+    - mensagem/destinatário/ID e ACK, status, objeto/item, telemetria APRS (T#… valores/canais),
+      clima, Mic-E, comentário;
+    - opção de mostrar no mapa as estações ouvidas via satélite (marcadores com o indicativo).
+  - Painel de detalhe ao selecionar um pacote (campos + hex + texto bruto) e filtros (só APRS, só o satélite
+    atual, por indicativo); exportação CSV/JSON mantendo o log atual.
+  - Reaproveitar o parser APRS do PT2VHF APRS Client (aprslib) quando possível.
+  - Testes com quadros APRS reais (posição sem/compressa, Mic-E, mensagem, telemetria) e GUI destacada.
+
 - **Frequências num "LCD de rádio" âmbar, de matriz de pontos (estilo Yaesu FT-891)** (registrado em 06/11/2026)
   - Referência: `docs/backlog/referencia-lcd-ft891.webp` (painel do FT-891: frequência grande em pixels,
     linha secundária menor, rótulos invertidos "A"/"USB", barra de S-meter e menu de teclas).
