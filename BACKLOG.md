@@ -81,6 +81,18 @@
 
 ## Pendentes
 
+- **Bloco "Passagens do satélite selecionado": sempre justificado, sem barra de rolagem horizontal** (registrado em 06/11/2026)
+  - A tabela deve ocupar exatamente a largura do bloco (colunas justificadas/fixas), **sem barra de rolagem
+    inferior**, e mostrar **sempre todos os campos** (AOS, TCA, LOS, Duração, Máx °, Qualidade, Modos) sem cortar
+    nem elipsar textos.
+  - A largura mínima do bloco passa a ser a soma das larguras necessárias às colunas (medida pela fonte/DPI);
+    se faltar espaço, **o mapa cede largura** (splitter/layout horizontal com prioridade para a tabela), em vez de
+    a tabela ganhar rolagem horizontal (`ScrollBarAlwaysOff` na horizontal).
+  - Recalcular ao redimensionar a janela, mudar idioma/fonte/DPI e ao abrir/fechar/destacar o painel SDR;
+    rolagem vertical continua permitida quando houver muitas passagens.
+  - Testes: 1280×720, 1366×768 e 1920×1080, normal/maximizada, DPI 100–200%, nomes de modos longos; verificar
+    ausência da barra horizontal e todas as colunas visíveis por inteiro.
+
 - **Display LCD (v1.6.0): pixels defeituosos, tecla A/B sem efeito e layout das frequências** (registrado em 06/11/2026)
   - **Pixels defeituosos:** a matriz de pontos apresenta pontos falhos/irregulares. Revisar a fonte 5×7 (glifos com
     pontos faltando ou sobrando), o arredondamento das posições dos pontos (usar grade inteira, sem acumular
