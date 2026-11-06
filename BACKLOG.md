@@ -67,6 +67,17 @@
 
 ## Pendentes
 
+- **SDR religa sozinho depois de desligado** (registrado em 06/11/2026, v1.5.0)
+  - Relato: desligo o SDR (botão "SDR") e, ao clicar de novo no mapa, ele volta a ligar.
+  - Causa provável: `SdrPanel.detect()` roda a cada 5 s e, com `rx_device == "SDR"` e `sdr_autostart`,
+    chama `start_sdr()` sempre que o receptor não está rodando — não distingue "parado pelo operador"
+    de "ainda não iniciado". (O clique no mapa provavelmente só coincide com o ciclo de detecção.)
+  - Correção: desligar pelo botão grava a intenção (`sdr_user_stopped`, persistida até o operador religar);
+    a detecção periódica só inicia automaticamente na abertura do programa ou quando o dongle é
+    reconectado, nunca depois de um desligamento manual; tooltip do botão SDR mostra "desligado pelo
+    operador · clique para ligar".
+  - Teste: parar o receptor, rodar vários ciclos de detecção e cliques/seleções no mapa → continua parado.
+
 - **Passagens e telemetria "encavaladas", sem como aumentar a altura dos blocos** (registrado em 06/11/2026, v1.5.0)
   - Na coluna direita da aba Operação, "Passagens do satélite selecionado" e "Telemetria orbital" disputam a
     altura (agravado pela barra Janela/Ordenar e pela coluna Qualidade da v1.5.0) e o painel SDR acoplável
