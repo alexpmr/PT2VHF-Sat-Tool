@@ -67,6 +67,30 @@
 
 ## Pendentes
 
+- **P0 · OTA não conclui: baixa, fecha o programa, começa a instalar e não termina** (registrado em 06/11/2026)
+  - Fluxo atual: `updater.download_update` (SHA-256 ok) → `launch_staged_update` copia `apply-update.ps1` para o
+    temp e o executa → espera o PID do app sair → `Start-Process Setup.exe /SILENT /SUPPRESSMSGBOXES /NORESTART -Wait`
+    → reabre o app. Erros vão para `%TEMP%\PT2VHF-Sat-Tool-update-error.txt` (pedir ao operador).
+  - Hipóteses a verificar:
+    - processos filhos ainda vivos após fechar o app (**QtWebEngineProcess.exe** do mapa, PowerShell/serial)
+      travando arquivos em `_internal`; o script só espera o PID principal e o Inno (`CloseApplications=yes`
+      com `/SUPPRESSMSGBOXES`) falha ou fica aguardando;
+    - `PrivilegesRequired=lowest`: instalação antiga em "Arquivos de Programas" (admin) × atualização por
+      usuário em outro diretório, ou UAC escondido atrás de janelas em modo silencioso;
+    - tarefas novas do instalador (driver RTL-SDR via wdi-simple, `RequireAdministrator`) disparando em
+      atualização — já protegidas por `Check: not WizardSilent`, confirmar;
+    - antivírus bloqueando o Setup baixado no temp; código de saída do Setup não registrado.
+  - Correções:
+    - esperar também os processos filhos (árvore do PID) e aguardar arquivos destravados antes do Setup;
+    - Setup com `/VERYSILENT /SP- /CLOSEAPPLICATIONS /LOG="%TEMP%\PT2VHF-Sat-Tool-setup.log"` e o mesmo diretório da
+      instalação atual (`/DIR=`), registrando o código de saída;
+    - janela pequena de progresso ("Atualizando PT2VHF Sat Tool…") em vez de tudo oculto, com mensagem final
+      de sucesso/erro e link para baixar manualmente em www.pt2vhf.com/sat;
+    - relançar o app sempre (mesmo em erro) e mostrar no próximo início o resultado da última atualização;
+    - portátil: mesma espera da árvore de processos antes de substituir o EXE.
+  - Teste: atualização simulada de versão N para N+1 em Windows 10/11 (instalação por usuário e por máquina),
+    com o mapa aberto, verificando conclusão, relançamento e logs.
+
 - **Tabela de passagens: distribuir a largura das colunas de forma otimizada** (registrado em 06/11/2026)
   - Imagem: `docs/backlog/passagens-largura-colunas.png` — AOS/TCA/LOS/Duração/Máx ° espremidas à esquerda e
     a coluna "Modos" ocupando todo o resto, com muito espaço vazio.
