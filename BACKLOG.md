@@ -90,6 +90,17 @@
     - portátil: mesma espera da árvore de processos antes de substituir o EXE.
   - Teste: atualização simulada de versão N para N+1 em Windows 10/11 (instalação por usuário e por máquina),
     com o mapa aberto, verificando conclusão, relançamento e logs.
+  - **Causa confirmada (06/11/2026):** `docs/backlog/ota-processos-abertos-qtwebengine.png` — instalando à mão, o
+    Setup v1.5.0 lista "PT2VHF-Sat-Tool" e **dois "QtWebEngine internal process"** ainda usando os arquivos.
+    Em modo silencioso esse aviso fica oculto e a instalação não conclui.
+    - Ao fechar o app: encerrar de forma ordenada o mapa (QWebEngineView/página: `setPage(None)`, `deleteLater`,
+      perfil fechado), SDR, KISS, web LAN, timers e threads; garantir saída do processo (fallback com `os._exit`
+      após timeout) e que nenhum `QtWebEngineProcess.exe` sobreviva.
+    - `apply-update.ps1`: esperar a árvore de processos e, se após o prazo restarem `QtWebEngineProcess.exe`
+      **da pasta do Sat Tool**, encerrá-los antes do Setup (nunca processos de outros programas).
+    - Inno Setup: `AppMutex` do app (detectar instância aberta) e `CloseApplicationsFilter=*.exe,*.dll,*.pak,*.dat`
+      para listar/fechar também os processos do QtWebEngine; em atualização silenciosa, fechar automaticamente.
+    - Verificar também a instalação manual: "Automatically close the applications" deve concluir sem erro.
 
 - **Tabela de passagens: distribuir a largura das colunas de forma otimizada** (registrado em 06/11/2026)
   - Imagem: `docs/backlog/passagens-largura-colunas.png` — AOS/TCA/LOS/Duração/Máx ° espremidas à esquerda e
