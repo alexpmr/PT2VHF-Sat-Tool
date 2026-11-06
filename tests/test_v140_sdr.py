@@ -63,4 +63,4 @@ def test_detect_devices_without_hardware_is_graceful():
 
 def test_open_error_help_mentions_zadig_on_windows(monkeypatch):
     monkeypatch.setattr(sdr.sys, "platform", "win32")
-    assert "Zadig" in sdr.open_error_help(OSError("usb_claim_interface error -12"))
+    assert "Preparar RTL-SDR" in sdr.open_error_help(OSError("usb_claim_interface error -12"))

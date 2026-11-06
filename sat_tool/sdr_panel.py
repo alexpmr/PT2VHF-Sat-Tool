@@ -21,7 +21,7 @@ from .qt_compat import (Qt, QTimer, QWidget, QVBoxLayout, QHBoxLayout, QGridLayo
                         QPushButton, QLineEdit, QComboBox, QGroupBox, QTabWidget, QCheckBox,
                         QTableWidget, QTableWidgetItem, QHeaderView, QDoubleSpinBox,
                         QAbstractItemView, QMessageBox, QProgressBar)
-from . import ax25, dsp, rigs, sdr, telemetry
+from . import ax25, dsp, rigs, rtl_driver, sdr, telemetry
 
 try:  # PySide6
     from PySide6.QtGui import QImage, QPainter, QColor, QPen
@@ -159,6 +159,9 @@ class SdrPanel(QWidget):
         self.detect_timer.timeout.connect(self.detect)
         self.detect_timer.start(5000)
         QTimer.singleShot(2500, self.detect)
+        self._prep_running = False
+        self._prep_offered = False
+        QTimer.singleShot(4000, self.check_preparation)
         if self.cfg.get("kiss_enabled"):
             QTimer.singleShot(1500, self.start_kiss)
 
@@ -263,6 +266,14 @@ class SdrPanel(QWidget):
         self.record_iq = QCheckBox("incluir IQ do canal (48 kHz)")
         self.record_iq.setChecked(bool(self.cfg.get("sdr_record_iq", False)))
         g.addWidget(self.record, 10, 0, 1, 2); g.addWidget(self.record_iq, 10, 2, 1, 2)
+        diag = QPushButton("Diagnosticar RTL-SDR")
+        diag.setToolTip("Biblioteca, USB, driver e abertura do dongle — resultado também vai para o log")
+        diag.clicked.connect(self.diagnose_rtl)
+        g.addWidget(diag, 11, 1)
+        prep = QPushButton("Preparar RTL-SDR (driver/permissões)")
+        prep.setToolTip("Windows: instala WinUSB na interface 0 · Linux: regra udev e bloqueio do driver de TV")
+        prep.clicked.connect(lambda: self.check_preparation(interactive=True, force=True))
+        g.addWidget(prep, 11, 2, 1, 2)
         save = QPushButton("Salvar configurações")
         save.clicked.connect(self.save_settings)
         g.addWidget(save, 11, 0)
@@ -399,6 +410,86 @@ class SdrPanel(QWidget):
                 self.save_settings()
                 self.start_sdr()
 
+    # ------------------------------------------------- plug and play / diagnóstico
+    def check_preparation(self, interactive=False, force=False):
+        """Verifica em segundo plano se o sistema precisa de driver/permissão para o RTL-SDR."""
+        if self._prep_running or (self._prep_offered and not force):
+            return
+        self._prep_running = True
+
+        def work():
+            try:
+                need, reason, _ = rtl_driver.needs_preparation()
+            except Exception as exc:
+                need, reason = False, str(exc)
+            self._decoded_q.put(("prep", need, reason, interactive or force))
+        threading.Thread(target=work, daemon=True).start()
+
+    def _prep_result(self, need, reason, interactive):
+        self._prep_running = False
+        if not need:
+            if interactive:
+                self.sdr_status.setText("RTL-SDR: driver/permissões OK. " + (reason or ""))
+            return
+        self._prep_offered = True
+        self.w.log("RTL-SDR precisa de preparação: " + reason)
+        windows = sdr.sys.platform == "win32"
+        text = (f"{reason}\n\nO PT2VHF Sat Tool pode preparar o RTL-SDR agora "
+                + ("instalando o driver WinUSB somente na interface 0 do dongle (o Windows pedirá permissão de "
+                   "administrador uma vez). Depois disso o dongle deixa de servir para programas de TV digital; "
+                   "para reverter use o Gerenciador de Dispositivos." if windows else
+                   "instalando a permissão USB e desativando o driver de TV digital (pede a senha uma vez).")
+                + "\n\nPreparar agora?")
+        if QMessageBox.question(self.w, "Preparar RTL-SDR", text) != QMessageBox.Yes:
+            return
+        self.sdr_status.setText("Preparando o RTL-SDR…")
+        self._prep_running = True
+
+        def work():
+            try:
+                ok, msg = rtl_driver.prepare()
+            except Exception as exc:
+                ok, msg = False, str(exc)
+            self._decoded_q.put(("prepared", ok, msg))
+        threading.Thread(target=work, daemon=True).start()
+
+    def _prepared(self, ok, msg):
+        self._prep_running = False
+        self.w.log("Preparação do RTL-SDR: " + msg)
+        self.sdr_status.setText(("RTL-SDR pronto: " if ok else "RTL-SDR: ") + msg)
+        if ok:
+            if self.receiver:
+                self.receiver.status.error = ""
+            self.devices = []
+            self.detect()
+            if self.devices:
+                self._select(self.rx_dev, "SDR")
+                self.save_settings()
+                self.start_sdr()
+        else:
+            QMessageBox.warning(self.w, "Preparar RTL-SDR", msg)
+
+    def diagnose_rtl(self):
+        self.sdr_status.setText("Diagnosticando o RTL-SDR…")
+        busy = self.receiver is not None and self.receiver.status.running
+
+        def work():
+            try:
+                report = rtl_driver.diagnose() if not busy else "Pare o SDR antes de diagnosticar a abertura do dongle.\n" + rtl_driver.diagnose().split("Abertura")[0]
+            except Exception as exc:
+                report = f"Diagnóstico falhou: {exc}"
+            self._decoded_q.put(("diag", report))
+        threading.Thread(target=work, daemon=True).start()
+
+    def _show_diag(self, report):
+        self.w.log("Diagnóstico RTL-SDR:\n" + report)
+        self.sdr_status.setText(report.splitlines()[-1] if report else "")
+        box = QMessageBox(self.w)
+        box.setWindowTitle("Diagnóstico do RTL-SDR")
+        box.setText(report)
+        box.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        box.exec()
+
     # ------------------------------------------------------------ receptor
     def toggle_sdr(self):
         if self.receiver and self.receiver.status.running:
@@ -412,8 +503,8 @@ class SdrPanel(QWidget):
         if not self.devices:
             self.detect()
             if not self.devices:
-                QMessageBox.information(self.w, "RTL-SDR", "Nenhum RTL-SDR detectado. " + sdr.ZADIG_HELP
-                                        if sdr.sys.platform == "win32" else "Nenhum RTL-SDR detectado.")
+                self.check_preparation(interactive=True)
+                self.sdr_status.setText("Nenhum RTL-SDR utilizável. Use \"Diagnosticar RTL-SDR\" para ver o motivo.")
                 return
         dev = self.devices[max(0, self.device_combo.currentIndex())]
         settings = sdr.SdrSettings(gain_db=self.gain.currentData(), ppm=int(self.ppm.value()),
@@ -673,6 +764,8 @@ class SdrPanel(QWidget):
             elif st.error:
                 self._led(False)
                 self.sdr_status.setText(st.error)
+                if not self._prep_offered:
+                    self.check_preparation(interactive=True)
         if self.sink_io is not None:
             while self._audio_q:
                 if self.sink.bytesFree() < 9600:
@@ -695,6 +788,12 @@ class SdrPanel(QWidget):
                 item = self._decoded_q.get_nowait()
                 if item[0] == "frame":
                     self._add_frame_row(*item[1:])
+                elif item[0] == "prep":
+                    self._prep_result(*item[1:])
+                elif item[0] == "prepared":
+                    self._prepared(*item[1:])
+                elif item[0] == "diag":
+                    self._show_diag(item[1])
                 else:
                     self.tlm_status.setText(item[1])
         except queue.Empty:

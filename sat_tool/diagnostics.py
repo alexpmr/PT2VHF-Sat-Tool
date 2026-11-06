@@ -60,6 +60,11 @@ def run_self_test(report_path: str, expected_qt: str = "") -> int:
         if not telemetry.TelemetryDecoder.decode_with("iss", frame):
             raise RuntimeError("satnogs-decoders não decodificou o quadro de teste")
         result["checks"].append("satnogs_decoders")
+        # v1.5.0: plug and play do RTL-SDR, CAT autodetectado, qualidade e popup do satélite.
+        from sat_tool import cat_scan, quality, rtl_driver, satinfo  # noqa: F401
+        if sys.platform == "win32" and rtl_driver.wdi_simple_path() is None:
+            raise FileNotFoundError("Instalador do driver WinUSB (wdi-simple.exe) ausente do pacote")
+        result["checks"].append("rtl_plug_and_play")
         if QT_BINDING == "PySide6":
             from PySide6.QtMultimedia import QAudioSink  # noqa: F401
             result["checks"].append("qt_multimedia")

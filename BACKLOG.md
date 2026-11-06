@@ -56,119 +56,16 @@
 - [x] Ideias do SatDump incorporadas: pipelines e gravação agendada. Futuro: imagens meteorológicas, IQ offline, SoapySDR.
 - [ ] Homologar com RTL-SDR, FT-817 e SoundModem reais.
 
+## v1.5.0 — RTL-SDR plug and play, CAT automático e passagens com qualidade (06/11/2026)
+
+- [x] P0 RTL-SDR não reconhecido: buffers ctypes corretos; S/N com falha não descarta o dongle; Zadig só em erro de driver.
+- [x] Diagnóstico e preparação: Windows (PnP + libwdi wdi-simple embarcado, interface 0, um UAC, tarefa no instalador); Linux (udev + blacklist via pkexec).
+- [x] CAT autodetectado: varredura de portas/velocidades (TS-2000 ID019; FT-817 com validação dupla), cancelável, sem PTT.
+- [x] Qualidade da passagem em estrelas (quality.py) com tooltip e ordenação; janela configurável (6 h–7 dias).
+- [x] Popup do satélite (mapa, seletor, catálogo) com cache offline; popup de boas-vindas com convite e botão Fechar.
+- [ ] Validar com RTL-SDR real (inclusive V4) no Windows 10/11 e Ubuntu; FT-817 e TS-2000 reais na varredura.
+
 ## Pendentes
-
-- **Popup de boas-vindas: convite para conhecer as demais aplicações PT2VHF** (registrado em 06/11/2026)
-  - Substitui o aviso atual "Downloads no site oficial" (`show_official_site_notice`, botão "Entendi").
-  - Texto sugerido — título "Feito por radioamadores, para radioamadores"; corpo: "Obrigado por usar o
-    PT2VHF Sat Tool! Conheça também as outras aplicações gratuitas desenvolvidas para a comunidade:
-    APRS Client, Prop Tool, Mesh Analyzer, Prog Tool e mais." ; link clicável **www.PT2VHF.com**
-    (abre https://www.pt2vhf.com no navegador); um único botão **Fechar**.
-  - Mesmo visual do aviso atual (tema escuro, não modal em relação ao restante do fluxo, sem roubar foco
-    de diálogos de CAT/AOS); textos nos idiomas da interface.
-  - Ajustar o teste do aviso (título, link e botão "Fechar").
-
-- **Janela da lista de passagens configurável** (registrado em 06/11/2026)
-  - Hoje fixa em 36 h (`core.passes(..., hours=36)`, título "PASSAGENS DO SATÉLITE SELECIONADO · 36 H",
-    log "próximas 36 h"). Tornar configurável: 6, 12, 24, 36, 48, 72 h ou personalizado (1–168 h).
-  - Controle no próprio painel de passagens (combo compacto no título) e em Configurações → Mapa e trajetória;
-    salvo em `settings.json` (`pass_window_hours`, padrão 36) e respeitado ao abrir.
-  - Título, log, painel Web e próxima passagem acompanham o valor ("PASSAGENS · 12 H").
-  - Recalcular em segundo plano ao mudar; manter limite de linhas e desempenho em janelas longas (72–168 h).
-  - Testes: valores-limite, persistência e título atualizado.
-
-- **Popup flutuante com informações do satélite ao passar o mouse** (registrado em 06/11/2026)
-  - Onde: marcador do satélite no mapa (Operação), seletor "Satélite", tabela da aba Satélites e
-    painel SDR/telemetria; aparece após ~400 ms parado e some ao sair, sem roubar foco nem clicar em nada.
-  - Conteúdo:
-    - imagem do satélite (SatNOGS DB `image` e Wikimedia, já usada em `media.photo_html`), com cache local;
-    - nome, outros nomes, NORAD, país/operador, data de lançamento e implantação;
-    - história resumida (SatNOGS/Wikipedia no idioma da interface, com link "ler mais");
-    - recursos: transponders/canais SatNOGS (modo, uplink/downlink, inversor), beacons e telemetria
-      (decodificador satnogs-decoders disponível);
-    - status: em órbita/decaído, "alive", status de recepção e evidências do SatNOGS, idade da efeméride;
-    - situação agora: elevação/azimute, visível ou não, iluminado/eclipse, próxima passagem (AOS/Máx °/duração)
-      e, quando houver, a nota de qualidade da passagem (item de estrelas).
-  - Dados baixados em segundo plano e guardados em cache (funciona offline com o que já foi visto);
-    se faltar algo, mostrar o que houver sem travar o mapa.
-  - Popup com o tema escuro do app, largura limitada, texto selecionável; clique fixa o popup (com botão
-    fechar) para ler com calma.
-  - Testes: renderização com dados completos, parciais e offline; nada de chamadas de rede na thread da GUI.
-
-- **CAT autodetectado: clicar em "CAT" varre as portas e conecta sozinho** (registrado em 06/11/2026)
-  - Botão CAT do topo (e "Conectar"): se não houver porta salva ou ela falhar, varrer todas as portas
-    seriais disponíveis (COM no Windows, /dev/ttyUSB*/ttyACM* no Linux, /dev/cu.* no macOS).
-  - Em cada porta, testar velocidades comuns (TS-2000: 57600, 38400, 19200, 9600, 4800; FT-817/818:
-    38400, 9600, 4800) e identificar o rádio só com comandos de leitura (TS-2000 `ID;` → `ID019;`;
-    FT-817 leitura de frequência/modo 0x03), com timeout curto, sem PTT e sem escrever nada.
-  - Ao encontrar, conectar, salvar porta/velocidade/modelo nas Configurações e mostrar
-    "TS-2000 encontrado em COM5 · 57600" (ou equivalente); próximas aberturas usam a porta salva primeiro.
-  - Pular portas ocupadas por outro programa e informar quais foram testadas e por que falharam;
-    varredura em segundo plano com progresso e botão Cancelar, sem travar a interface.
-  - Não interferir em portas de outros dispositivos (GPS, Arduino/ESP32 do rotor): só considerar sucesso
-    com resposta válida do protocolo do rádio; nada é enviado além dos comandos de identificação.
-  - Testes com portas seriais simuladas (rádio em porta/velocidade aleatória, porta ocupada, nenhum rádio).
-
-- **RTL-SDR plug and play: driver/permissões instalados pelo próprio programa** (registrado em 06/11/2026)
-  - Objetivo: conectar o dongle e usar, sem Zadig, sem terminal e sem ler instruções.
-  - **Windows:** embarcar a libwdi (`wdi-simple.exe`, LGPL, a mesma base do Zadig) no instalador e no portátil.
-    - Detectar pelo PnP do Windows o RTL-SDR (0BDA:2838/2832, **somente a interface 0**) e o driver associado
-      (RTL2832UUSB/DVB-T, nenhum, WinUSB, libusbK).
-    - Sem WinUSB: aviso único "O RTL-SDR precisa do driver WinUSB. Instalar agora?" → executa o wdi-simple
-      elevado (um único UAC), confere o resultado, reabre o dispositivo e inicia o SDR sem reconectar.
-    - Instalador Inno Setup: tarefa opcional, marcada por padrão, "Preparar RTL-SDR (driver WinUSB)",
-      que roda na instalação se o dongle estiver conectado e fica disponível no programa depois.
-    - Registrar no log o antes/depois do driver; informar que o dongle deixa de servir para apps de TV e
-      como reverter (Gerenciador de Dispositivos → Reverter driver); nunca alterar a interface 1.
-    - Validar assinatura/certificado gerado pela libwdi no Windows 10/11 e falsos positivos de antivírus.
-  - **Linux:** `.deb` instala sozinho a regra udev e o blacklist do `dvb_usb_rtl28xxu` (postinst) e
-    recarrega o udev; `.tar.gz`/AppImage: botão/aviso "Configurar RTL-SDR" que aplica regra + blacklist via
-    `pkexec` (senha uma vez) e descarrega o módulo de TV, sem reiniciar.
-  - **macOS:** nada a instalar; apenas detectar e usar.
-  - Ao detectar e preparar o dongle: selecionar o SDR como RX (com confirmação já existente), abrir o painel,
-    aplicar ganho automático e começar a ouvir o satélite selecionado — zero configuração obrigatória.
-  - Diagnóstico "Diagnosticar RTL-SDR" (item P0) reaproveitado para explicar qualquer etapa que falhe.
-  - Validar com RTL-SDR real (inclusive RTL-SDR Blog V4) em Windows 10/11, Ubuntu e macOS.
-
-- **P0 · RTL-SDR não reconhecido no Windows mesmo após instalar o driver WinUSB (Zadig)** (registrado em 06/11/2026)
-  - Imagem: `docs/backlog/rtlsdr-nao-reconhecido-v1.4.0.webp` (v1.4.0, Windows): "Nenhum RTL-SDR detectado" + texto do Zadig.
-  - A mensagem atual é genérica: aparece sempre que `rtlsdr_get_device_count()` retorna 0, sem distinguir
-    (a) biblioteca nativa não carregou, (b) dongle ausente na USB, (c) driver errado/interface errada,
-    (d) dongle ocupado por outro programa (SDR#, SDR++, HDSDR, rtl_tcp).
-  - Investigar no EXE congelado: carga de `librtlsdr.dll` + `libusb-1.0.dll` do pyrtlsdrlib (caminho em
-    `_MEIPASS`, dependências do MSVC runtime), versão da librtlsdr x RTL-SDR Blog V4 (R828D), e se a
-    enumeração vê o VID:PID 0BDA:2838/2832.
-  - Diagnóstico na tela (botão "Diagnosticar RTL-SDR"): biblioteca carregada e caminho; dispositivos USB
-    com VID 0BDA via PnP do Windows e driver associado (WinUSB/RTL2832UUSB/libusbK); resultado de abrir
-    o dispositivo (código libusb) e recomendação específica; incluir no log exportável.
-  - Só sugerir o Zadig quando o driver associado não for WinUSB/libusbK; detectar o caso "Interface 1".
-  - Validar com RTL-SDR real no Windows 10/11 (inclusive V4) antes de fechar.
-  - **Causa confirmada (06/11/2026, 2ª captura do painel SDR):** "Falha ao listar RTL-SDR: argument 2:
-    TypeError: expected LP_c_ubyte instance instead of c_char_Array_256". O driver e a biblioteca estão OK e
-    o dongle É enumerado (count ≥ 1); o erro é do PT2VHF: `sdr.detect_devices()` passa
-    `ctypes.create_string_buffer(256)` (c_char) para `rtlsdr_get_device_usb_strings`, cujos argtypes no
-    pyrtlsdr são `POINTER(c_ubyte)`. A exceção descarta a lista inteira e a GUI mostra a mensagem do Zadig.
-    - Correção: buffers `(ctypes.c_ubyte * 256)()` e decodificação via `bytes(buf).split(b"\0")[0]`;
-      falha ao ler o número de série não pode descartar o dispositivo (fica sem S/N).
-    - Teste de regressão com biblioteca falsa que imita os argtypes do pyrtlsdr (count=1). O CI não pegou
-      porque os runners não têm dongle (count=0, o laço nunca executa).
-    - Só mostrar o texto do Zadig quando a abertura falhar com erro de driver, nunca para erro de listagem.
-
-- **Passagens 36 h — coluna "Qualidade" de 1 a 5 estrelas** (registrado em 06/11/2026)
-  - Nota composta, não só elevação máxima ou duração: estimar a qualidade real do contato.
-  - Fatores sugeridos (pesos ajustáveis, documentados no tooltip de cada linha):
-    - geometria: elevação máxima, tempo acima de 10°/20°/30° e distância mínima (perda no espaço livre);
-    - duração útil da janela (LOS − AOS) e se o tempo acima do horizonte mínimo da estação basta para um QSO;
-    - obstruções: horizonte/máscara da estação por azimute, quando configurado (inclui azimute de entrada/saída);
-    - Doppler: taxa máxima de variação (Hz/s) perto do TCA, que dificulta SSB/CW em passagens altas e rápidas;
-    - satélite: estado operacional (SatNOGS "alive"/status), modo do transponder (FM vs. linear) e,
-      se possível, iluminação/eclipse (satélites que só operam no sol);
-    - concorrência: horário (dia/noite local, fim de semana) como indicador de congestionamento em FM;
-    - equipamento da estação: bandas/modos disponíveis e, com rotor, se o giro cobre o arco (450°/flip).
-  - Exibir ★☆☆☆☆…★★★★★ com tooltip explicando os principais motivos (ex.: "máx. 62°, 9 min, Doppler
-    rápido para SSB, entra por trás do morro a leste").
-  - Permitir ordenar a tabela pela qualidade; manter a ordem cronológica como padrão.
-  - Testes com passagens sintéticas (baixa/curta, alta/rápida, obstruída, eclipse) cobrindo a pontuação.
 
 - **Aviso sonoro de AOS 10 s antes, com contagem regressiva em popup** (registrado em 05/11/2026)
   - Hoje existe o alerta "Avisar 30 segundos antes da entrada do satélite selecionado"

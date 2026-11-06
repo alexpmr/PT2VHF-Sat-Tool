@@ -216,22 +216,22 @@ class MainWindow(QMainWindow):
             QTimer.singleShot(700,self.start_web_server)
 
     def show_official_site_notice(self):
-        """Aviso do site oficial no mesmo padrão dos demais projetos PT2VHF (v1.3.16)."""
+        """Boas-vindas (v1.5.0): convite às demais aplicações PT2VHF, com link e botão Fechar."""
         from .qt_compat import QDialog, QDialogButtonBox
         dialog = QDialog(self)
         dialog.setWindowTitle('PT2VHF Sat Tool')
         layout = QVBoxLayout(dialog)
-        title = QLabel('Downloads no site oficial')
+        title = QLabel('Feito por radioamadores, para radioamadores')
         title.setStyleSheet('font-size:18px;font-weight:700')
-        text = QLabel('A partir de agora, as novas versões e os instaladores do PT2VHF Sat Tool '
-                      'serão distribuídos pelo site oficial.')
+        text = QLabel('Obrigado por usar o PT2VHF Sat Tool! Conheça também as outras aplicações gratuitas '
+                      'desenvolvidas para a comunidade: APRS Client, Prop Tool, Mesh Analyzer, Prog Tool e mais.')
         text.setWordWrap(True)
-        link = QLabel('<a href="https://www.pt2vhf.com/sat" style="color:#6cc7ff;font-weight:700">www.PT2VHF.com</a>')
+        link = QLabel('<a href="https://www.pt2vhf.com" style="color:#6cc7ff;font-weight:700">www.PT2VHF.com</a>')
         link.setOpenExternalLinks(True)
         buttons = QDialogButtonBox()
-        ok = buttons.addButton('Entendi', QDialogButtonBox.AcceptRole)
-        ok.setDefault(True)
-        buttons.accepted.connect(dialog.accept)
+        close = buttons.addButton('Fechar', QDialogButtonBox.RejectRole)
+        close.setDefault(True)
+        buttons.rejected.connect(dialog.reject)
         for widget in (title, text, link):
             layout.addWidget(widget)
         layout.addWidget(buttons)
@@ -545,19 +545,39 @@ class MainWindow(QMainWindow):
         # tela; os widgets continuam vivos (atualizados pelo timer) sem exibição.
         self._upcoming_group=upcoming
         rv.addWidget(stat)
-        nextpass,np=group("PASSAGENS DO SATÉLITE SELECIONADO · 36 H")
+        window_h=int(self.config.values.get("pass_window_hours",36) or 36)
+        nextpass,np=group(f"PASSAGENS DO SATÉLITE SELECIONADO · {window_h} H")
+        self.pass_group=nextpass
         nextpass.setMinimumWidth(0)
-        self.pass_table=QTableWidget(0,6)
+        pass_bar=QHBoxLayout();pass_bar.setContentsMargins(0,0,0,0)
+        pass_bar.addWidget(label("Janela"))
+        self.pass_window=QComboBox()
+        for hours in (6,12,24,36,48,72,168):
+            self.pass_window.addItem(f"{hours} h" if hours<168 else "7 dias",hours)
+        idx=self.pass_window.findData(window_h)
+        if idx<0:
+            self.pass_window.addItem(f"{window_h} h",window_h);idx=self.pass_window.count()-1
+        self.pass_window.setCurrentIndex(idx)
+        self.pass_window.setToolTip("Quantas horas à frente a lista de passagens mostra (salvo nas configurações)")
+        self.pass_window.currentIndexChanged.connect(self.change_pass_window)
+        pass_bar.addWidget(self.pass_window)
+        pass_bar.addStretch(1)
+        self.pass_sort=QCheckBox("Ordenar por qualidade")
+        self.pass_sort.setToolTip("Mostra primeiro as melhores passagens; desmarque para ordem cronológica")
+        self.pass_sort.toggled.connect(lambda *_:self.render_pass_table())
+        pass_bar.addWidget(self.pass_sort)
+        np.addLayout(pass_bar)
+        self.pass_table=QTableWidget(0,7)
         # Selected satellite appears in the combo; redundant table column removed.
-        self.pass_table.setHorizontalHeaderLabels(["AOS\nlocal","TCA\nlocal","LOS\nlocal","Duração","Máx °","Modos"])
+        self.pass_table.setHorizontalHeaderLabels(["AOS\nlocal","TCA\nlocal","LOS\nlocal","Duração","Máx °","Qualidade","Modos"])
         pass_header=self.pass_table.horizontalHeader()
         pass_header.setStretchLastSection(False)
         pass_header.setMinimumSectionSize(50)
         pass_header.setDefaultAlignment(Qt.AlignCenter)
         pass_header.setFixedHeight(max(46,self.pass_table.fontMetrics().height()*2+14))
-        for col in (0,1,2,3,4):
+        for col in (0,1,2,3,4,5):
             pass_header.setSectionResizeMode(col,QHeaderView.ResizeToContents)
-        pass_header.setSectionResizeMode(5,QHeaderView.Stretch)
+        pass_header.setSectionResizeMode(6,QHeaderView.Stretch)
         self.pass_table.setWordWrap(False)
         self.pass_table.setTextElideMode(Qt.ElideNone)
         self.pass_table.verticalHeader().setMinimumSectionSize(max(28,self.pass_table.fontMetrics().height()+10))
@@ -698,6 +718,8 @@ class MainWindow(QMainWindow):
         # temporária do Qt. Não deixar uma linha desmarcada amarela só
         # por continuar com o foco após o clique.
         self.catalog_table.setSelectionMode(QAbstractItemView.NoSelection)
+        self.catalog_table.setMouseTracking(True)
+        self.catalog_table.itemEntered.connect(self.catalog_item_hovered)
         self.catalog_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.catalog_table.setToolTip(
             "Clique uma vez na linha para marcar/desmarcar o favorito (amarelo). "
@@ -1538,9 +1560,7 @@ class MainWindow(QMainWindow):
         port=self.config.values.get("port","").strip() if startup else self.ports.currentText().strip()
         if not port:
             if not startup:
-                QMessageBox.warning(self,"CAT não configurado",
-                    "Configure uma porta COM em Configurações → Conexão CAT antes de conectar.")
-                self.tabs.setCurrentIndex(2)
+                self.start_cat_scan()  # v1.5.0: sem porta configurada, procura o rádio sozinho
             return
         baud=int(self.baud_combo.currentText())
         stopbits=int(self.stops_combo.currentText())
@@ -1555,7 +1575,72 @@ class MainWindow(QMainWindow):
         self.log("CAT: iniciando conexão "+port+"; auto="+str(startup))
         self.background("cat-connect",lambda:self.radio.connect(port,baud,stopbits))
 
+    def start_cat_scan(self):
+        """Varre portas/velocidades em segundo plano e conecta ao rádio encontrado (somente leitura)."""
+        if "cat-scan" in self.pending_jobs:
+            return
+        from .cat import available_ports
+        from .cat_scan import scan
+        self._cat_scan_cancel=threading.Event()
+        self._cat_scan_progress="Procurando o rádio nas portas seriais…"
+        saved=self.config.values.get("port","").strip()
+        preferred=(saved,int(self.config.values.get("baud",9600) or 9600)) if saved else None
+        self.cat_indicator.setToolTip("Procurando o rádio · clique para cancelar")
+        self.cat_indicator.setStyleSheet("font-size:12px;font-weight:800;color:#ffe4b0;background:#755225;border:1px solid #e0aa55")
+        self.cat_tune_status.setText(self._cat_scan_progress)
+        self.log("CAT: varredura automática de portas iniciada")
+        def progress(text):
+            self._cat_scan_progress="Procurando o rádio: "+text
+        self.background("cat-scan",lambda:scan(available_ports(),preferred=preferred,progress=progress,
+                                                cancel=self._cat_scan_cancel))
+
+    def cat_scan_finished(self,result):
+        found,report=result
+        self._cat_scan_progress=""
+        for line in report:
+            self.log("CAT varredura: "+line)
+        if found is None:
+            cancelled=report[-1:]==["Varredura cancelada"]
+            self.cat_tune_status.setText("Varredura cancelada" if cancelled else "Nenhum rádio encontrado nas portas seriais")
+            self.cat_indicator.setStyleSheet("font-size:12px;font-weight:800;color:#ffe7e7;background:#783437;border:1px solid #db565e")
+            if not cancelled:
+                QMessageBox.warning(self,"CAT não encontrado",
+                    "Nenhum TS-2000 ou FT-817/818 respondeu nas portas seriais.\n\nConfira cabo, driver USB-serial, "
+                    "se o rádio está ligado e se outro programa não está usando a porta.\n\n"+"\n".join(report[-8:]))
+            return
+        self.log(f"CAT: {found.model} encontrado em {found.port} · {found.baud} bps ({found.detail})")
+        if found.model=="TS-2000":
+            self.config.values.update({"port":found.port,"baud":found.baud,"stopbits":found.stopbits})
+            self.config.save()
+            if self.ports.findText(found.port)<0:self.ports.addItem(found.port)
+            self.ports.setCurrentText(found.port)
+            self.baud_combo.setCurrentText(str(found.baud))
+            self.stops_combo.setCurrentText(str(found.stopbits))
+            self.cat_tune_status.setText(f"TS-2000 encontrado em {found.port} · {found.baud} bps · conectando…")
+            self._cat_after_scan=True
+            self.request_cat_connection(startup=False)
+        else:
+            panel=getattr(self,"sdr_panel",None)
+            c=self.config.values
+            c.update({"ft817_port":found.port,"ft817_baud":found.baud,"tx_device":"FT-817"})
+            if c.get("rx_device") in ("TS-2000","NONE",""):
+                c["rx_device"]="FT-817"
+            self.config.save()
+            self.cat_tune_status.setText(f"{found.model} encontrado em {found.port} · {found.baud} bps")
+            if panel is not None:
+                panel._select(panel.rx_dev,c["rx_device"]);panel._select(panel.tx_dev,"FT-817")
+                panel.ft_port.setCurrentText(found.port);panel.ft_baud.setCurrentText(str(found.baud))
+                self.sdr_dock.setVisible(True)
+                panel.connect_rigs()
+            QMessageBox.information(self,"Rádio encontrado",
+                f"Yaesu {found.model}/818 encontrado em {found.port} ({found.baud} bps, {found.detail}).\n\n"
+                "Ele foi configurado no painel SDR · Equipamentos RX/TX. Para o Doppler automático, marque "
+                "\"Doppler automático nos equipamentos\" (nunca aciona PTT).")
+
     def toggle_connection(self):
+        if "cat-scan" in self.pending_jobs:
+            self._cat_scan_cancel.set()
+            return
         if self.cat_connecting or "cat-connect" in self.pending_jobs:
             return
         if not self.radio.connected:
@@ -1935,6 +2020,8 @@ class MainWindow(QMainWindow):
 
     def choose_satellite(self):
         ident=self.sat_combo.currentData()
+        if ident and str(ident) in self.omm:
+            self.request_satinfo(str(ident),self.omm[str(ident)].get("OBJECT_NAME",str(ident)))
         if ident==self._active_satellite_id and self.sat is not None:
             return  # The same satellite must not interrupt CAT.
         self.last_freqs=(None,None)
@@ -2662,12 +2749,34 @@ class MainWindow(QMainWindow):
         self.pass_enabled={ident}
         self.pass_rows={ident:load_transmitters(self.config.dir,int(ident))}
         obj=dict(self.omm[ident])
+        window=int(self.config.values.get("pass_window_hours",36) or 36)
+        rows_tx=self.pass_rows[ident]
+        alive=(True if any(r.get("alive") for r in rows_tx) else (False if rows_tx else None))
+        mode=self.rx_mode.currentText()
+        try:
+            downlink=self.nominal_hz()[1]
+        except Exception:
+            downlink=None
         def task():
             try:
+                from .quality import pass_quality
                 sat=make_satellite(obj,self.ts)
-                rows=predict_passes(sat,station,now=now_utc()-timedelta(hours=3),hours=39,ts=self.ts)
-                return [dict(p,id=ident,name=obj.get("OBJECT_NAME",ident))
-                        for p in rows if p["los"]>now_utc()][:100]
+                end=now_utc()+timedelta(hours=window)
+                rows=predict_passes(sat,station,now=now_utc()-timedelta(hours=3),hours=window+3,ts=self.ts)
+                out=[]
+                for p in rows:
+                    if p["los"]<=now_utc() or p["aos"]>end:
+                        continue
+                    item=dict(p,id=ident,name=obj.get("OBJECT_NAME",ident))
+                    try:
+                        item["quality"]=pass_quality(sat,station,p,self.ts,norad=ident,mode=mode,
+                                                     downlink_hz=downlink,alive=alive)
+                    except Exception:
+                        item["quality"]=None
+                    out.append(item)
+                    if len(out)>=100:
+                        break
+                return out
             except Exception as exc:
                 self.log("Agenda órbita "+ident+": "+str(exc))
                 return []
@@ -2689,9 +2798,107 @@ class MainWindow(QMainWindow):
             count+=1
             self.background("tx:"+sid,lambda sid=sid:refresh_transmitters(self.config.dir,int(sid)))
 
+    # ------------------------------------------------ popup de informações do satélite (v1.5.0)
+    def request_satinfo(self,ident,name):
+        ident=str(ident)
+        if not hasattr(self,"satinfo"):
+            self.satinfo={}
+        if ident in self.satinfo or f"satinfo:{ident}" in self.pending_jobs:
+            return
+        from .satinfo import fetch_info, load_cached
+        cached=load_cached(self.config.dir,ident)
+        if cached:
+            self.satinfo[ident]=cached
+        lang=str(self.config.values.get("language","pt-BR")).split("-")[0]
+        self.background(f"satinfo:{ident}",lambda:fetch_info(self.config.dir,ident,name,lang))
+
+    def satinfo_html(self,ident,for_qt=True):
+        from .satinfo import info_html
+        ident=str(ident)
+        info=getattr(self,"satinfo",{}).get(ident)
+        obj=self.omm.get(ident,{})
+        name=obj.get("OBJECT_NAME",ident)
+        live=None;next_pass=None;transponders=None
+        if self.sat is not None and ident==str(self.sat_combo.currentData() or ""):
+            live=self.last_pos
+            transponders=self.options
+            upcoming=[p for p in self.passes if p["los"]>now_utc()]
+            if upcoming:
+                p=upcoming[0];q=p.get("quality")
+                next_pass=(f"{p['aos'].astimezone():%d/%m %H:%M} · máx {p['max_el']:.0f}° · "
+                           f"{format_duration(int((p['los']-p['aos']).total_seconds()))}"+(f" · {q.label}" if q else ""))
+        else:
+            try:
+                transponders=transponder_options(load_transmitters(self.config.dir,int(ident)))
+            except Exception:
+                transponders=None
+        return info_html(info,name=name,norad=ident,live=live,transponders=transponders,
+                         next_pass=next_pass,for_qt=for_qt)
+
+    def refresh_satinfo_tooltips(self,ident=None):
+        current=str(self.sat_combo.currentData() or "")
+        if current and (ident is None or ident==current):
+            self.sat_combo.setToolTip(self.satinfo_html(current))
+        if ident is not None:
+            html=self.satinfo_html(ident)
+            for row in range(self.catalog_table.rowCount()):
+                item=self.catalog_table.item(row,0)
+                if item is not None and str(item.data(Qt.UserRole))==ident:
+                    for col in range(self.catalog_table.columnCount()):
+                        cell=self.catalog_table.item(row,col)
+                        if cell is not None:
+                            cell.setToolTip(html)
+
+    def catalog_item_hovered(self,item):
+        ident=str(item.data(Qt.UserRole) or "")
+        if ident and ident in self.omm:
+            if ident in getattr(self,"satinfo",{}):
+                self.refresh_satinfo_tooltips(ident)
+            self.request_satinfo(ident,self.omm[ident].get("OBJECT_NAME",ident))
+
+    def change_pass_window(self,*args):
+        hours=int(self.pass_window.currentData() or 36)
+        self.config.values["pass_window_hours"]=hours
+        self.config.save()
+        self.pass_group.setTitle(f"PASSAGENS DO SATÉLITE SELECIONADO · {hours} H" if hours<168 else
+                                 "PASSAGENS DO SATÉLITE SELECIONADO · 7 DIAS")
+        self.log(f"Janela de passagens: {hours} h")
+        self.refresh_passes()
+
+    def render_pass_table(self):
+        """Preenche a tabela (cronológica ou por qualidade) sem recalcular as passagens."""
+        rows=list(self.passes)
+        if self.pass_sort.isChecked():
+            rows.sort(key=lambda p:-(p.get("quality").score if p.get("quality") else -1))
+        self._pass_rows_view=rows
+        self.pass_table.setRowCount(len(rows))
+        for i,p in enumerate(rows):
+            aos=p['aos'].astimezone().strftime('%d/%m %H:%M')
+            peak=p['tca'].astimezone().strftime('%d/%m %H:%M') if p.get('tca') else '—'
+            los=p['los'].astimezone().strftime('%d/%m %H:%M')
+            modes=self.suggested_mode_text(p['id'])
+            seconds=max(0,int((p['los']-p['aos']).total_seconds()))
+            duration=format_duration(seconds)
+            q=p.get("quality")
+            stars=q.label if q else "—"
+            for j,value in enumerate((aos,peak,los,duration,f"{p['max_el']:.0f}°",stars,modes)):
+                cell=QTableWidgetItem(value)
+                cell.setTextAlignment(Qt.AlignVCenter | (Qt.AlignLeft if j==6 else Qt.AlignCenter))
+                cell.setToolTip(q.tooltip if (j==5 and q) else value)
+                if j==5:
+                    cell.setForeground(QBrush(QColor("#f2c94c")))
+                if j==0:
+                    cell.setData(Qt.UserRole,str(p['id']))
+                self.pass_table.setItem(i,j,cell)
+        self.pass_table.resizeRowsToContents()
+        for i in range(self.pass_table.rowCount()):
+            self.pass_table.setRowHeight(i,max(self.pass_table.rowHeight(i),
+                self.pass_table.fontMetrics().height()+12))
+
     def select_pass_satellite(self,row,col):
-        if 0<=row<len(self.passes):
-            ident=self.passes[row]['id']
+        view=getattr(self,"_pass_rows_view",self.passes)
+        if 0<=row<len(view):
+            ident=view[row]['id']
             self.search.clear()
             index=self.sat_combo.findData(ident)
             if index>=0:
@@ -2719,7 +2926,9 @@ class MainWindow(QMainWindow):
                      "track_past":self.track_cache["past"] if self.track_cache_key and self.track_cache_key[0]==str(self.sat_combo.currentData()) else [],
                      "track_future":self.track_cache["future"] if self.track_cache_key and self.track_cache_key[0]==str(self.sat_combo.currentData()) else [],
                      "footprint":circle,
-                     "label":f"{self.sat.name} · elevação {pos['elevation']:.1f}° · alcance {pos['range_km']:.0f} km · órbita TLE/OMM"}
+                     "label":f"{self.sat.name} · elevação {pos['elevation']:.1f}° · alcance {pos['range_km']:.0f} km · órbita TLE/OMM",
+                     "info":self.satinfo_html(str(self.sat_combo.currentData() or ""),for_qt=False)}
+            self.sat_combo.setToolTip(self.satinfo_html(str(self.sat_combo.currentData() or "")))
             self.map.page().runJavaScript('window.updateOrbit && window.updateOrbit('+json.dumps(payload)+');')
             # A past error banner must not survive a successful map render.
             self.map_desc.setText("Trajetória passada reconstruída · futuro previsto por OMM/TLE · Natural Earth offline")
@@ -2857,6 +3066,8 @@ class MainWindow(QMainWindow):
         # No network calls in the GUI tick; asynchronous check respects the configured period.
         if int(now_utc().timestamp()) % 60 == 0:
             self.check_for_updates()
+        if getattr(self,"_cat_scan_progress",""):
+            self.cat_tune_status.setText(self._cat_scan_progress)
         now=now_utc();self.utc.setText(now.strftime('UTC · %d/%m %H:%M:%S'))
         self.utc.setToolTip(now.strftime('DATA/HORA UTC · %d/%m/%Y %H:%M:%S'))
         self.update_next_indicator()
@@ -2916,6 +3127,16 @@ class MainWindow(QMainWindow):
         if key=="rig":
             self.sdr_panel.rig_result(data)
             return
+        if key=="cat-scan":
+            self.cat_scan_finished(data)
+            return
+        if key.startswith("satinfo:"):
+            ident=key.split(":",1)[1]
+            self.satinfo[ident]=data
+            self.refresh_satinfo_tooltips(ident)
+            if ident==str(self.sat_combo.currentData() or ""):
+                self.update_map()
+            return
         if key.startswith('photo:'):
             if key.split(':')[1]==str(self.sat_combo.currentData()):
                 self.photo.setHtml(photo_html(data),QUrl("https://commons.wikimedia.org/"))
@@ -2960,6 +3181,7 @@ class MainWindow(QMainWindow):
                 self.frequency_progress_dialog.setValue(index)
             return
         if key=="cat-connect":
+            self._cat_after_scan=False
             self.cat_connecting=False
             self.cat_indicator.setEnabled(True)
             self.connection.setEnabled(True)
@@ -3105,27 +3327,10 @@ class MainWindow(QMainWindow):
                 self._passes_refresh_again=False
                 self.refresh_passes()
                 return
-            self.passes=data[:75]
-            self.pass_table.setRowCount(len(self.passes))
-            for i,p in enumerate(self.passes):
-                aos=p['aos'].astimezone().strftime('%d/%m %H:%M')
-                peak=p['tca'].astimezone().strftime('%d/%m %H:%M') if p.get('tca') else '—'
-                los=p['los'].astimezone().strftime('%d/%m %H:%M')
-                modes=self.suggested_mode_text(p['id'])
-                seconds=max(0,int((p['los']-p['aos']).total_seconds()))
-                duration=format_duration(seconds)
-                for j,value in enumerate((aos,peak,los,duration,f"{p['max_el']:.0f}°",modes)):
-                    cell=QTableWidgetItem(value)
-                    cell.setTextAlignment(Qt.AlignVCenter | (Qt.AlignLeft if j==5 else Qt.AlignCenter))
-                    cell.setToolTip(value)
-                    if j==0:
-                        cell.setData(Qt.UserRole,str(p['id']))
-                    self.pass_table.setItem(i,j,cell)
-            self.pass_table.resizeRowsToContents()
-            for i in range(self.pass_table.rowCount()):
-                self.pass_table.setRowHeight(i,max(self.pass_table.rowHeight(i),
-                    self.pass_table.fontMetrics().height()+12))
-            self.log(f'Previsão: {len(data)} passagens nas próximas 36 h (lista limitada a 100)')
+            self.passes=data[:100]
+            self.render_pass_table()
+            window=int(self.config.values.get("pass_window_hours",36) or 36)
+            self.log(f'Previsão: {len(data)} passagens nas próximas {window} h (lista limitada a 100)')
             self.update_next_indicator()
             self.prefetch_upcoming_modes()
             if self._passes_refresh_again:
@@ -3163,7 +3368,13 @@ class MainWindow(QMainWindow):
             self.cat_tune_status.setToolTip(message)
             self.log("CAT: falha ao conectar: "+message)
             if not self.cat_connect_was_startup:
-                QMessageBox.warning(self,"Falha de conexão CAT",message)
+                if not getattr(self,"_cat_after_scan",False):
+                    # v1.5.0: porta salva falhou → procura o rádio nas demais portas
+                    self.cat_tune_status.setText("Porta salva não respondeu · procurando o rádio…")
+                    QTimer.singleShot(0,self.start_cat_scan)
+                else:
+                    QMessageBox.warning(self,"Falha de conexão CAT",message)
+            self._cat_after_scan=False
             return
         if key=="cat-readback":
             self.cat_consecutive_failures+=1
@@ -3491,9 +3702,9 @@ class MainWindow(QMainWindow):
                 state='conectado' if age<=10 else 'degradado'
         passes=[]
         for i in range(min(self.pass_table.rowCount(),75)):
-            cells=[self.pass_table.item(i,j) for j in range(6)]
+            cells=[self.pass_table.item(i,j) for j in range(7)]
             items=[x.text() if x is not None else '—' for x in cells]
-            passes.append(dict(zip(('aos','tca','los','duration','max_el','modes'),items)))
+            passes.append(dict(zip(('aos','tca','los','duration','max_el','quality','modes'),items)))
         names={'elevation':'Elevação','azimuth':'Azimute','range_km':'Distância',
                'radial_m_s':'Velocidade radial','height_km':'Altitude orbital'}
         metrics={names[k]:w.text() for k,w in self.orbit_metrics.items()}

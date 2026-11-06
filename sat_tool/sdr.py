@@ -25,9 +25,9 @@ RETUNE_MARGIN = 300_000      # reposiciona o centro se o canal passar disso
 BLOCK = 96_000               # 0,1 s a 960 kS/s
 RTL_IDS = {(0x0BDA, 0x2838), (0x0BDA, 0x2832)}
 
-ZADIG_HELP = ("O Windows está usando o driver de TV digital no RTL-SDR. Instale o driver WinUSB "
-              "uma única vez com o Zadig (zadig.akeo.ie): Options → List All Devices → "
-              "\"Bulk-In, Interface (Interface 0)\" → WinUSB → Replace Driver. Depois reconecte o dongle.")
+ZADIG_HELP = ("O Windows não deixou abrir o RTL-SDR: a interface 0 provavelmente não usa o driver WinUSB. "
+              "Clique em \"Preparar RTL-SDR\" (Equipamentos RX/TX) para o programa instalar o driver, ou feche "
+              "outro programa que esteja usando o dongle (SDR#, SDR++, HDSDR).")
 LINUX_HELP = ("Sem permissão para o RTL-SDR. Instale a regra udev incluída no pacote "
               "(linux/rtl-sdr.rules em /etc/udev/rules.d/) e bloqueie o módulo dvb_usb_rtl28xxu; reconecte.")
 
@@ -55,26 +55,37 @@ def _librtlsdr():
     return librtlsdr
 
 
+def _usb_strings(lib, index: int) -> tuple[str, str, str]:
+    """Fabricante, produto e número de série. Falha aqui nunca descarta o dispositivo."""
+    import ctypes
+    bufs = [(ctypes.c_ubyte * 256)() for _ in range(3)]
+    try:
+        if lib.rtlsdr_get_device_usb_strings(index, *bufs) != 0:
+            return "", "", ""
+    except Exception:
+        return "", "", ""
+    return tuple(bytes(b).split(b"\0", 1)[0].decode("utf-8", "replace").strip() for b in bufs)
+
+
 def detect_devices() -> tuple[list[SdrDevice], str]:
     """Lista dongles RTL-SDR visíveis. Retorna (dispositivos, mensagem de diagnóstico)."""
     try:
         lib = _librtlsdr()
     except Exception as exc:
-        return [], f"Biblioteca librtlsdr indisponível: {type(exc).__name__}"
-    import ctypes
-    devices = []
+        return [], f"Biblioteca librtlsdr indisponível: {type(exc).__name__}: {exc}"
     try:
         count = int(lib.rtlsdr_get_device_count())
-        for i in range(count):
-            name = lib.rtlsdr_get_device_name(i)
-            name = name.decode("utf-8", "replace") if isinstance(name, bytes) else str(name or "RTL-SDR")
-            m, p, s = (ctypes.create_string_buffer(256) for _ in range(3))
-            serial = ""
-            if lib.rtlsdr_get_device_usb_strings(i, m, p, s) == 0:
-                serial = s.value.decode("utf-8", "replace")
-            devices.append(SdrDevice(i, name or "RTL-SDR", serial))
     except Exception as exc:
-        return [], f"Falha ao listar RTL-SDR: {exc}"
+        return [], f"Falha ao contar dispositivos RTL-SDR: {exc}"
+    devices = []
+    for i in range(count):
+        try:
+            name = lib.rtlsdr_get_device_name(i)
+            name = name.decode("utf-8", "replace") if isinstance(name, bytes) else str(name or "")
+        except Exception:
+            name = ""
+        maker, product, serial = _usb_strings(lib, i)
+        devices.append(SdrDevice(i, name or product or "RTL-SDR", serial))
     return devices, ("" if devices else "Nenhum RTL-SDR conectado")
 
 

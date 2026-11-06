@@ -11,6 +11,7 @@ DEFAULTS = {
     "rtl_tcp": "", "sdr_ppm": 0, "sdr_bias_tee": False, "sdr_gain_db": None,
     "sdr_audio_device": "", "sdr_record": False, "sdr_record_iq": False,
     "sdr_volume": 0.8, "sdr_squelch_db": -120, "sdr_autostart": True, "sdr_dock_visible": False,
+    "pass_window_hours": 36,
     "kiss_enabled": False, "kiss_host": "127.0.0.1:8100", "satnogs_upload": False,
     "callsign": "PT2VHF", "lat": "", "lon": "", "altitude_m": 0,
     "min_elevation": 10, "port": "", "baud": 9600, "stopbits": 1,
