@@ -106,7 +106,7 @@ jobs:
           cd ..\libwdi
           rem Somente WinUSB: retira libusb0/libusbK do embedder (o PT2VHF nunca instala esses drivers).
           powershell -NoProfile -Command "(Get-Content msvc\config.h) | Where-Object { $_ -notmatch '^#define LIBUSB(0|K)_DIR' } | Set-Content msvc\config.h" || exit /b 1
-          findstr /R "^#define LIBUSB" msvc\config.h && exit /b 1
+          findstr /L /C:"#define LIBUSB0_DIR" /C:"#define LIBUSBK_DIR" msvc\config.h && exit /b 1
           curl -sSL %WDK_URL% -o wdk-redist.msi || exit /b 1
           msiexec /a wdk-redist.msi /qn TARGETDIR=%CD%\wdk
           if not exist "wdk\Windows Kits\8.0\redist\wdf\x64" (echo WDK redist ausente & exit /b 1)
