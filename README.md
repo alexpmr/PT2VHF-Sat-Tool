@@ -4,16 +4,16 @@
 
 ## Downloads — Windows, Linux e macOS
 
-**PT2VHF Sat Tool v1.6.0 — Windows 10/11 x64, Linux x64 e macOS Apple Silicon**.
+**PT2VHF Sat Tool v1.7.0 — Windows 10/11 x64, Linux x64 e macOS Apple Silicon**.
 
 **Novo site oficial: [www.PT2VHF.com](https://www.pt2vhf.com/sat)** — downloads (Setup e Portátil), novas versões e somas SHA-256 ficam no site. A partir da v1.3.14 o atualizador consulta exclusivamente `https://www.pt2vhf.com/update.php?product=sat`.
 
 | Edição | Download direto |
 | --- | --- |
-| **Instalável x64** | [Setup (.exe)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.6.0-Win11-x64-Setup.exe) |
-| **Portátil x64** | [Portable (.exe)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.6.0-Win11-x64-Portable.exe) |
-| **Linux x64** | [Pacote (.tar.gz)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.6.0-Linux-x64.tar.gz) |
-| **macOS ARM64** | [Imagem (.dmg)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.6.0-macOS-arm64.dmg) |
+| **Instalável x64** | [Setup (.exe)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.7.0-Win11-x64-Setup.exe) |
+| **Portátil x64** | [Portable (.exe)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.7.0-Win11-x64-Portable.exe) |
+| **Linux x64** | [Pacote (.tar.gz)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.7.0-Linux-x64.tar.gz) |
+| **macOS ARM64** | [Imagem (.dmg)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.7.0-macOS-arm64.dmg) |
 
 O sufixo `Win11-x64` é mantido para compatibilidade com o atualizador e também atende ao Windows 10 1809+.
 
@@ -28,7 +28,16 @@ O sufixo `Win11-x64` é mantido para compatibilidade com o atualizador e também
 3. O acesso local usa `http://127.0.0.1:8094/`. Para outros dispositivos da mesma LAN, marque **Permitir outros dispositivos da rede local (LAN)** e use **Copiar endereço**; a URL inclui uma chave temporária e a primeira visita cria um cookie de sessão.
 4. Se outro computador/celular não alcançar a página, confira o IPv4 do computador e libere a porta TCP de entrada **apenas na rede privada** no firewall local. Não configure redirecionamento de porta no roteador.
 
-**Escopo do painel Web v1.6.0:** consulta em tempo real ao satélite, frequências previstas, CAT, telemetria, mapa vetorial offline e passagens. **Somente leitura:** o navegador não muda satélite/configurações nem executa comandos CAT/PTT. O desktop deve permanecer aberto. O HTTP na LAN não é criptografado; não divulgue a URL fora da rede.
+**Escopo do painel Web v1.7.0:** consulta em tempo real ao satélite, frequências previstas, CAT, telemetria, mapa vetorial offline e passagens. **Somente leitura:** o navegador não muda satélite/configurações nem executa comandos CAT/PTT. O desktop deve permanecer aberto. O HTTP na LAN não é criptografado; não divulgue a URL fora da rede.
+## Novidades v1.7.0 — modelos de display, rotor e atualização automática
+
+- **Display no layout do TS-2000:** MAIN e SUB lado a lado, dígito de 1 Hz menor, S-meter sob o lado RX e PO/SWR sob o lado TX, indicadores e contagem **LOS m:ss / AOS** (pisca nos últimos 30 s). Pontos sempre em pixels inteiros (sem "pixels defeituosos").
+- **5 modelos** em Configurações → Apresentação → Tipo de display, com prévia ao vivo: matriz de pontos âmbar (fonte Normal ou Negrito; cores âmbar/verde/azul), LED de 7 segmentos âmbar, LCD de 7 segmentos âmbar, Digital (tela colorida) e Clássico v1.6.0.
+- **Tecla A/B corrigida:** aguarda o TS-2000 confirmar a troca MAIN↔SUB, mostra o motivo quando não aplicada e acompanha a orientação lida do rádio (inclusive troca feita no painel).
+- **Rotor (GS-232):** Yaesu G-5400B via ERC-M pela USB (porta COM). Autodetecção só por leitura, limites 450°/180°, correção do norte, rastreamento só quando o operador pede (pré-posiciona no AOS, acompanha, modo flip, estaciona no LOS), botão PARAR sempre visível e parada automática em perda de comunicação ou ao fechar.
+- **Atualização automática** sem perguntar (opção em Configurações, ligada por padrão): baixa, confere SHA-256 e instala, adiando durante passagem com CAT/SDR/rotor ativos ou transmissão.
+- **Configurações em abas:** Apresentação, Estação, Rádio, Rotor e Geral. Detalhes de CAT recolhidos por padrão ("Detalhes CAT ▸"); velocidade radial em km/h; tabela de passagens sempre inteira, sem rolagem lateral (o mapa cede largura).
+
 ## Novidades v1.6.0 — display de rádio, OTA corrigido, passagens e SDR
 
 - **Atualização automática (P0) corrigida:** o programa encerra também os processos do mapa (QtWebEngine), o instalador detecta o app aberto e fecha o que for preciso, o resultado aparece na próxima abertura; uma única contagem de download por atualização.

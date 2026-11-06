@@ -71,6 +71,12 @@ def run_self_test(report_path: str, expected_qt: str = "") -> int:
         if not aprs_info.parse("PT2VHF>APRS:!1554.00S/04756.00W-x"):
             raise RuntimeError("aprslib não interpretou o pacote de teste")
         result["checks"].append("v160_modules")
+        # v1.7.0: modelos de display, rotor GS-232 e sua interface.
+        from sat_tool import rotor, rotor_ui  # noqa: F401
+        from sat_tool.lcd import MODELS
+        if rotor.parse_position("AZ=123  EL=045") != (123.0, 45.0) or len(MODELS) < 5:
+            raise RuntimeError("Rotor/display v1.7.0 incompletos")
+        result["checks"].append("v170_modules")
         if QT_BINDING == "PySide6":
             from PySide6.QtMultimedia import QAudioSink  # noqa: F401
             result["checks"].append("qt_multimedia")

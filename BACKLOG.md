@@ -79,7 +79,25 @@
 - [x] Telemetria e waterfall destacáveis; APRS decodificado (posição/Maidenhead/distância, mensagem, status, telemetria, clima, Mic-E), detalhe, filtros, exportação JSON, estações no mapa.
 - [ ] Homologar em campo: OTA 1.5.0→1.6.0 no Windows (Setup e Portátil), RTL-SDR real, A/B e Somente RX no TS-2000 físico.
 
+## v1.7.0 — modelos de display, rotor G-5400B e OTA automático (06/11/2026)
+
+- [x] Display LCD: pontos em grade inteira de pixels (imagem no tamanho físico da tela), layout TS-2000 (MAIN | SUB), mockup aprovado.
+- [x] Tecla A/B: SA P3 com releitura por até ~2 s, mensagem visível quando o rádio não aceita, orientação lida do rádio adotada (troca no painel).
+- [x] Fonte do display Normal (padrão) / Negrito; modelos matriz, LED 7 seg., LCD 7 seg., Digital e Clássico em Configurações → Apresentação, com prévia.
+- [x] Tempo restante da passagem no display (LOS m:ss, pisca nos 30 s finais; AOS fora da passagem).
+- [x] Configurações em abas Apresentação / Estação / Rádio / Rotor / Geral (`open_settings`).
+- [x] Detalhes de CAT ocultos por padrão (Detalhes CAT ▸, escolha salva).
+- [x] Velocidade radial em km/h (tooltip em m/s; Doppler inalterado).
+- [x] Tabela de passagens sem rolagem horizontal; largura mínima = soma das colunas; mapa cede largura.
+- [x] Rotor GS-232 (G-5400B + ERC-M pela USB): autodetecção só leitura, perfis, flip, pré-posicionamento, estacionar, PARAR, watchdog, parada ao fechar.
+- [x] OTA automático sem perguntar (padrão ligado; adia em operação; nova tentativa em 6 h após falha).
+- [ ] Homologar em campo: A/B no TS-2000 físico, rotor G-5400B + ERC-M real (calibração, flip), OTA automático 1.6.0→1.7.0 no Windows.
+
 ## Pendentes
+
+- (nenhum item novo em aberto)
+
+## Detalhamento dos itens resolvidos na v1.7.0
 
 - **Configurações reorganizadas em abas: Apresentação, Estação e Rádio; escolha do tipo de display** (registrado em 06/11/2026)
   - **Aba "Apresentação"** (nova): opção **"Tipo de display"** com os modelos disponíveis — por ora os **dois atuais**:
