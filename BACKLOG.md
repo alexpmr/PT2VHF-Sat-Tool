@@ -67,6 +67,19 @@
 
 ## Pendentes
 
+- **Revisar as linhas das órbitas no mapa** (registrado em 06/11/2026; aguardando captura do operador com o problema observado)
+  - Conferir no mapa vetorial (`map.html`, `ground_track_between`, `track_cache`, `footprint`):
+    - quebra na linha de data (±180°): sem traços atravessando o mapa inteiro nem lacunas;
+    - suavidade: amostragem suficiente (hoje até 220 pontos por trecho) para curvas sem "quinas", inclusive em 24 h;
+    - passado × futuro: cores/estilos coerentes com a legenda, trecho contínuo no ponto atual do satélite,
+      sem sobreposição confusa quando "Ambos" ou períodos longos (várias voltas);
+    - período da trajetória (Configurações → Mapa e trajetória) respeitado após trocar de satélite e no zoom;
+    - cobertura (footprint) perto dos polos e cruzando ±180°;
+    - atualização: linhas recalculadas ao trocar satélite/estação, sem ficar a órbita do satélite anterior.
+  - Opções a avaliar: marcar AOS/LOS da próxima passagem sobre a linha, setas de sentido, espessura/cores mais
+    legíveis no tema escuro.
+  - Validar com capturas de ISS (51,6°), satélite polar (SO-50/AO-91) e AO-7, em 2 h, 10 h e 24 h.
+
 - **Telemetria e waterfall em janelas destacáveis; conteúdo dos pacotes APRS decodificado** (registrado em 06/11/2026)
   - **Telemetria** e **waterfall** podem ser abertos cada um em **janela própria (popup destacável)**,
     redimensionável, movível para outro monitor, sempre-no-topo opcional; posição/tamanho lembrados;
