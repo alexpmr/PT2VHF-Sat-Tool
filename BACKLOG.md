@@ -67,6 +67,16 @@
 
 ## Pendentes
 
+- **Tabela de passagens: AOS como "hoje/amanhã/DD/MM/AA" + hora; TCA e LOS só com horário** (registrado em 06/11/2026)
+  - AOS: "Hoje 16:32", "Amanhã 05:52" ou "DD/MM/AA HH:MM" para as demais datas (fuso local); TCA e LOS: só
+    "HH:MM" (sem data repetida). Se a passagem cruzar a meia-noite, LOS mostra "HH:MM (+1)".
+  - Cabeçalhos "AOS", "TCA", "LOS" (o "local" vai para o tooltip), liberando largura para as demais colunas
+    (complementa o item da largura otimizada das colunas).
+  - Tooltip de cada célula com data/hora completas local e UTC; ordenação continua pela data real.
+  - Mesmo formato no popup do satélite (próxima passagem) e no painel Web; textos "Hoje/Amanhã" traduzidos
+    nos idiomas da interface.
+  - Testes com datas de hoje, amanhã, depois de amanhã e passagem cruzando meia-noite.
+
 - **Confirmar que cada OTA conta um download no site** (registrado em 06/11/2026)
   - Desenho atual (análise do código): o updater baixa `https://www.pt2vhf.com/downloads/sat-tool/<arquivo>` com
     um único `GET` sem `Range` nem `HEAD` prévio; o `.htaccess` reescreve para `download.php?product=sat&file=…`,
