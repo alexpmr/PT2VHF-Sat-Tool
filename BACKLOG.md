@@ -58,6 +58,24 @@
 
 ## Pendentes
 
+- **Popup flutuante com informações do satélite ao passar o mouse** (registrado em 06/11/2026)
+  - Onde: marcador do satélite no mapa (Operação), seletor "Satélite", tabela da aba Satélites e
+    painel SDR/telemetria; aparece após ~400 ms parado e some ao sair, sem roubar foco nem clicar em nada.
+  - Conteúdo:
+    - imagem do satélite (SatNOGS DB `image` e Wikimedia, já usada em `media.photo_html`), com cache local;
+    - nome, outros nomes, NORAD, país/operador, data de lançamento e implantação;
+    - história resumida (SatNOGS/Wikipedia no idioma da interface, com link "ler mais");
+    - recursos: transponders/canais SatNOGS (modo, uplink/downlink, inversor), beacons e telemetria
+      (decodificador satnogs-decoders disponível);
+    - status: em órbita/decaído, "alive", status de recepção e evidências do SatNOGS, idade da efeméride;
+    - situação agora: elevação/azimute, visível ou não, iluminado/eclipse, próxima passagem (AOS/Máx °/duração)
+      e, quando houver, a nota de qualidade da passagem (item de estrelas).
+  - Dados baixados em segundo plano e guardados em cache (funciona offline com o que já foi visto);
+    se faltar algo, mostrar o que houver sem travar o mapa.
+  - Popup com o tema escuro do app, largura limitada, texto selecionável; clique fixa o popup (com botão
+    fechar) para ler com calma.
+  - Testes: renderização com dados completos, parciais e offline; nada de chamadas de rede na thread da GUI.
+
 - **CAT autodetectado: clicar em "CAT" varre as portas e conecta sozinho** (registrado em 06/11/2026)
   - Botão CAT do topo (e "Conectar"): se não houver porta salva ou ela falhar, varrer todas as portas
     seriais disponíveis (COM no Windows, /dev/ttyUSB*/ttyACM* no Linux, /dev/cu.* no macOS).
