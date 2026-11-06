@@ -77,6 +77,13 @@
     reconectado, nunca depois de um desligamento manual; tooltip do botão SDR mostra "desligado pelo
     operador · clique para ligar".
   - Teste: parar o receptor, rodar vários ciclos de detecção e cliques/seleções no mapa → continua parado.
+  - **Novo relato (06/11/2026):** desligo o SDR e, ao clicar no botão **"SDR" do topo** (mostrar/ocultar o
+    painel), ele liga de novo. Mesma causa (autostart na detecção periódica) e mais um problema de interface:
+    há **dois botões chamados "SDR"** com funções diferentes — o do topo mostra/oculta o painel e o do painel
+    liga/desliga o receptor.
+    - Mostrar/ocultar o painel **nunca** altera o estado do receptor (teste dedicado).
+    - Diferenciar os botões: topo "Painel SDR" (ícone de painel, mostra se o receptor está ligado pela cor) e,
+      no painel, "Receptor: LIGADO/DESLIGADO" com cor e texto explícitos.
 
 - **Passagens e telemetria "encavaladas", sem como aumentar a altura dos blocos** (registrado em 06/11/2026, v1.5.0)
   - Na coluna direita da aba Operação, "Passagens do satélite selecionado" e "Telemetria orbital" disputam a
