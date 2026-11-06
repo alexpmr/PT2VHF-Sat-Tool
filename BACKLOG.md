@@ -81,7 +81,21 @@
 
 ## Pendentes
 
-- (nenhum item novo em aberto)
+- **Display LCD (v1.6.0): pixels defeituosos, tecla A/B sem efeito e layout das frequências** (registrado em 06/11/2026)
+  - **Pixels defeituosos:** a matriz de pontos apresenta pontos falhos/irregulares. Revisar a fonte 5×7 (glifos com
+    pontos faltando ou sobrando), o arredondamento das posições dos pontos (usar grade inteira, sem acumular
+    frações por escala/DPI) e o antialiasing; conferir em DPI 100/125/150/200% e nos temas âmbar/verde/azul.
+  - **Clicar para inverter TX↔RX não funcionou:** a tecla A/B (MAIN↔SUB) não teve efeito no uso real. Verificar se o
+    clique chega ao `swap_clicked` (área clicável da tecla), as condições que bloqueiam a troca (CAT conectado,
+    SAT ON, sem PTT) e a mensagem mostrada quando bloqueada; conferir o comando `SA` (P3) e o readback no
+    TS-2000 físico; o display deve refletir a orientação real lida do rádio. Sem CAT, inverter ao menos a
+    exibição/atribuição RX/TX do display.
+  - **Layout como o display do TS-2000:** mostrar as **duas frequências na mesma linha**, lado a lado
+    (MAIN à esquerda, SUB à direita, cada uma com o rótulo RX/TX e modo), e não uma embaixo da outra; manter
+    S-meter/elevação e indicadores (SAT, AUTO, Doppler, potência, SWR) em linha abaixo; tamanho dos dígitos
+    legível nas duas frequências, sem cortar em 1366×768.
+  - Testes: renderização sem pontos falhos (comparação de imagem/grade), clique na tecla A/B com CAT simulado
+    (SA P3 + readback) e caso bloqueado com aviso, layout lado a lado em larguras pequenas e grandes.
 
 ## Detalhamento dos itens resolvidos na v1.6.0 (e anteriores)
 
