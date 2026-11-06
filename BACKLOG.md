@@ -67,6 +67,17 @@
 
 ## Pendentes
 
+- **Linha da trajetória passada ("Passado reconstruído") não aparece mais no mapa** (registrado em 06/11/2026)
+  - Imagem: `docs/backlog/orbita-sem-passado-v1.4.png` (ISS; só aparecem as linhas tracejadas "Futuro
+    previsto"; a linha contínua "Passado reconstruído" da legenda sumiu nas últimas versões).
+  - Pistas: padrão `trail_direction = "Futuro"` em `config.py` (com "Futuro" o passado não é calculado em
+    `track_period_bounds`); verificar se uma versão recente trocou o padrão/ migrou a preferência do operador,
+    se `track_past` chega vazio ao `updateOrbit`, e se a linha é desenhada mas fica invisível
+    (`.track-history` com opacidade .62 por baixo do tracejado).
+  - Correção: padrão **"Ambos"** (passado contínuo + futuro tracejado), sem sobrescrever escolha explícita
+    salva; legenda só mostra os itens realmente desenhados; passado com cor/espessura distinguível do futuro.
+  - Junto do item "Revisar as linhas das órbitas no mapa"; teste com payload real (passado e futuro não vazios).
+
 - **Display LCD: parâmetros do rádio lidos via CAT (sinal, SWR, potência etc.)** (registrado em 06/11/2026; complementa o display âmbar)
   - Mostrar no display, como no painel de um rádio, o que o TS-2000 informa por CAT — **somente leitura**,
     sem alterar ajustes e sem PTT:
