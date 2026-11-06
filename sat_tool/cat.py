@@ -434,19 +434,34 @@ class TS2000:
                 raise RuntimeError("Rádio não confirmou o modo de recepção")
             return st
 
-    def set_orientation(self, main_downlink: bool):
-        """v1.6.0: MAIN↔SUB. P3 do SA: 1 = MAIN RX/SUB TX, 0 = MAIN TX/SUB RX. Só com SAT ON; sem PTT."""
+    def set_orientation(self, main_downlink: bool, settle_s: float = 0.35, attempts: int = 6):
+        """MAIN↔SUB no TS-2000 (SA P3: 1 = MAIN RX/SUB TX, 0 = MAIN TX/SUB RX). Só com SAT ON; sem PTT.
+
+        v1.7.0: o rádio leva alguns centésimos para reconfigurar as bandas; a leitura SA é repetida
+        (até ~2 s) antes de declarar falha, e a mensagem diz o que foi lido de volta.
+        """
         with self.lock:
             sa=self._exchange("SA;","SA")
             status=decode_satellite_status(sa)
             if not status["sat"]:
                 raise RuntimeError("Ative SAT no rádio antes de inverter MAIN/SUB")
+            if status["main_downlink"]==bool(main_downlink):
+                self.main_downlink_expected=bool(main_downlink)
+                self.state.main_downlink=bool(main_downlink)
+                return self.state
             p=sa[2:9]
             command=f"SA{p[0]}{p[1]}{'1' if main_downlink else '0'}{p[3:7]};"
             self._exchange(command)
-            check=decode_satellite_status(self._exchange("SA;","SA"))
+            check=status
+            for _ in range(max(1,attempts)):
+                if settle_s:
+                    time.sleep(settle_s)
+                check=decode_satellite_status(self._exchange("SA;","SA"))
+                if check["main_downlink"]==bool(main_downlink):
+                    break
             if check["main_downlink"]!=bool(main_downlink):
-                raise RuntimeError("TS-2000 não confirmou a inversão MAIN/SUB")
+                raise RuntimeError("O TS-2000 não aceitou a inversão MAIN/SUB pelo CAT (SA lido: "+check["raw"]+
+                                   "). Faça a troca no painel do rádio: o programa acompanha a orientação lida.")
             self.main_downlink_expected=bool(main_downlink)
             self.state.main_downlink=bool(main_downlink)
             return self.state

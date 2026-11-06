@@ -28,6 +28,8 @@ from .qt_compat import (
 from .qt_compat import QWebEngineView, QGeoPositionInfoSource, qt_exec, QT_BINDING
 from skyfield.api import load
 from . import __version__
+from .passfmt import radial_kmh_text
+from .rotor_ui import RotorUiMixin
 from .cat import TS2000, available_ports, decode_satellite_status
 from .catalog import refresh_orbits, load_orbits, refresh_transmitters, load_transmitters, age_hours, satellite_search_text, normalized_satellite_search, DEFAULT_GROUPS
 from .config import Config, DEFAULT_SATELLITES
@@ -100,7 +102,7 @@ def group(title):
     return g, QVBoxLayout(g)
 
 
-class MainWindow(QMainWindow):
+class MainWindow(RotorUiMixin, QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle(f'PT2VHF Sat Tool  •  v{__version__}')
@@ -112,6 +114,7 @@ class MainWindow(QMainWindow):
         self.journal = EventJournal(self.config.dir / "logs")
         self.ts = load.timescale(builtin=True)
         self.radio = TS2000(self.log)
+        self.rotor_init()
         self.events = Events()
         self.events.result.connect(self.background_result)
         self.events.failure.connect(self.background_error)
@@ -439,7 +442,9 @@ class MainWindow(QMainWindow):
         # v1.6.0: display LCD âmbar de matriz de pontos no lugar dos cartões RX/TX (textos mantidos ocultos
         # para acessibilidade/painel Web).
         from .lcd import LcdDisplay
-        self.lcd=LcdDisplay(theme=str(self.config.values.get("lcd_theme","âmbar")))
+        self.lcd=LcdDisplay(theme=str(self.config.values.get("lcd_theme","âmbar")),
+                            model=str(self.config.values.get("display_model","matriz")),
+                            font=str(self.config.values.get("display_font","normal")))
         self.lcd.swap_clicked.connect(self.toggle_main_sub)
         self.lcd.rx_only_clicked.connect(self.toggle_rx_only)
         self.lcd.set_state(rx_only=bool(self.config.values.get("rx_only",False)))
@@ -529,6 +534,10 @@ class MainWindow(QMainWindow):
         self.map_desc=label("Trajetória · cobertura · estação · mapa vetorial offline (Natural Earth)")
         self.map_desc.setStyleSheet('color:#8caec3')
         mv.addWidget(self.map_desc)
+        # v1.7.0: o mapa é que cede largura quando a tabela de passagens precisa de espaço.
+        for w in (self.map_radio_label,self.map_desc):
+            w.setWordWrap(True);w.setMinimumWidth(0)
+        mid.setMinimumWidth(220)
         splitter.addWidget(mid)
         right=QWidget();rv=QVBoxLayout(right);rv.setContentsMargins(2,0,2,0)
         stat,sv=group("TELEMETRIA ORBITAL")
@@ -660,26 +669,40 @@ class MainWindow(QMainWindow):
         quick_cat=QHBoxLayout()
         self.radio_label=label("CAT desconectado · configure a porta em Configurações")
         self.radio_label.setStyleSheet("color:#ecc48f;font-size:12px")
+        # v1.7.0: detalhes de CAT recolhidos por padrão (escolha salva); erros seguem no botão CAT do topo.
+        self.cat_details_toggle=QPushButton("Detalhes CAT ▸")
+        self.cat_details_toggle.setCheckable(True)
+        self.cat_details_toggle.setToolTip("Mostrar/ocultar leitura FA/FB/FC/MD, orientação SAT, Auto CAT e diagnóstico")
+        quick_cat.addWidget(self.cat_details_toggle)
         quick_cat.addWidget(self.radio_label,1)
         quick_cat.addWidget(self.connection)
         op.addLayout(quick_cat)
+        self.build_rotor_bar(op)
+        self.cat_details_box=QWidget()
+        cdl=QVBoxLayout(self.cat_details_box);cdl.setContentsMargins(0,0,0,0);cdl.setSpacing(3)
         self.cat_live_label=label("RÁDIO REAL (CAT) · aguardando FA (RX SAT) / FB (TX SAT) / FC (SUB) / MD")
         self.cat_live_label.setStyleSheet("font-size:14px;font-weight:800;color:#d8f5c0")
-        op.addWidget(self.cat_live_label)
+        cdl.addWidget(self.cat_live_label)
         self.cat_sat_orientation=label("SAT: aguardando resposta SA do TS-2000")
         self.cat_sat_orientation.setStyleSheet("font-size:12px;font-weight:700;color:#d8c399")
-        op.addWidget(self.cat_sat_orientation)
+        cdl.addWidget(self.cat_sat_orientation)
         self.cat_diagnose=QPushButton("Diagnosticar comunicação CAT · somente leitura")
         self.cat_diagnose.setToolTip("Consulta ID, SA, FA, FB, FC e MD; sem alterar SAT, VFO ou PTT")
         self.cat_diagnose.setEnabled(False)
         self.cat_diagnose.clicked.connect(self.diagnose_cat)
-        op.addWidget(self.cat_diagnose)
+        cdl.addWidget(self.cat_diagnose)
         self.cat_tune_status=label("Auto CAT desligado · ative em Configurações para acompanhar a seleção")
         self.cat_tune_status.setStyleSheet("font-size:12px;font-weight:700;color:#b4d7e7")
-        op.addWidget(self.cat_tune_status)
+        cdl.addWidget(self.cat_tune_status)
         self.cat_sync_status=label("CAT SYNC · previsto — · confirmado — · atraso —")
         self.cat_sync_status.setStyleSheet("font-size:11px;color:#a8d7e5")
-        op.addWidget(self.cat_sync_status)
+        cdl.addWidget(self.cat_sync_status)
+        op.addWidget(self.cat_details_box)
+        shown=bool(self.config.values.get("cat_details_visible",False))
+        self.cat_details_toggle.setChecked(shown)
+        self.cat_details_box.setVisible(shown)
+        self.cat_details_toggle.setText("Detalhes CAT ▾" if shown else "Detalhes CAT ▸")
+        self.cat_details_toggle.toggled.connect(self.toggle_cat_details)
         # v1.6.0: com o painel SDR aberto em telas baixas a aba rola em vez de espremer/sobrepor blocos.
         operation.setMinimumHeight(640)
         operation_scroll=QScrollArea();operation_scroll.setWidgetResizable(True)
@@ -765,10 +788,23 @@ class MainWindow(QMainWindow):
         catalog_layout.addWidget(self.catalog_note)
         root.addTab(catalog_page,"Satélites")
         config_page=QWidget();config_root=QVBoxLayout(config_page)
-        settings_scroll=QScrollArea(config_page);settings_scroll.setWidgetResizable(True)
-        settings_frame=QWidget();cfg=QVBoxLayout(settings_frame)
-        cfg.setContentsMargins(20,16,20,16)
-        settings_scroll.setWidget(settings_frame);config_root.addWidget(settings_scroll)
+        config_root.setContentsMargins(0,0,0,0)
+        # v1.7.0: Configurações em abas (Apresentação, Estação, Rádio, Rotor, Geral), cada uma com rolagem.
+        self.settings_tabs=QTabWidget()
+        config_root.addWidget(self.settings_tabs)
+        self.settings_pages={}
+        def settings_page(title):
+            scroll=QScrollArea();scroll.setWidgetResizable(True);scroll.setFrameShape(QScrollArea.NoFrame)
+            frame=QWidget();lay=QVBoxLayout(frame);lay.setContentsMargins(20,16,20,16)
+            scroll.setWidget(frame);self.settings_tabs.addTab(scroll,title)
+            self.settings_pages[title]=scroll
+            return lay
+        look_l=settings_page("Apresentação")
+        station_l=settings_page("Estação")
+        radio_l=settings_page("Rádio")
+        rotor_l=settings_page("Rotor")
+        cfg=settings_page("Geral")
+        self.build_presentation_settings(look_l)
         station_group,sg=group("ESTAÇÃO TERRENA")
         grid=QGridLayout();grid.setColumnStretch(1,1)
         self.callsign=QLineEdit();self.lat=QLineEdit();self.lon=QLineEdit()
@@ -816,7 +852,7 @@ class MainWindow(QMainWindow):
             "Grid Locator preenche o centro da quadrícula, não uma posição exata. "
             "A localização do navegador depende de autorização e suporte do sistema; "
             "nada será salvo nem enviado ao rádio sem clicar em Salvar estação."))
-        cfg.addWidget(station_group)
+        station_l.addWidget(station_group)
         profile_group,pg=group("PERFIL OPERACIONAL — MODOS E BANDAS")
         pg.addWidget(label("Modos selecionados determinam candidatos automáticos; as escolhas manuais permanecem salvas."))
         mode_row=QHBoxLayout();self.station_modes={}
@@ -829,7 +865,8 @@ class MainWindow(QMainWindow):
         pg.addLayout(band_row)
         profile_save=QPushButton("Salvar capacidades e recalcular")
         profile_save.clicked.connect(self.save_profile)
-        pg.addWidget(profile_save);cfg.addWidget(profile_group)
+        pg.addWidget(profile_save);station_l.addWidget(profile_group)
+        station_l.addStretch(1)
 
         radio_settings,rs=group("CONEXÃO CAT — RÁDIO")
         rr=QHBoxLayout()
@@ -856,11 +893,11 @@ class MainWindow(QMainWindow):
         rs.addWidget(catview)
         connect_btn=QPushButton("Conectar pela porta selecionada")
         connect_btn.clicked.connect(self.connect_from_settings)
-        rs.addWidget(connect_btn);cfg.addWidget(radio_settings)
+        rs.addWidget(connect_btn);radio_l.addWidget(radio_settings)
         track_settings,tsv=group("MAPA E TRAJETÓRIA")
         tsv.addLayout(trail_bar)
         tsv.addWidget(label("O mapa respeita as preferências salvas. Para marcar a estação, use Estação Terrena."))
-        cfg.addWidget(track_settings)
+        look_l.addWidget(track_settings)
 
         sel_group,ss=group("SATÉLITES VISÍVEIS NA PÁGINA PRINCIPAL")
         ss.addWidget(label("Auto sugere satélites por FM/SSB/CW e banda. A confirmação de funcionamento depende das fontes atuais."))
@@ -965,7 +1002,8 @@ class MainWindow(QMainWindow):
         ag.addWidget(label("Mínima variação para reprogramar CAT"),1,0);ag.addWidget(self.threshold,1,1)
         adv.addLayout(ag)
         adv.addWidget(label("Auto CAT acompanha o Doppler sempre, inclusive abaixo do horizonte, enquanto estiver habilitado e com CAT conectado. Requer SAT ON, efeméride recente e perfil crossband válido; nunca aciona PTT."))
-        cfg.addWidget(advanced)
+        radio_l.addWidget(advanced)
+        radio_l.addStretch(1)
         local_group,lg=group("IDIOMA E FORMATO DE FREQUÊNCIA")
         local_row=QHBoxLayout()
         local_row.addWidget(label("Idioma da aplicação"))
@@ -983,7 +1021,8 @@ class MainWindow(QMainWindow):
         self.freq_style_combo.currentIndexChanged.connect(self.change_frequency_style)
         local_row.addWidget(self.freq_style_combo,1)
         lg.addLayout(local_row)
-        cfg.addWidget(local_group)
+        look_l.addWidget(local_group)
+        look_l.addStretch(1)
         update_group, ug=group("ATUALIZAÇÕES DO APLICATIVO")
         self.update_minutes=QDoubleSpinBox();self.update_minutes.setRange(5,1440);self.update_minutes.setDecimals(0)
         self.update_minutes.setSuffix(' min')
@@ -991,7 +1030,15 @@ class MainWindow(QMainWindow):
         ug.addWidget(self.update_minutes)
         self.include_prerelease=QCheckBox("Incluir versões de testes / pré-lançamentos")
         ug.addWidget(self.include_prerelease)
-        ug.addWidget(label("Novas versões são indicadas somente na barra superior, sem pop-up ou changelog automático. Clicar em Nova versão inicia o download com SHA-256 e a instalação externa após a verificação. Configurações preservadas."))
+        self.auto_update_check=QCheckBox("Atualizar automaticamente, sem perguntar (recomendado)")
+        self.auto_update_check.setChecked(bool(self.config.values.get("auto_update",True)))
+        self.auto_update_check.setToolTip("Ao detectar versão nova em www.pt2vhf.com: baixa, confere SHA-256 e instala. "
+                                          "Adia durante passagem com CAT/SDR/rotor ativos ou transmissão.")
+        ug.addWidget(self.auto_update_check)
+        ug.addWidget(label("Ligado: a versão nova é baixada, verificada (SHA-256) e instalada sozinha, nunca no meio de uma "
+                           "passagem em operação, transmissão, gravação ou rastreamento do rotor. Desligado: aparece o aviso "
+                           "'Atualizar agora / Depois' e o botão de versão no topo. Linux/macOS: abre a página de download. "
+                           "Configurações preservadas."))
         self.save_update_btn=QPushButton("Salvar preferências de atualização")
         self.save_update_btn.clicked.connect(self.save_update_preferences)
         ug.addWidget(self.save_update_btn)
@@ -1000,6 +1047,7 @@ class MainWindow(QMainWindow):
         extras.addWidget(left)
         cfg.addWidget(extra_controls)
         cfg.addStretch(1)
+        self.build_rotor_settings(rotor_l)
         root.addTab(config_page,"Configurações")
         logs=QWidget();ll=QVBoxLayout(logs)
         self.log_view=QPlainTextEdit();self.log_view.setReadOnly(True)
@@ -1183,6 +1231,7 @@ class MainWindow(QMainWindow):
     def save_update_preferences(self):
         self.config.values['version_check_minutes']=int(self.update_minutes.value())
         self.config.values['include_prereleases']=self.include_prerelease.isChecked()
+        self.config.values['auto_update']=self.auto_update_check.isChecked()
         self.config.save()
         self.log('Preferências de atualizações salvas')
         # Saving preferences only refreshes the quiet top-menu indicator.
@@ -1206,7 +1255,7 @@ class MainWindow(QMainWindow):
             __version__,variant,kind,
             include_prereleases=bool(self.config.values.get('include_prereleases',True))))
 
-    def request_update(self,manual=False):
+    def request_update(self,manual=False,silent=False):
         if not self.update_distribution:
             QMessageBox.information(self,'Atualizações','O atualizador funciona apenas nos executáveis Windows instalável ou portátil. Compile ou instale uma versão para testar.')
             return
@@ -1227,13 +1276,77 @@ class MainWindow(QMainWindow):
             return
         # The version button click is authorization. No separate confirmation
         # or changelog popup; keep progress and SHA256 integrity checks.
-        self.update_dialog=QProgressDialog('Baixando e verificando atualização…','',0,100,self)
-        self.update_dialog.setCancelButton(None)
-        self.update_dialog.setAutoClose(False)
-        self.update_dialog.setMinimumDuration(0)
-        self.update_dialog.setValue(0)
+        # v1.7.0: no OTA automático (opção ligada por padrão) o download é discreto: progresso no botão do topo.
+        if not silent:
+            self.update_dialog=QProgressDialog('Baixando e verificando atualização…','',0,100,self)
+            self.update_dialog.setCancelButton(None)
+            self.update_dialog.setAutoClose(False)
+            self.update_dialog.setMinimumDuration(0)
+            self.update_dialog.setValue(0)
+        self._auto_update_running=bool(silent)
         self.version_btn.setText('Atualização em andamento…')
         self.background('update-download', lambda: download_update(u, lambda n,total:self.events.progress.emit(n,total)))
+
+    AUTO_UPDATE_RETRY_SECONDS = 6 * 3600
+
+    def operation_busy(self):
+        """Motivo para adiar o OTA automático, ou '' se o programa está livre (v1.7.0)."""
+        try:
+            if bool((self.radio.state.extras or {}).get("if",{}).get("tx")):
+                return "rádio transmitindo"
+            event=getattr(self,"next_candidate",None)
+            in_pass=bool(event and event.get("in_progress"))
+            if in_pass and self.radio.connected and self.cat_tracking_armed:
+                return "passagem em curso com Auto CAT"
+            if getattr(self,"rotor_tracking",False):
+                return "rotor rastreando"
+            rec=getattr(getattr(self,"sdr_panel",None),"receiver",None)
+            if rec is not None and rec.status.running and (in_pass or rec.status.recording):
+                return "SDR recebendo/gravando"
+            if QApplication.activeModalWidget() is not None:
+                return "janela de diálogo aberta"
+        except Exception:
+            return ""
+        return ""
+
+    def try_auto_update(self,data=None):
+        """OTA automático: baixa, confere SHA-256 e instala sem perguntar, fora de operação (v1.7.0)."""
+        data=data or self.available_update
+        if data is None or 'update-download' in self.pending_jobs or not self.config.values.get('auto_update',True):
+            return
+        failed=getattr(self,'_auto_update_failed',None) or {}
+        if failed.get('version')==data.version and time.time()-float(failed.get('at') or 0)<self.AUTO_UPDATE_RETRY_SECONDS:
+            return
+        busy=self.operation_busy()
+        if busy:
+            self.version_btn.setText(f'Nova versão {data.version} · instala ao ficar livre')
+            self.version_btn.setToolTip('Atualização automática adiada: '+busy)
+            if not getattr(self,'_auto_update_timer_armed',False):
+                self._auto_update_timer_armed=True
+                def retry():
+                    self._auto_update_timer_armed=False
+                    self.try_auto_update()
+                QTimer.singleShot(60_000,retry)
+            return
+        self.log(f'Atualização automática para {data.version} iniciada (www.pt2vhf.com)')
+        self.show_tray_message('PT2VHF Sat Tool',f'Atualizando para a versão {data.version}…')
+        self.request_update(manual=True,silent=True)
+
+    def show_tray_message(self,title,text):
+        try:
+            tray=getattr(self,'_tray',None)
+            if tray is None:
+                try:
+                    from PySide6.QtWidgets import QSystemTrayIcon
+                except ImportError:
+                    from PySide2.QtWidgets import QSystemTrayIcon
+                if not QSystemTrayIcon.isSystemTrayAvailable():
+                    return
+                self._tray=tray=QSystemTrayIcon(self.windowIcon(),self);tray.show()
+            if tray is not None:
+                tray.showMessage(title,text)
+        except Exception:
+            pass
 
     UPDATE_PROMPT_SNOOZE_SECONDS = 24 * 3600
 
@@ -1273,6 +1386,8 @@ class MainWindow(QMainWindow):
             self.log(f'Atualização {data.version} adiada por 24 h')
 
     def download_progress(self, current, total):
+        if getattr(self,'_auto_update_running',False) and total:
+            self.version_btn.setText(f'Atualizando para {getattr(self.available_update,"version","")}… {min(99,int(current*100/total))}%')
         if self.update_dialog:
             if total:
                 self.update_dialog.setMaximum(100)
@@ -1450,7 +1565,7 @@ class MainWindow(QMainWindow):
             "Confira a altitude e clique em Salvar estação.")
         self.log("Coordenadas do mapa preenchidas para revisão; estação salva permanece inalterada")
         self.cancel_station_map()
-        self.tabs.setCurrentIndex(2)
+        self.open_settings("Estação")
         self.lat.setFocus()
 
     def save_station(self):
@@ -1741,6 +1856,17 @@ class MainWindow(QMainWindow):
         try:
             ex=dict(getattr(st,"extras",{}) or {})
             swapped=not getattr(st,"main_downlink",True)
+            # v1.7.0: a orientação real lida (SA) manda — inclusive troca feita no painel do rádio.
+            if st.sat and getattr(st,"main_downlink",True)!=self.radio.main_downlink_expected \
+                    and "cat-swap" not in self.pending_jobs:
+                self.radio.main_downlink_expected=bool(st.main_downlink)
+                ident=str(self.sat_combo.currentData() or "")
+                if ident:
+                    self.config.values.setdefault("main_sub_swapped",{})[ident]=swapped
+                    self.config.save()
+                self.last_freqs=(None,None)
+                self.log("TS-2000: orientação "+("MAIN TX / SUB RX" if swapped else "MAIN RX / SUB TX")+
+                         " lida do rádio; display e Auto CAT acompanham")
             signal=st.signal_sub if swapped else st.signal_main
             # RM SWR do TS-2000 vem em 0–30 pontos do medidor; 1+pontos/10 é uma aproximação exibida como SWR.
             swr=(1+st.meter_value/10.0 if st.meter_type.upper().startswith("SWR") and st.meter_value is not None else None)
@@ -2285,6 +2411,68 @@ class MainWindow(QMainWindow):
             self.cat_tune_status.setText("CAT (somente RX) aguardando: "+str(exc))
             return False
 
+    def toggle_cat_details(self,shown):
+        self.cat_details_box.setVisible(bool(shown))
+        self.cat_details_toggle.setText("Detalhes CAT ▾" if shown else "Detalhes CAT ▸")
+        self.config.values["cat_details_visible"]=bool(shown)
+        self.config.save()
+
+    def open_settings(self,page="Rádio"):
+        """Abre Configurações direto na aba pedida (Apresentação, Estação, Rádio, Rotor, Geral)."""
+        self.tabs.setCurrentIndex(2)
+        widget=getattr(self,"settings_pages",{}).get(page)
+        if widget is not None:
+            self.settings_tabs.setCurrentWidget(widget)
+
+    def build_presentation_settings(self,layout):
+        """v1.7.0: aba Apresentação — tipo de display, fonte, cores e prévia ao vivo."""
+        from .lcd import LcdDisplay, MODELS, FONTS, THEMES
+        box,bv=group("DISPLAY DE RÁDIO")
+        grid=QGridLayout();grid.setColumnStretch(1,1)
+        self.display_model=QComboBox()
+        for code,name in MODELS.items():
+            self.display_model.addItem(name,code)
+        self.display_font=QComboBox()
+        for code,name in FONTS.items():
+            self.display_font.addItem(name,code)
+        self.display_theme=QComboBox()
+        for name in THEMES:
+            self.display_theme.addItem(name.capitalize(),name)
+        for row,(txt,widget) in enumerate((("Tipo de display",self.display_model),
+                                           ("Fonte (matriz de pontos)",self.display_font),
+                                           ("Cor",self.display_theme))):
+            grid.addWidget(label(txt),row,0);grid.addWidget(widget,row,1)
+        bv.addLayout(grid)
+        self.display_preview=LcdDisplay()
+        self.display_preview.setMinimumHeight(132)
+        self.display_preview.set_state(rx_hz=436_795_120,tx_hz=145_850_340,rx_mode="FM",tx_mode="FM",signal=18,
+                                       power_w=25,swr=1.2,sat_on=True,link="CAT",auto=True,doppler_hz=-6800,
+                                       visible=True,elevation=38,los_s=342)
+        bv.addWidget(label("Prévia (dados de exemplo):"))
+        bv.addWidget(self.display_preview)
+        bv.addWidget(label("A troca vale na hora, sem reiniciar. As teclas A/B e RX ONLY funcionam em todos os modelos."))
+        for combo,key,default in ((self.display_model,"display_model","matriz"),
+                                  (self.display_font,"display_font","normal"),
+                                  (self.display_theme,"lcd_theme","âmbar")):
+            idx=combo.findData(str(self.config.values.get(key,default)))
+            combo.setCurrentIndex(max(0,idx))
+            combo.currentIndexChanged.connect(self.change_display_settings)
+        layout.addWidget(box)
+        self.change_display_settings(save=False)
+
+    def change_display_settings(self,*_,save=True):
+        model=self.display_model.currentData() or "matriz"
+        font=self.display_font.currentData() or "normal"
+        theme=self.display_theme.currentData() or "âmbar"
+        self.display_font.setEnabled(model=="matriz")
+        self.display_theme.setEnabled(model!="digital")
+        for widget in (getattr(self,"lcd",None),getattr(self,"display_preview",None)):
+            if widget is not None:
+                widget.set_model(model);widget.set_font_style(font);widget.set_theme(theme)
+        if save:
+            self.config.values.update(display_model=model,display_font=font,lcd_theme=theme)
+            self.config.save()
+
     def toggle_rx_only(self):
         enabled=not bool(self.config.values.get("rx_only",False))
         self.config.values["rx_only"]=enabled
@@ -2311,12 +2499,20 @@ class MainWindow(QMainWindow):
             self.config.values["main_sub_confirmed"]=True
         if not self.radio.connected:
             swaps[ident]=target;self.config.save()
+            self.radio.main_downlink_expected=not target
             self.lcd.set_state(swapped=target)
+            self.cat_tune_status.setText("A/B: "+("MAIN TX / SUB RX" if target else "MAIN RX / SUB TX")+
+                                         " salvo para este satélite · aplicado ao conectar o TS-2000")
             self.log("MAIN↔SUB salvo para este satélite; será aplicado ao conectar o TS-2000")
             return
+        if "cat-swap" in self.pending_jobs:
+            self.cat_tune_status.setText("A/B: inversão MAIN↔SUB em andamento…")
+            return
+        if bool((self.radio.state.extras or {}).get("if",{}).get("tx")):
+            QMessageBox.information(self,"Inverter MAIN↔SUB","O rádio está transmitindo. Solte o PTT e clique A/B de novo.")
+            return
+        self.cat_tune_status.setText("A/B: pedindo ao TS-2000 "+("MAIN TX / SUB RX" if target else "MAIN RX / SUB TX")+"…")
         def task():
-            if (self.radio.state.extras or {}).get("if",{}) and self.radio.state.extras["if"].get("tx"):
-                raise RuntimeError("Rádio em transmissão: inversão adiada")
             return self.radio.set_orientation(main_downlink=not target),ident,target
         self.background("cat-swap",task)
 
@@ -2821,6 +3017,13 @@ class MainWindow(QMainWindow):
                  "name":self.mode_combo.currentText()}
         event=select_selected_satellite_pass(self.passes,selected,channel,now) if selected else None
         self.next_candidate=event
+        # v1.7.0: contagem da passagem no display (mesmo AOS/LOS da tabela de passagens).
+        if event is None:
+            self.lcd.set_state(los_s=None,aos_s=None)
+        elif event["in_progress"]:
+            self.lcd.set_state(los_s=(event["los"]-now).total_seconds(),aos_s=None)
+        else:
+            self.lcd.set_state(los_s=None,aos_s=(event["aos"]-now).total_seconds())
         self.next_select.setEnabled(event is not None)
         if event is None:
             self.next_event_label.setText("Sem passagem compatível para o satélite selecionado")
@@ -3059,9 +3262,17 @@ class MainWindow(QMainWindow):
             content=table.sizeHintForColumn(col) if table.rowCount() else 0
             need.append(max(content,fm.horizontalAdvance(title)+18,header.minimumSectionSize()))
         total=sum(need)
+        # v1.7.0: a tabela nunca rola na horizontal; a largura mínima do bloco é a soma das colunas e,
+        # se faltar espaço, o mapa (à esquerda do divisor) é que cede largura.
+        table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        minimum=total+table.verticalScrollBar().sizeHint().width()+2*table.frameWidth()+4
+        if table.minimumWidth()!=minimum:
+            table.setMinimumWidth(minimum)
         extra=max(0,avail-total)
         widths=[w+extra*w//max(1,total) for w in need]
         widths[-1]+=avail-sum(widths) if extra else 0
+        if avail<total:   # transição antes do relayout: comprime proporcionalmente, sem rolagem
+            widths=[max(header.minimumSectionSize(),w*avail//total) for w in need]
         for col,w in enumerate(widths):
             header.resizeSection(col,int(w))
 
@@ -3347,6 +3558,10 @@ class MainWindow(QMainWindow):
             self.refresh_passes()
         self.check_selected_aos_alarm(now)
         self.check_pass_alerts(now)
+        try:
+            self.rotor_tick(now)
+        except Exception as exc:
+            report_exception("rotor_tick",exc)
         self.poll_station_map()
         if self.sat:
             try:
@@ -3354,9 +3569,11 @@ class MainWindow(QMainWindow):
                 pos=position(self.sat,station,ts=self.ts)
                 self.last_pos=pos
                 formats={'elevation':f"{pos['elevation']:.1f}°",'azimuth':f"{pos['azimuth']:.1f}°",
-                         'range_km':f"{pos['range_km']:.0f} km",'radial_m_s':f"{pos['radial_m_s']:+.1f} m/s",
+                         'range_km':f"{pos['range_km']:.0f} km",'radial_m_s':radial_kmh_text(pos['radial_m_s']),
                          'height_km':f"{pos['height_km']:.0f} km"}
                 for k,v in formats.items():self.orbit_metrics[k].setText(v)
+                self.orbit_metrics['radial_m_s'].setToolTip(
+                    f"{pos['radial_m_s']:+.1f} m/s · positivo = afastando, negativo = aproximando")
                 self.visibility.setText('EM PASSAGEM' if pos['visible'] else 'ABAIXO DO HORIZONTE')
                 self.visibility.setStyleSheet('font-size:18px;font-weight:800;color:'+('#5ae1a6' if pos['visible'] else '#e1c27c'))
                 self.preview_doppler(pos=pos,when=now)
@@ -3396,6 +3613,8 @@ class MainWindow(QMainWindow):
 
     def background_result(self,key,data):
         self.pending_jobs.discard(key)
+        if self.rotor_result(key,data):
+            return
         if key=="rig":
             self.sdr_panel.rig_result(data)
             return
@@ -3409,6 +3628,8 @@ class MainWindow(QMainWindow):
             self.lcd.set_state(swapped=target)
             self.last_freqs=(None,None)
             self.cat_selection_generation+=1
+            self.radio.main_downlink_expected=not target
+            self.cat_tune_status.setText("A/B: "+("MAIN TX / SUB RX" if target else "MAIN RX / SUB TX")+" confirmado pelo TS-2000")
             self.log("TS-2000: "+("MAIN TX / SUB RX" if target else "MAIN RX / SUB TX")+" confirmado")
             if self.cat_tracking_armed:
                 self.auto_tune_selected_satellite()
@@ -3580,6 +3801,9 @@ class MainWindow(QMainWindow):
                 self.version_btn.setStyleSheet('background:#ae6616;color:white;border:1px solid #eda847')
                 if start_download:
                     self.request_update(manual=True)
+                elif (self.config.values.get('auto_update',True) and self.update_distribution
+                      and self.update_distribution[1]!='Manual'):
+                    self.try_auto_update(data)
                 else:
                     self.maybe_prompt_update(data)
             else:
@@ -3625,6 +3849,8 @@ class MainWindow(QMainWindow):
     def background_error(self,key,message):
         self.pending_jobs.discard(key)
         self.log(f'Falha {key}: {message}')
+        if self.rotor_failed(key,message):
+            return
         if key in ("geo-ip","geo-gps"):
             self.location_status.setText(f"Localização não obtida: {message}. Coordenadas preservadas.")
             return
@@ -3635,6 +3861,10 @@ class MainWindow(QMainWindow):
                 self.frequency_progress_dialog.close()
                 self.frequency_progress_dialog=None
             self.catalog_progress.setText("SatNOGS: falha, cache anterior preservado")
+            return
+        if key=="cat-swap":
+            self.cat_tune_status.setText("A/B não aplicado: "+message[:200])
+            QMessageBox.warning(self,"Inverter MAIN↔SUB",message)
             return
         if key=="cat-connect":
             self.cat_connecting=False
@@ -3747,7 +3977,13 @@ class MainWindow(QMainWindow):
             if self.update_dialog:
                 self.update_dialog.close()
                 self.update_dialog=None
-            if key=='update-download' or self.manual_update_requested:
+            if key=='update-download' and getattr(self,'_auto_update_running',False):
+                # v1.7.0: falha no OTA automático não repete em laço (nova tentativa em 6 h) nem bloqueia o uso.
+                self._auto_update_running=False
+                self._auto_update_failed={'version':getattr(self.available_update,'version',''),'at':time.time()}
+                self.version_btn.setText('Atualização automática falhou · clique para tentar')
+                self.log('Atualização automática falhou: '+message)
+            elif key=='update-download' or self.manual_update_requested:
                 QMessageBox.warning(self,'Falha de atualização',message)
             self.manual_update_requested = False
         if key=='passes' and self._passes_refresh_again:
@@ -4025,6 +4261,7 @@ class MainWindow(QMainWindow):
             'orbit':orbit,
         })
     def closeEvent(self,event):
+        self.rotor_shutdown()
         try:
             if self.sdr_dock.isVisible() and not self.sdr_dock.isFloating():
                 self.config.values["sdr_dock_height"]=int(self.sdr_dock.height())

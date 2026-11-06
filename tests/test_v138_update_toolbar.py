@@ -21,7 +21,7 @@ def test_new_version_only_shows_in_top_toolbar():
 
 def test_version_click_starts_download_and_keeps_checksum_verification():
     app=(ROOT/"sat_tool"/"app.py").read_text(encoding="utf-8")
-    click=app.split("    def request_update(self,manual=False):",1)[1].split("    def download_progress(",1)[0]
+    click=app.split("    def request_update(self,manual=False,silent=False):",1)[1].split("    def download_progress(",1)[0]
     assert "QMessageBox.question" not in click
     assert "u.body" not in click
     assert "self.background('update-download'," in click

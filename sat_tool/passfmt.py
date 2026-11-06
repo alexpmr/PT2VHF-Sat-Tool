@@ -36,3 +36,11 @@ def full_tooltip(moment: datetime | None) -> str:
     if moment is None:
         return ""
     return f"{moment.astimezone():%d/%m/%Y %H:%M:%S} local · {moment:%H:%M:%S} UTC"
+
+
+def radial_kmh_text(radial_m_s: float, lang: str = "pt") -> str:
+    """v1.7.0: velocidade radial em km/h com sinal (+ afastando / − aproximando) e milhar do idioma."""
+    kmh = float(radial_m_s) * 3.6
+    sep = "," if lang in ("en", "zh") else "."
+    sign = "+" if kmh > 0.5 else ("−" if kmh < -0.5 else "")
+    return f"{sign}{abs(kmh):,.0f}".replace(",", sep) + " km/h"

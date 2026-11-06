@@ -14,7 +14,7 @@ DEFAULTS = {
     "sdr_filters": {}, "wf_rows_per_s": 20, "wf_average": 0, "wf_height": 90, "detached_geometry": {}, "aprs_on_map": True, "sdr_autostart": True, "sdr_dock_visible": False,
     "sdr_dock_height": 200, "sdr_dock_floating": False, "right_splitter_sizes": None,
     "pass_window_hours": 36, "pass_alerts": [],
-    "rx_only": False, "main_sub_swapped": {}, "main_sub_confirmed": False, "lcd_theme": "âmbar",
+    "rx_only": False, "main_sub_swapped": {}, "main_sub_confirmed": False, "lcd_theme": "âmbar", "display_model": "matriz", "display_font": "normal", "cat_details_visible": False, "auto_update": True,
     "kiss_enabled": False, "kiss_host": "127.0.0.1:8100", "satnogs_upload": False,
     "callsign": "PT2VHF", "lat": "", "lon": "", "altitude_m": 0,
     "min_elevation": 10, "port": "", "baud": 9600, "stopbits": 1,
