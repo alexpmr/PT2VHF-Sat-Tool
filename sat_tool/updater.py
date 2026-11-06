@@ -214,8 +214,29 @@ def safe_extract_portable(zip_path: Path) -> Path:
     return output
 
 
+def update_script_args(helper: Path, *, pid: int, package: Path, destination: Path, exe: Path,
+                       portable: bool, version: str = '') -> list:
+    """Linha de comando do apply-update.ps1 (v1.6.0: inclui a versão para o relatório final)."""
+    return [str(Path(os.environ.get('SYSTEMROOT', r'C:\Windows')) / 'System32' / 'WindowsPowerShell' / 'v1.0' / 'powershell.exe'),
+            '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', str(helper),
+            '-WaitPid', str(pid), '-Package', str(package), '-Destination', str(destination),
+            '-Executable', str(exe), '-Mode', 'Portable' if portable else 'Setup', '-Version', str(version)]
+
+
+def read_update_result(temp_dir: Optional[Path] = None) -> Optional[tuple]:
+    """Resultado da última atualização externa (status, versão, detalhe) e remove o arquivo."""
+    path = Path(temp_dir or tempfile.gettempdir()) / 'PT2VHF-Sat-Tool-update-result.txt'
+    try:
+        lines = path.read_text(encoding='utf-8-sig').splitlines()
+        path.unlink()
+    except OSError:
+        return None
+    lines += ['', '', '']
+    return lines[0].strip(), lines[1].strip(), lines[2].strip()
+
+
 def launch_staged_update(package: Path, *, portable: bool, script_path: Path,
-                         exe_path: Optional[Path] = None):
+                         exe_path: Optional[Path] = None, version: str = ''):
     """Launch an external PowerShell helper. App must exit immediately afterward."""
     if sys.platform != 'win32' or not getattr(sys, 'frozen', False):
         raise RuntimeError('Atualização local só é permitida nos EXEs Windows')
@@ -229,8 +250,13 @@ def launch_staged_update(package: Path, *, portable: bool, script_path: Path,
     shutil.copy2(script_path, helper)
     if not script_path.is_file():
         raise FileNotFoundError('Atualizador externo não incluído no pacote')
-    args = [str(Path(os.environ.get('SYSTEMROOT', r'C:\Windows')) / 'System32' / 'WindowsPowerShell' / 'v1.0' / 'powershell.exe'),
-            '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', str(helper),
-            '-WaitPid', str(os.getpid()), '-Package', str(candidate), '-Destination', str(destination),
-            '-Executable', str(exe), '-Mode', 'Portable' if portable else 'Setup']
-    subprocess.Popen(args, close_fds=True, creationflags=getattr(subprocess, 'CREATE_NEW_PROCESS_GROUP', 0))
+    args = update_script_args(helper, pid=os.getpid(), package=candidate, destination=destination, exe=exe,
+                              portable=portable, version=version)
+    # Processo independente: continua vivo depois que o app (e seus filhos) encerram.
+    flags = getattr(subprocess, 'CREATE_NEW_PROCESS_GROUP', 0) | getattr(subprocess, 'DETACHED_PROCESS', 0) \
+        | getattr(subprocess, 'CREATE_BREAKAWAY_FROM_JOB', 0)
+    try:
+        subprocess.Popen(args, close_fds=True, creationflags=flags)
+    except OSError:
+        # Alguns ambientes proíbem sair do job: tenta sem CREATE_BREAKAWAY_FROM_JOB.
+        subprocess.Popen(args, close_fds=True, creationflags=flags & ~getattr(subprocess, 'CREATE_BREAKAWAY_FROM_JOB', 0))

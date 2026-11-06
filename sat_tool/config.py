@@ -10,8 +10,11 @@ DEFAULTS = {
     "ft817_port": "", "ft817_baud": 9600, "rigctld_host": "127.0.0.1:4532",
     "rtl_tcp": "", "sdr_ppm": 0, "sdr_bias_tee": False, "sdr_gain_db": None,
     "sdr_audio_device": "", "sdr_record": False, "sdr_record_iq": False,
-    "sdr_volume": 0.8, "sdr_squelch_db": -120, "sdr_autostart": True, "sdr_dock_visible": False,
-    "pass_window_hours": 36,
+    "sdr_volume": 0.8, "sdr_squelch_db": -120, "sdr_squelch_pct": 0, "sdr_user_stopped": False,
+    "sdr_filters": {}, "wf_rows_per_s": 20, "wf_average": 0, "wf_height": 90, "detached_geometry": {}, "aprs_on_map": True, "sdr_autostart": True, "sdr_dock_visible": False,
+    "sdr_dock_height": 200, "sdr_dock_floating": False, "right_splitter_sizes": None,
+    "pass_window_hours": 36, "pass_alerts": [],
+    "rx_only": False, "main_sub_swapped": {}, "main_sub_confirmed": False, "lcd_theme": "âmbar",
     "kiss_enabled": False, "kiss_host": "127.0.0.1:8100", "satnogs_upload": False,
     "callsign": "PT2VHF", "lat": "", "lon": "", "altitude_m": 0,
     "min_elevation": 10, "port": "", "baud": 9600, "stopbits": 1,
@@ -38,7 +41,7 @@ DEFAULTS = {
     "web_enabled": False, "web_allow_lan": False, "web_port": 8094,
     "language": "pt-BR", "frequency_style": "radio10",
     "gps_port": "", "gps_baud": 9600,
-    "trail_period": "2 h", "trail_direction": "Futuro", "trail_custom_hours": 3.0,
+    "trail_period": "2 h", "trail_direction": "Ambos", "trail_ambos_v160_migrated": True, "trail_custom_hours": 3.0,
 }
 
 
@@ -73,6 +76,12 @@ class Config:
                 if self.values["tune_threshold_hz"] == 20:
                     self.values["tune_threshold_hz"] = 1
                 self.values["cat_live_v137_migrated"] = True
+                self.save()
+            # v1.6.0: o padrão antigo "Futuro" escondia a trajetória passada; passa a "Ambos" uma única vez.
+            if not data.get("trail_ambos_v160_migrated", False):
+                if self.values.get("trail_direction") == "Futuro":
+                    self.values["trail_direction"] = "Ambos"
+                self.values["trail_ambos_v160_migrated"] = True
                 self.save()
             # v1.3.16: soma os satélites padrão à seleção existente uma única vez,
             # sem desmarcar nada; desmarcar depois não é revertido.

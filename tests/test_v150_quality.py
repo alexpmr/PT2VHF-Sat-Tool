@@ -51,7 +51,7 @@ def test_weekend_evening_fm_crowding_and_stars_range():
     assert q(s, local_start=sat_evening).score < q(s).score
     for case in (synthetic(5, 1, 3000), synthetic(89, 15, 400)):
         assert 1 <= q(case).stars <= 5
-    assert q(synthetic(89, 15, 400)).label == "★★★★★"
+    assert q(synthetic(89, 15, 400)).label == "★★★★★" and "☆" not in q(synthetic(30, 6, 900)).label
 
 
 def test_shadow_geometry():

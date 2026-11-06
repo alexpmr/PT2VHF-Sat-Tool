@@ -4,16 +4,16 @@
 
 ## Downloads — Windows, Linux e macOS
 
-**PT2VHF Sat Tool v1.5.0 — Windows 10/11 x64, Linux x64 e macOS Apple Silicon**.
+**PT2VHF Sat Tool v1.6.0 — Windows 10/11 x64, Linux x64 e macOS Apple Silicon**.
 
 **Novo site oficial: [www.PT2VHF.com](https://www.pt2vhf.com/sat)** — downloads (Setup e Portátil), novas versões e somas SHA-256 ficam no site. A partir da v1.3.14 o atualizador consulta exclusivamente `https://www.pt2vhf.com/update.php?product=sat`.
 
 | Edição | Download direto |
 | --- | --- |
-| **Instalável x64** | [Setup (.exe)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.5.0-Win11-x64-Setup.exe) |
-| **Portátil x64** | [Portable (.exe)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.5.0-Win11-x64-Portable.exe) |
-| **Linux x64** | [Pacote (.tar.gz)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.5.0-Linux-x64.tar.gz) |
-| **macOS ARM64** | [Imagem (.dmg)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.5.0-macOS-arm64.dmg) |
+| **Instalável x64** | [Setup (.exe)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.6.0-Win11-x64-Setup.exe) |
+| **Portátil x64** | [Portable (.exe)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.6.0-Win11-x64-Portable.exe) |
+| **Linux x64** | [Pacote (.tar.gz)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.6.0-Linux-x64.tar.gz) |
+| **macOS ARM64** | [Imagem (.dmg)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.6.0-macOS-arm64.dmg) |
 
 O sufixo `Win11-x64` é mantido para compatibilidade com o atualizador e também atende ao Windows 10 1809+.
 
@@ -28,7 +28,15 @@ O sufixo `Win11-x64` é mantido para compatibilidade com o atualizador e também
 3. O acesso local usa `http://127.0.0.1:8094/`. Para outros dispositivos da mesma LAN, marque **Permitir outros dispositivos da rede local (LAN)** e use **Copiar endereço**; a URL inclui uma chave temporária e a primeira visita cria um cookie de sessão.
 4. Se outro computador/celular não alcançar a página, confira o IPv4 do computador e libere a porta TCP de entrada **apenas na rede privada** no firewall local. Não configure redirecionamento de porta no roteador.
 
-**Escopo do painel Web v1.5.0:** consulta em tempo real ao satélite, frequências previstas, CAT, telemetria, mapa vetorial offline e passagens. **Somente leitura:** o navegador não muda satélite/configurações nem executa comandos CAT/PTT. O desktop deve permanecer aberto. O HTTP na LAN não é criptografado; não divulgue a URL fora da rede.
+**Escopo do painel Web v1.6.0:** consulta em tempo real ao satélite, frequências previstas, CAT, telemetria, mapa vetorial offline e passagens. **Somente leitura:** o navegador não muda satélite/configurações nem executa comandos CAT/PTT. O desktop deve permanecer aberto. O HTTP na LAN não é criptografado; não divulgue a URL fora da rede.
+## Novidades v1.6.0 — display de rádio, OTA corrigido, passagens e SDR
+
+- **Atualização automática (P0) corrigida:** o programa encerra também os processos do mapa (QtWebEngine), o instalador detecta o app aberto e fecha o que for preciso, o resultado aparece na próxima abertura; uma única contagem de download por atualização.
+- **Display LCD âmbar** de matriz de pontos (estilo FT-891) no lugar dos cartões: RX grande, TX menor, barra S-meter (CAT/SDR) ou elevação, Doppler, SAT, AUTO e parâmetros lidos do TS-2000 (potência, SWR, PRE/ATT, NB/NR, TX). Tecla **A/B** inverte MAIN↔SUB (SA P3, só com SAT ON e sem PTT) e tecla **RX ONLY** opera só em recepção, por CAT (inclusive com SAT OFF) ou SDR.
+- **Passagens:** AOS como "Hoje/Amanhã/DD/MM/AA HH:MM", TCA/LOS só com horário, larguras distribuídas, estrelas só cheias e **avisos 30 min/30 s** pelo clique direito (qualquer satélite, salvos entre sessões); divisor arrastável entre Passagens e Telemetria; aba rola em telas baixas.
+- **Mapa:** trajetória passada volta a aparecer (padrão "Ambos"), linhas mais suaves (30 s) e sem falhas na linha de data.
+- **SDR:** não religa depois de desligado; botões "Painel SDR" e "Receptor: LIGADO/DESLIGADO"; squelch por ruído (FM) e SNR (SSB/CW) em %; áudio contínuo (jitter buffer com compensação de deriva, decodificação em thread própria); filtro, velocidade, média e altura do waterfall; waterfall e telemetria em **janelas destacáveis**; pacotes **APRS decodificados** (posição, distância/azimute, Maidenhead, mensagens, telemetria, Mic-E) com detalhe, filtros, exportação JSON e estações no mapa.
+
 ## Novidades v1.5.0 — RTL-SDR plug and play, CAT automático e passagens com qualidade
 
 - **RTL-SDR reconhecido:** corrigida a listagem do dongle (erro "expected LP_c_ubyte… c_char_Array_256" que fazia o programa pedir o Zadig mesmo com driver instalado).

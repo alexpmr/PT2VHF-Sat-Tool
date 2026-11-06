@@ -8,6 +8,7 @@ fugir do pico de DC do RTL-SDR.
 """
 from __future__ import annotations
 
+import queue
 import sys
 import threading
 import time
@@ -188,6 +189,8 @@ class ReceiverStatus:
     frames: int = 0
     error: str = ""
     recording: str = ""
+    overruns: int = 0
+    quality: float = 0.0
 
 
 class PassRecorder:
@@ -235,6 +238,9 @@ class SdrReceiver:
         self._thread: Optional[threading.Thread] = None
         self._recorder: Optional[PassRecorder] = None
         self._last_spec = 0.0
+        # v1.6.0: decodificação AFSK fora da thread de leitura (não atrasa o RTL-SDR → áudio contínuo).
+        self._dec_q: "queue.Queue" = queue.Queue(maxsize=100)
+        self._dec_thread: Optional[threading.Thread] = None
 
     # --- controle (GUI) -------------------------------------------------
     def start(self):
@@ -243,6 +249,8 @@ class SdrReceiver:
         self._stop.clear()
         self._thread = threading.Thread(target=self._run, name="sdr-rx", daemon=True)
         self._thread.start()
+        self._dec_thread = threading.Thread(target=self._decode_loop, name="sdr-decode", daemon=True)
+        self._dec_thread.start()
 
     def stop(self):
         self._stop.set()
@@ -255,14 +263,20 @@ class SdrReceiver:
         with self._lock:
             self._target = int(downlink_hz)
 
-    def set_mode(self, mode: str):
+    def set_mode(self, mode: str, width_hz: Optional[float] = None):
         with self._lock:
             mode = (mode or "FM").upper()
-            if mode != self.demod.mode:
+            if mode != self.demod.mode or width_hz != self.demod.width_hz:
                 offset = self.demod.offset_hz
-                self.demod.set_mode(mode)
+                self.demod.set_mode(mode, width_hz)
                 self.demod.offset_hz = offset
             self.status.mode = self.demod.mode
+
+    def set_squelch_pct(self, pct: float):
+        self.demod.squelch_pct = float(pct)
+
+    def set_spectrum_rate(self, rows_per_s: float):
+        self.spectrum_period = 1.0 / max(1.0, float(rows_per_s))
 
     def set_decoder(self, pipeline: str):
         with self._lock:
@@ -286,6 +300,16 @@ class SdrReceiver:
                 self._recorder.close()
                 self._recorder = None
                 self.status.recording = ""
+
+    def _decode_loop(self):
+        while not self._stop.is_set():
+            try:
+                afsk, audio = self._dec_q.get(timeout=0.5)
+            except queue.Empty:
+                continue
+            for frame in afsk.process(audio):
+                self.status.frames += 1
+                self.on_frame(frame, "SDR AFSK1200")
 
     # --- thread ---------------------------------------------------------
     def _run(self):
@@ -321,13 +345,15 @@ class SdrReceiver:
             recorder = self._recorder
         st = self.status
         st.center_hz, st.channel_hz, st.level_db = self._center, target, self.demod.level_db
+        st.quality = self.demod.quality
         self.on_audio(audio)
         if recorder is not None:
             recorder.write(audio, self.demod.last_channel)
         if afsk is not None:
-            for frame in afsk.process(audio):
-                st.frames += 1
-                self.on_frame(frame, "SDR AFSK1200")
+            try:
+                self._dec_q.put_nowait((afsk, audio))
+            except queue.Full:
+                st.overruns += 1
         now = time.monotonic()
         if now - self._last_spec >= self.spectrum_period:
             self._last_spec = now

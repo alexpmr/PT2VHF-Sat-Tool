@@ -78,14 +78,25 @@ class Demodulator:
         self._last = np.complex64(1)
         self._bfo_phase = 0.0
         self.last_channel = np.zeros(0, dtype=np.complex64)
+        # v1.6.0: squelch por qualidade do sinal (0–100): FM por ruído do discriminador,
+        # SSB/CW por SNR em relação ao piso estimado; histerese, retenção e rampa sem cliques.
+        self.squelch_pct = 0.0
+        self.quality = 0.0
+        self._floor_db = None
+        self._open = True
+        self._gain = 1.0
+        self._hold_until = 0
+        self._samples = 0
+        self.width_hz = None
         self.set_mode(mode)
 
-    def set_mode(self, mode: str):
+    def set_mode(self, mode: str, width_hz: float | None = None):
         mode = (mode or "FM").upper()
         self.mode = mode if mode in CHANNEL_WIDTH else "FM"
-        width = CHANNEL_WIDTH[self.mode]
+        self.width_hz = width_hz
+        width = float(width_hz) if width_hz else CHANNEL_WIDTH[self.mode]
         cutoff = width / 2 if self.mode in ("FM", "CW") else width / 2
-        self.stage2 = FirDecimator(lowpass_taps(max(cutoff, 600.0) if self.mode != "CW" else 300.0,
+        self.stage2 = FirDecimator(lowpass_taps(max(cutoff, 600.0) if self.mode != "CW" else max(100.0, width / 2),
                                                 self.mid_rate, 129), self.stage2_factor)
         # SSB: canal complexo 0..2,8 kHz (USB) ou -2,8..0 (LSB) via filtro deslocado.
         if self.mode in ("USB", "LSB"):
@@ -118,9 +129,16 @@ class Demodulator:
             prev = np.concatenate([[self._last], x[:-1]])
             self._last = x[-1]
             audio = np.angle(x * np.conj(prev)).astype(np.float32) / np.pi
+            raw = audio
             data = np.concatenate([self._audio_hist, audio])
             audio = np.convolve(data, self._audio_lp, mode="valid").astype(np.float32)
             self._audio_hist = data[-62:]
+            # Ruído do discriminador: energia acima da voz (bruto − passa-baixa 3,5 kHz), como num rádio FM.
+            delay = len(self._audio_lp) // 2
+            hf = raw[:len(raw) - delay] - audio[delay:] if len(raw) > delay else raw
+            noise = float(np.sqrt(np.mean(hf ** 2))) if len(hf) else 1.0
+            self.noise_hf = noise
+            self.quality = float(np.clip((0.16 - noise) / 0.13 * 100.0, 0, 100))
             audio *= 2.0
         else:
             if self.sideband is not None:
@@ -133,12 +151,37 @@ class Demodulator:
                 ph = self._bfo_phase + step * np.arange(len(x))
                 self._bfo_phase = float((self._bfo_phase + step * len(x)) % (2 * np.pi))
                 audio = (x * np.exp(1j * ph)).real.astype(np.float32)
+            # SNR do canal sobre o piso de ruído (mínimo móvel que sobe devagar).
+            if self._floor_db is None or self.level_db < self._floor_db:
+                self._floor_db = self.level_db
+            else:
+                self._floor_db += 0.02
+            self.quality = float(np.clip((self.level_db - self._floor_db) / 20.0 * 100.0, 0, 100))
             peak = float(np.max(np.abs(audio))) + 1e-12
             self._agc = max(peak, self._agc * 0.9)  # AGC de ataque rápido, queda lenta
             audio = audio / self._agc * 0.5
         if self.level_db < self.squelch_db:
             audio = np.zeros_like(audio)
+        audio = self._apply_squelch(audio)
         return np.clip(audio * self.volume, -1.0, 1.0).astype(np.float32)
+
+    def _apply_squelch(self, audio: np.ndarray) -> np.ndarray:
+        n = len(audio)
+        self._samples += n
+        if self.squelch_pct <= 0:
+            self._open = True
+        elif self.quality >= self.squelch_pct:
+            self._open = True
+            self._hold_until = self._samples + int(0.3 * AUDIO_RATE)   # segura 300 ms
+        elif self.quality < self.squelch_pct - 5 and self._samples > self._hold_until:
+            self._open = False
+        target = 1.0 if self._open else 0.0
+        if target == self._gain:
+            return audio if target else np.zeros_like(audio)
+        ramp = np.clip(self._gain + (target - self._gain) * np.arange(1, n + 1) / max(1, int(0.01 * AUDIO_RATE)),
+                       0.0, 1.0).astype(np.float32)
+        self._gain = float(ramp[-1])
+        return audio * ramp
 
 
 def power_spectrum_db(iq: np.ndarray, fft_size: int = 4096) -> np.ndarray:

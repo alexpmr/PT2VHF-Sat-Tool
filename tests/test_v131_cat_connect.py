@@ -20,7 +20,7 @@ def test_auto_cat_trigger_paths_and_independent_status():
     assert "self.cat_tune_status=label(" in text
     assert "self.cat_tune_status.setText(" in text
     assert 'if not force and not self.config.values.get("cat_auto_select",False)' in text
-    assert 'if not self.radio.state.sat:' in text
+    assert 'if not self.radio.state.sat and not self.config.values.get("rx_only",False):' in text  # v1.6.0 Somente RX
     assert 'if "cat-autotune" in self.pending_jobs:' in text
 
 
@@ -40,7 +40,7 @@ class SerialCAT:
     def write(self,raw):
         cmd=raw.decode("ascii");self.writes.append(cmd)
         if cmd=="ID;":self.answer=b"ID019;"
-        elif cmd=="SA;":self.answer=("SA1010000;" if self.sat else "SA0010000;").encode()
+        elif cmd=="SA;":self.answer=(f"SA10{getattr(self,'orientation','1')}0000;" if self.sat else "SA0010000;").encode()
         elif cmd=="FA;":self.answer=f"FA{self.down:011d};".encode()
         elif cmd=="FB;":self.answer=f"FB{self.up:011d};".encode()
         elif cmd=="FC;":self.answer=f"FC{self.sub_vfo:011d};".encode()
@@ -53,6 +53,17 @@ class SerialCAT:
         elif cmd=="SM1;":self.answer=b"SM10004;"
         elif cmd=="PC;":self.answer=b"PC025;"
         elif cmd=="RM;":self.answer=b"RM30011;"
+        # v1.6.0: leituras extras do display e orientação MAIN/SUB (SA P3)
+        elif cmd=="AG0;":self.answer=b"AG0128;"
+        elif cmd=="RG;":self.answer=b"RG255;"
+        elif cmd=="SQ0;":self.answer=b"SQ0010;"
+        elif cmd=="PA;":self.answer=b"PA10;"
+        elif cmd=="RA;":self.answer=b"RA0000;"
+        elif cmd=="NB;":self.answer=b"NB0;"
+        elif cmd=="NR;":self.answer=b"NR1;"
+        elif cmd=="IF;":self.answer=b"IF00435847500     +00000000000000000000000;"
+        elif cmd.startswith("SA") and len(cmd)==10:
+            self.sat=cmd[2]=="1";self.orientation=cmd[4];self.answer=b""
         else:raise AssertionError("Unexpected CAT command: "+cmd)
     def read_until(self,delimiter):return self.answer
 

@@ -65,7 +65,25 @@
 - [x] Popup do satélite (mapa, seletor, catálogo) com cache offline; popup de boas-vindas com convite e botão Fechar.
 - [ ] Validar com RTL-SDR real (inclusive V4) no Windows 10/11 e Ubuntu; FT-817 real na varredura. (TS-2000: CAT homologado em 06/11/2026.)
 
+## v1.6.0 — OTA corrigido, display LCD, passagens e SDR (06/11/2026)
+
+- [x] **P0 OTA não conclui:** app encerra o mapa (QtWebEngine) e sai com `os._exit`; `apply-update.ps1` espera a árvore de processos e encerra só `QtWebEngineProcess.exe` da pasta do Sat Tool; Setup `/SILENT /SP- /CLOSEAPPLICATIONS /LOG` com `/DIR=`; `AppMutex` + `CloseApplicationsFilter`; resultado exibido no próximo início; relançamento sempre.
+- [x] Contagem OTA: um único GET por atualização via `/downloads/sat-tool/` → `download.php` (+1); testes no app.
+- [x] Passagens: AOS "Hoje/Amanhã/DD/MM/AA HH:MM", TCA/LOS só horário com "(+1)", tooltips local/UTC; larguras distribuídas; só estrelas cheias amarelas.
+- [x] Clique direito: avisos 30 min / 30 s / ambos / remover, qualquer satélite, sino na linha, salvos no settings.json, removidos após LOS.
+- [x] Display LCD âmbar de matriz de pontos (temas âmbar/verde/azul) no lugar dos cartões; parâmetros CAT (S-meter, potência, SWR, PRE/ATT, NB/NR, TX); tecla A/B (MAIN↔SUB, SA P3 com readback); modo Somente RX (CAT com SAT ON/OFF ou SDR).
+- [x] Mapa: trajetória passada visível (padrão "Ambos" com migração única), linhas com passo de 30 s e corte na linha de data.
+- [x] Layout: divisor Passagens/Telemetria persistente; altura/flutuação do painel SDR lembradas; aba Operação rola em telas baixas.
+- [x] SDR não religa sozinho após desligar; botões "Painel SDR" e "Receptor: LIGADO/DESLIGADO".
+- [x] SDR: squelch por qualidade (FM ruído / SSB-CW SNR) com histerese; áudio contínuo (jitter buffer, decodificação em thread); filtro, velocidade, média, altura e arrasto de filtro no waterfall.
+- [x] Telemetria e waterfall destacáveis; APRS decodificado (posição/Maidenhead/distância, mensagem, status, telemetria, clima, Mic-E), detalhe, filtros, exportação JSON, estações no mapa.
+- [ ] Homologar em campo: OTA 1.5.0→1.6.0 no Windows (Setup e Portátil), RTL-SDR real, A/B e Somente RX no TS-2000 físico.
+
 ## Pendentes
+
+- (nenhum item novo em aberto)
+
+## Detalhamento dos itens resolvidos na v1.6.0 (e anteriores)
 
 - **Clique direito numa passagem: agendar avisos (30 min e 30 s antes)** (registrado em 06/11/2026)
   - Menu de contexto na linha da tabela de passagens: "Avisar 30 minutos antes", "Avisar 30 segundos antes",

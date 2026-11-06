@@ -29,7 +29,7 @@ class PassQuality:
 
     @property
     def label(self) -> str:
-        return "★" * self.stars + "☆" * (5 - self.stars)
+        return "★" * self.stars  # v1.6.0: só estrelas cheias; quanto melhor, mais estrelas
 
     @property
     def tooltip(self) -> str:

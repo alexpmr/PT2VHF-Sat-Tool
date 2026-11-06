@@ -65,6 +65,12 @@ def run_self_test(report_path: str, expected_qt: str = "") -> int:
         if sys.platform == "win32" and rtl_driver.wdi_simple_path() is None:
             raise FileNotFoundError("Instalador do driver WinUSB (wdi-simple.exe) ausente do pacote")
         result["checks"].append("rtl_plug_and_play")
+        # v1.6.0: display LCD, buffer de áudio, APRS (aprslib) e avisos agendados.
+        from sat_tool import alerts, aprs_info, audio_ring, lcd, passfmt  # noqa: F401
+        import aprslib  # noqa: F401
+        if not aprs_info.parse("PT2VHF>APRS:!1554.00S/04756.00W-x"):
+            raise RuntimeError("aprslib não interpretou o pacote de teste")
+        result["checks"].append("v160_modules")
         if QT_BINDING == "PySide6":
             from PySide6.QtMultimedia import QAudioSink  # noqa: F401
             result["checks"].append("qt_multimedia")
