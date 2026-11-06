@@ -81,6 +81,16 @@
 
 ## Pendentes
 
+- **Display LCD: tempo restante da passagem corrente** (registrado em 06/11/2026)
+  - Durante a passagem (satélite selecionado acima do horizonte), mostrar no display o **tempo restante até o LOS**,
+    atualizado a cada segundo, ex.: "LOS 342S" (abaixo de 10 min) ou "LOS 5:42" — mesma fonte de matriz de pontos,
+    na linha de indicadores (junto de VIS/EL), seguindo o mockup aprovado e a opção de fonte Normal/Negrito.
+  - Fora da passagem: mostrar a contagem até o próximo AOS ("AOS 12:30" / "AOS 1H05") ou nada, sem confundir
+    com o LOS; nos últimos 30 s, indicador invertido/piscando discreto.
+  - Usar o mesmo LOS da tabela de passagens (fonte única); recalcular ao trocar de satélite, estação ou TLE.
+  - Testes: contagem correta em passagem em curso, troca de satélite durante a passagem, transição LOS → próximo
+    AOS e relógio do sistema.
+
 - **Controle de rotor Yaesu G-5400B via interface ERC-M (DF9GR, Easy Rotor Control) pela USB** (registrado em 06/11/2026)
   - Equipamento do operador: **G-5400B** (az/el) + **ERC-M by DF9GR** (interface modular 2 eixos; DC 12–14 V,
     USB, RS232, LAN; cabo DB15 → mini-DIN para o controle externo do rotor). Fotos em 05/11/2026.
