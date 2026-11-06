@@ -67,6 +67,17 @@
 
 ## Pendentes
 
+- **Passagens e telemetria "encavaladas", sem como aumentar a altura dos blocos** (registrado em 06/11/2026, v1.5.0)
+  - Na coluna direita da aba Operação, "Passagens do satélite selecionado" e "Telemetria orbital" disputam a
+    altura (agravado pela barra Janela/Ordenar e pela coluna Qualidade da v1.5.0) e o painel SDR acoplável
+    reduz ainda mais; linhas e textos se sobrepõem e não há divisor para redimensionar.
+  - Colocar os dois blocos num **QSplitter vertical** com alça visível, altura mínima calculada pela fonte
+    (cabeçalho + ≥3 linhas de passagens; 5 linhas de telemetria) e proporção lembrada entre sessões.
+  - Barra Janela/Ordenar compacta (na linha do título) para não roubar altura; rolagem interna quando faltar espaço,
+    nunca sobreposição.
+  - Opção de recolher a telemetria (ou a lista) com um clique e de destacar a lista de passagens em janela própria.
+  - Validar com capturas em 1280×720, 1366×768 e 1920×1080, com e sem o painel SDR aberto, DPI 100–150 %.
+
 - **SDR: squelch sem efeito, áudio entrecortado; ajustes do waterfall** (registrado em 06/11/2026, v1.5.0)
   - **Squelch não funciona.** Hoje compara a potência média do canal (`level_db`, bloco de 0,1 s) com o
     controle de -120 a 0 dB. Em FM a potência quase não muda entre ruído e sinal (limitador), e a escala
