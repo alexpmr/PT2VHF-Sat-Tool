@@ -81,6 +81,14 @@
 
 ## Pendentes
 
+- **Telemetria orbital: velocidade radial em km/h** (registrado em 06/11/2026)
+  - Hoje o campo "Velocidade radial" é exibido em **m/s** (`'radial_m_s': f"{...:+.1f} m/s"`). Passar a mostrar em
+    **km/h** (×3,6), com sinal (+ afastando / − aproximando) e separador de milhar conforme o idioma,
+    ex.: "−24.480 km/h"; tooltip com o valor em m/s e a explicação do sinal.
+  - Apenas exibição: o cálculo Doppler continua usando `radial_m_s` internamente, sem alteração.
+  - Mesmo formato no painel Web/LAN e na exportação, mantendo a chave numérica original para compatibilidade.
+  - Testes: conversão e formatação (positivo, negativo, zero) e Doppler inalterado.
+
 - **Informações de CAT na parte inferior da aba Operação: ocultas por padrão** (registrado em 06/11/2026)
   - O bloco inferior ("RÁDIO REAL (CAT) · FA/FB/FC/MD", status do Auto CAT e botão "Diagnosticar comunicação
     CAT") fica **recolhido por padrão** para não poluir a tela; o display LCD e o botão CAT do topo continuam
