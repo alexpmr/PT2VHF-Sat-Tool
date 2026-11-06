@@ -67,6 +67,18 @@
 
 ## Pendentes
 
+- **Clique direito numa passagem: agendar avisos (30 min e 30 s antes)** (registrado em 06/11/2026)
+  - Menu de contexto na linha da tabela de passagens: "Avisar 30 minutos antes", "Avisar 30 segundos antes",
+    "Avisar nos dois" e "Remover avisos desta passagem" (antecedências editáveis no próprio menu/diálogo).
+  - Funciona para **qualquer satélite/passagem da lista**, não só o satélite selecionado, e com o programa minimizado.
+  - Aviso de 30 min: notificação discreta (popup não modal + bandeja do sistema) com satélite, AOS, Máx °,
+    duração, qualidade e botão "Selecionar satélite".
+  - Aviso de 30 s: reutiliza o popup de contagem regressiva com som do AOS (v1.3.18), sem roubar foco.
+  - Linha com aviso agendado ganha ícone de sino; avisos salvos em `settings.json` (sobrevivem a reiniciar)
+    e removidos automaticamente após o LOS; se a órbita for recalculada e o AOS mudar, o aviso acompanha a
+    nova previsão da mesma passagem.
+  - Testes: agendar/remover, disparo único por passagem, persistência após reiniciar, passagem já iniciada.
+
 - **Tabela de passagens: AOS como "hoje/amanhã/DD/MM/AA" + hora; TCA e LOS só com horário** (registrado em 06/11/2026)
   - AOS: "Hoje 16:32", "Amanhã 05:52" ou "DD/MM/AA HH:MM" para as demais datas (fuso local); TCA e LOS: só
     "HH:MM" (sem data repetida). Se a passagem cruzar a meia-noite, LOS mostra "HH:MM (+1)".
