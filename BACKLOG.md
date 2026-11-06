@@ -58,6 +58,15 @@
 
 ## Pendentes
 
+- **Janela da lista de passagens configurável** (registrado em 06/11/2026)
+  - Hoje fixa em 36 h (`core.passes(..., hours=36)`, título "PASSAGENS DO SATÉLITE SELECIONADO · 36 H",
+    log "próximas 36 h"). Tornar configurável: 6, 12, 24, 36, 48, 72 h ou personalizado (1–168 h).
+  - Controle no próprio painel de passagens (combo compacto no título) e em Configurações → Mapa e trajetória;
+    salvo em `settings.json` (`pass_window_hours`, padrão 36) e respeitado ao abrir.
+  - Título, log, painel Web e próxima passagem acompanham o valor ("PASSAGENS · 12 H").
+  - Recalcular em segundo plano ao mudar; manter limite de linhas e desempenho em janelas longas (72–168 h).
+  - Testes: valores-limite, persistência e título atualizado.
+
 - **Popup flutuante com informações do satélite ao passar o mouse** (registrado em 06/11/2026)
   - Onde: marcador do satélite no mapa (Operação), seletor "Satélite", tabela da aba Satélites e
     painel SDR/telemetria; aparece após ~400 ms parado e some ao sair, sem roubar foco nem clicar em nada.
