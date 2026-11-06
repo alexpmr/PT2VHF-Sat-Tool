@@ -58,6 +58,20 @@
 
 ## Pendentes
 
+- **CAT autodetectado: clicar em "CAT" varre as portas e conecta sozinho** (registrado em 06/11/2026)
+  - Botão CAT do topo (e "Conectar"): se não houver porta salva ou ela falhar, varrer todas as portas
+    seriais disponíveis (COM no Windows, /dev/ttyUSB*/ttyACM* no Linux, /dev/cu.* no macOS).
+  - Em cada porta, testar velocidades comuns (TS-2000: 57600, 38400, 19200, 9600, 4800; FT-817/818:
+    38400, 9600, 4800) e identificar o rádio só com comandos de leitura (TS-2000 `ID;` → `ID019;`;
+    FT-817 leitura de frequência/modo 0x03), com timeout curto, sem PTT e sem escrever nada.
+  - Ao encontrar, conectar, salvar porta/velocidade/modelo nas Configurações e mostrar
+    "TS-2000 encontrado em COM5 · 57600" (ou equivalente); próximas aberturas usam a porta salva primeiro.
+  - Pular portas ocupadas por outro programa e informar quais foram testadas e por que falharam;
+    varredura em segundo plano com progresso e botão Cancelar, sem travar a interface.
+  - Não interferir em portas de outros dispositivos (GPS, Arduino/ESP32 do rotor): só considerar sucesso
+    com resposta válida do protocolo do rádio; nada é enviado além dos comandos de identificação.
+  - Testes com portas seriais simuladas (rádio em porta/velocidade aleatória, porta ocupada, nenhum rádio).
+
 - **RTL-SDR plug and play: driver/permissões instalados pelo próprio programa** (registrado em 06/11/2026)
   - Objetivo: conectar o dongle e usar, sem Zadig, sem terminal e sem ler instruções.
   - **Windows:** embarcar a libwdi (`wdi-simple.exe`, LGPL, a mesma base do Zadig) no instalador e no portátil.
