@@ -67,6 +67,24 @@
 
 ## Pendentes
 
+- **Display LCD: parâmetros do rádio lidos via CAT (sinal, SWR, potência etc.)** (registrado em 06/11/2026; complementa o display âmbar)
+  - Mostrar no display, como no painel de um rádio, o que o TS-2000 informa por CAT — **somente leitura**,
+    sem alterar ajustes e sem PTT:
+    - **S-meter** MAIN e SUB (`SM0;`/`SM1;`) em barra segmentada com escala S1–S9/+20/+40/+60;
+    - em transmissão: **potência de saída / SWR / ALC / COMP** (`RM;` com o medidor selecionado, `PC;` ajuste
+      de potência), destacando SWR alto;
+    - estado TX/RX (`IF;`), SAT ON/OFF e TRACE, VFO/memória, modo por banda (`MD;`);
+    - ajustes úteis: AF/RF gain (`AG;`, `RG;`), squelch (`SQ;`), pré-amplificador (`PA;`), atenuador (`RA;`),
+      NB/NR, largura de filtro (`FW;`), IF shift, AGC, tom/CTCSS quando disponível.
+  - Atualização sem prejudicar o Auto CAT homologado: leituras extras em baixa prioridade e cadência menor
+    (ex.: S-meter 2–4 Hz, demais a cada 2–5 s), nunca intercaladas com as escritas FA/FB do Doppler;
+    sem leitura recente, o campo mostra "—" (não valor antigo).
+  - FT-817/818 e rigctld: mostrar o que cada protocolo oferecer (FT-817: S-meter em RX e
+    potência/SWR/ALC em TX pelos comandos de leitura de status; rigctld: `l STRENGTH`, `l SWR`,
+    `l RFPOWER`); SDR: nível do sinal do próprio SDR.
+  - Escolher no display quais indicadores aparecem (compacto × completo).
+  - Testes com rádio simulado respondendo cada comando e com falhas parciais; validação no TS-2000 físico.
+
 - **Display LCD: botão para inverter TX/RX (MAIN/SUB)** (registrado em 06/11/2026; complementa o item do display âmbar)
   - Botão no próprio display (estilo tecla "A/B" do FT-891) que troca os papéis: qual banda do TS-2000 recebe
     (MAIN/FA) e qual transmite (SUB/FB), e o que o display mostra em cada linha.
