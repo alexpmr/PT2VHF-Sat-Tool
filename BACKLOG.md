@@ -67,6 +67,28 @@
 
 ## Pendentes
 
+- **SDR: squelch sem efeito, áudio entrecortado; ajustes do waterfall** (registrado em 06/11/2026, v1.5.0)
+  - **Squelch não funciona.** Hoje compara a potência média do canal (`level_db`, bloco de 0,1 s) com o
+    controle de -120 a 0 dB. Em FM a potência quase não muda entre ruído e sinal (limitador), e a escala
+    não corresponde ao que o medidor mostra. Corrigir:
+    - FM: squelch por ruído (energia acima de ~5 kHz no áudio demodulado / SNR), como nos rádios;
+    - SSB/CW: squelch por SNR do canal em relação ao piso de ruído estimado no waterfall;
+    - controle em escala relativa (0–100 % ou dB acima do ruído) com marca do nível atual no medidor,
+      histerese e abertura/fechamento suaves (sem picotar a cada bloco).
+  - **Áudio entrecortado.** Hipóteses a verificar com RTL-SDR real: drenagem do áudio no timer da GUI
+    (40 ms) concorrendo com waterfall/mapa/tick; fila limitada (`deque(maxlen=50)`) descartando blocos;
+    buffer do QAudioSink pequeno; diferença de relógio entre o RTL-SDR e a placa de som (deriva de ppm);
+    decodificador AFSK em Python na thread de recepção.
+    - Correção: buffer circular com jitter buffer (~250–400 ms) alimentando o QAudioSink em modo pull
+      (sem depender do timer da GUI), reamostragem adaptativa para compensar a deriva, contador de
+      underrun/overrun no diagnóstico e decodificação em thread separada.
+  - **Waterfall:** controles de **velocidade** (linhas por segundo / média), **altura na tela**
+    (divisor arrastável entre controles e waterfall, lembrado entre sessões) e **largura da banda**
+    exibida e do **filtro de recepção** (arrastar as bordas do filtro no waterfall ou seletor por modo:
+    FM 6–16 kHz, SSB 1,8–3,6 kHz, CW 200–1000 Hz).
+  - Testes: squelch abre/fecha com sinal sintético e ruído; áudio contínuo por 10 min sem underrun com
+    fonte simulada e GUI ocupada; validação com RTL-SDR real.
+
 - **Aviso sonoro de AOS 10 s antes, com contagem regressiva em popup** (registrado em 05/11/2026)
   - Hoje existe o alerta "Avisar 30 segundos antes da entrada do satélite selecionado"
     (Configurações; diálogo "Alerta de aproximação — AOS" com `QApplication.beep()`).
