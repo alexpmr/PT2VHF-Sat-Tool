@@ -88,6 +88,10 @@
     nunca sobreposição.
   - Opção de recolher a telemetria (ou a lista) com um clique e de destacar a lista de passagens em janela própria.
   - Validar com capturas em 1280×720, 1366×768 e 1920×1080, com e sem o painel SDR aberto, DPI 100–150 %.
+  - **Confirmado pelo operador (06/11/2026):** com o painel SDR minimizado/oculto as passagens ficam corretas;
+    o problema é a altura tomada pelo dock SDR. Além do divisor: dock SDR com altura inicial menor e lembrada,
+    opção de abrir o SDR como janela flutuante ou em aba própria, e altura mínima da coluna direita
+    respeitada antes de o dock crescer.
 
 - **SDR: squelch sem efeito, áudio entrecortado; ajustes do waterfall** (registrado em 06/11/2026, v1.5.0)
   - **Squelch não funciona.** Hoje compara a potência média do canal (`level_db`, bloco de 0,1 s) com o
