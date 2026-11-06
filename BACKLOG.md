@@ -67,6 +67,14 @@
 
 ## Pendentes
 
+- **Estrelas de qualidade: só estrelas cheias amarelas** (registrado em 06/11/2026)
+  - Hoje `PassQuality.label` mostra cheias + vazias ("★★★☆☆"). Mostrar **apenas estrelas cheias amarelas**:
+    1 a 5 "★" conforme a nota (quanto melhor, mais estrelas), sem "☆".
+  - Alinhar à esquerda/centro de forma que a quantidade seja fácil de comparar entre linhas; manter o tooltip
+    com os motivos e "Qualidade N/5".
+  - Aplicar igual na tabela de passagens, no popup do satélite e no painel Web.
+  - Ajustar testes que esperam "★★★★★"/"☆".
+
 - **Modo "Somente RX"** (registrado em 06/11/2026)
   - Opção (seletor no display/aba Operação e em Equipamentos RX/TX) para operar só em recepção — escuta,
     telemetria, beacons, SSTV/APRS da ISS — sem nenhum uplink.
