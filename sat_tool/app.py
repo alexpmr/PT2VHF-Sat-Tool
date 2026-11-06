@@ -4,6 +4,7 @@ UI is intentionally non-transmitting: no CAT TX/PTT commands exist.
 """
 from __future__ import annotations
 import json
+import os
 import math
 import time
 import unicodedata
@@ -308,8 +309,8 @@ class MainWindow(QMainWindow):
         self.cat_indicator.setFixedWidth(66)
         self.cat_indicator.setStyleSheet("font-size:12px;font-weight:800;color:#ef9a9a;padding:4px;background:#243143;border-radius:5px")
         header.addWidget(self.cat_indicator)
-        self.sdr_toggle=QPushButton("SDR")
-        self.sdr_toggle.setToolTip("Mostrar/ocultar o painel SDR · Equipamentos RX/TX · Telemetria")
+        self.sdr_toggle=QPushButton("Painel SDR")
+        self.sdr_toggle.setToolTip("Mostrar/ocultar o painel SDR (não liga nem desliga o receptor)")
         self.sdr_toggle.setStyleSheet("font-size:12px;font-weight:800")
         header.addWidget(self.sdr_toggle)
         self.utc = QLabel("DATA/HORA UTC —")
@@ -435,15 +436,16 @@ class MainWindow(QMainWindow):
         frequency_cards.setContentsMargins(2,0,2,0)
         self.pred_rx=label("RX / DOWNLINK\nAguardando satélite")
         self.pred_tx=label("TX / UPLINK\nAguardando satélite")
-        for card,color in ((self.pred_rx,"#68ebcd"),(self.pred_tx,"#8fd8ff")):
-            card.setAlignment(Qt.AlignCenter)
-            card.setMinimumHeight(62)
-            card.setMaximumHeight(78)
-            card.setMinimumWidth(0)
-            card.setWordWrap(False)
-            card.setStyleSheet("font-size:15px;font-weight:800;color:"+color+
-                               ";background:#10263b;border:1px solid #284e6e;border-radius:5px;padding:3px")
-            frequency_cards.addWidget(card,1)
+        # v1.6.0: display LCD âmbar de matriz de pontos no lugar dos cartões RX/TX (textos mantidos ocultos
+        # para acessibilidade/painel Web).
+        from .lcd import LcdDisplay
+        self.lcd=LcdDisplay(theme=str(self.config.values.get("lcd_theme","âmbar")))
+        self.lcd.swap_clicked.connect(self.toggle_main_sub)
+        self.lcd.rx_only_clicked.connect(self.toggle_rx_only)
+        self.lcd.set_state(rx_only=bool(self.config.values.get("rx_only",False)))
+        for card in (self.pred_rx,self.pred_tx):
+            card.setVisible(False)
+        frequency_cards.addWidget(self.lcd,1)
         ov.addLayout(frequency_cards)
         self.corrected_label=label("Previsão orbital sem CAT e sem transmissão")
         self.corrected_label.setStyleSheet("color:#a4d5df;font-size:11px")
@@ -544,7 +546,7 @@ class MainWindow(QMainWindow):
         # v1.3.15: bloco "Próxima passagem do satélite selecionado" removido da
         # tela; os widgets continuam vivos (atualizados pelo timer) sem exibição.
         self._upcoming_group=upcoming
-        rv.addWidget(stat)
+        self._telemetry_group=stat
         window_h=int(self.config.values.get("pass_window_hours",36) or 36)
         nextpass,np=group(f"PASSAGENS DO SATÉLITE SELECIONADO · {window_h} H")
         self.pass_group=nextpass
@@ -569,28 +571,49 @@ class MainWindow(QMainWindow):
         np.addLayout(pass_bar)
         self.pass_table=QTableWidget(0,7)
         # Selected satellite appears in the combo; redundant table column removed.
-        self.pass_table.setHorizontalHeaderLabels(["AOS\nlocal","TCA\nlocal","LOS\nlocal","Duração","Máx °","Qualidade","Modos"])
+        self.pass_table.setHorizontalHeaderLabels(["AOS","TCA","LOS","Duração","Máx °","Qualidade","Modos"])
+        for col,tip in enumerate(("Início da passagem (horário local)","Máxima aproximação (horário local)",
+                                  "Fim da passagem (horário local)")):
+            self.pass_table.horizontalHeaderItem(col).setToolTip(tip)
+        self.pass_table.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.pass_table.customContextMenuRequested.connect(self.pass_context_menu)
         pass_header=self.pass_table.horizontalHeader()
         pass_header.setStretchLastSection(False)
         pass_header.setMinimumSectionSize(50)
         pass_header.setDefaultAlignment(Qt.AlignCenter)
         pass_header.setFixedHeight(max(46,self.pass_table.fontMetrics().height()*2+14))
-        for col in (0,1,2,3,4,5):
-            pass_header.setSectionResizeMode(col,QHeaderView.ResizeToContents)
-        pass_header.setSectionResizeMode(6,QHeaderView.Stretch)
+        # v1.6.0: larguras pelo conteúdo e sobra repartida entre todas as colunas (fit_pass_columns).
+        for col in range(7):
+            pass_header.setSectionResizeMode(col,QHeaderView.Interactive)
+        self.pass_table.viewport().installEventFilter(self)
         self.pass_table.setWordWrap(False)
         self.pass_table.setTextElideMode(Qt.ElideNone)
         self.pass_table.verticalHeader().setMinimumSectionSize(max(28,self.pass_table.fontMetrics().height()+10))
         self.pass_table.verticalHeader().setDefaultSectionSize(max(30,self.pass_table.fontMetrics().height()+12))
         self.pass_table.verticalHeader().hide()
         # Sem altura máxima: a tabela cresce no espaço livre abaixo da telemetria.
-        self.pass_table.setMinimumHeight(160)
+        self.pass_table.setMinimumHeight(self.pass_table.fontMetrics().height()*3+20)
         self.pass_table.setStyleSheet("QTableWidget::item { padding: 1px 2px; }")
         self.pass_table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.pass_table.cellDoubleClicked.connect(self.select_pass_satellite)
         self.pass_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         np.addWidget(self.pass_table)
-        rv.insertWidget(0,nextpass,1)
+        # v1.6.0: divisor arrastável entre Passagens e Telemetria (proporção lembrada; nunca sobrepõe).
+        self.right_splitter=QSplitter(Qt.Vertical)
+        self.right_splitter.setChildrenCollapsible(True)
+        self.right_splitter.setHandleWidth(8)
+        self.right_splitter.addWidget(nextpass)
+        self.right_splitter.addWidget(stat)
+        fm=self.pass_table.fontMetrics()
+        nextpass.setMinimumHeight(fm.height()*4+80)   # cabeçalho + barra + linhas visíveis
+        stat.setMinimumHeight(fm.height()*6+30)       # métricas com rolagem se faltar espaço
+        saved=self.config.values.get("right_splitter_sizes")
+        self.right_splitter.setSizes(saved if isinstance(saved,list) and len(saved)==2 else [3,2])
+        self.right_splitter.splitterMoved.connect(
+            lambda *_:self.config.values.__setitem__("right_splitter_sizes",self.right_splitter.sizes()))
+        self.right_splitter.setToolTip("Arraste a divisória para ajustar Passagens × Telemetria; "
+                                       "duplo clique na divisória recolhe/expande a telemetria")
+        rv.insertWidget(0,self.right_splitter,1)
         catview,cv=group("RÁDIO / CAT  ·  KENWOOD TS-2000")
         self.cat_status=label("● Desconectado  ·  porta CAT indisponível")
         self.cat_status.setStyleSheet("color:#efc17b;font-size:12px")
@@ -657,7 +680,13 @@ class MainWindow(QMainWindow):
         self.cat_sync_status=label("CAT SYNC · previsto — · confirmado — · atraso —")
         self.cat_sync_status.setStyleSheet("font-size:11px;color:#a8d7e5")
         op.addWidget(self.cat_sync_status)
-        root.addTab(operation,"Operação")
+        # v1.6.0: com o painel SDR aberto em telas baixas a aba rola em vez de espremer/sobrepor blocos.
+        operation.setMinimumHeight(640)
+        operation_scroll=QScrollArea();operation_scroll.setWidgetResizable(True)
+        operation_scroll.setFrameShape(QScrollArea.NoFrame)
+        operation_scroll.setWidget(operation)
+        self.operation_scroll=operation_scroll
+        root.addTab(operation_scroll,"Operação")
         catalog_page=QWidget(); catalog_layout=QVBoxLayout(catalog_page)
         catalog_layout.addWidget(label("Satélites atuais no catálogo orbital CelesTrak. 'Canal publicado' não comprova serviço ativo nem autoriza TX. Clique duas vezes para selecionar."))
         self.catalog_search=QLineEdit()
@@ -1003,7 +1032,10 @@ class MainWindow(QMainWindow):
         self.sdr_dock,self.sdr_panel=make_dock(self)
         self.addDockWidget(Qt.BottomDockWidgetArea,self.sdr_dock)
         self.sdr_dock.setVisible(bool(self.config.values.get("sdr_dock_visible",False)))
-        self.resizeDocks([self.sdr_dock],[230],Qt.Vertical)
+        # v1.6.0: altura menor por padrão e lembrada; flutuante também lembrado.
+        self.resizeDocks([self.sdr_dock],[int(self.config.values.get("sdr_dock_height",200) or 200)],Qt.Vertical)
+        self.sdr_dock.setFloating(bool(self.config.values.get("sdr_dock_floating",False)))
+        self.sdr_dock.topLevelChanged.connect(lambda f:self.config.values.__setitem__("sdr_dock_floating",bool(f)))
         self.sdr_dock.visibilityChanged.connect(self._remember_sdr_dock)
         self.sdr_toggle.clicked.connect(lambda:self.sdr_dock.setVisible(not self.sdr_dock.isVisible()))
 
@@ -1256,15 +1288,34 @@ class MainWindow(QMainWindow):
         try:
             base=Path(getattr(sys, '_MEIPASS', Path(__file__).resolve().parents[1]))
             script=base/'scripts'/'apply-update.ps1'
-            launch_staged_update(Path(package), portable=self.update_distribution[1]=='Portable', script_path=script)
+            version=getattr(self.available_update,'version','')
+            launch_staged_update(Path(package), portable=self.update_distribution[1]=='Portable', script_path=script,
+                                 version=version)
             self.doppler_checkbox.setChecked(False)
             self.cat_tracking_armed=False
             self.radio.disconnect()
             self.log('Atualização verificada; fechando para atualização externa')
+            self._quitting_for_update=True
             self.close()
+            # v1.6.0: encerra o processo inteiro (inclusive o mapa/QtWebEngine) para liberar os arquivos.
+            QApplication.quit()
+            QTimer.singleShot(8000,lambda:os._exit(0))
         except Exception as exc:
             self.version_btn.setText('Falha ao instalar · tentar novamente')
             QMessageBox.critical(self,'Atualização não aplicada',str(exc))
+
+    def show_last_update_result(self):
+        from .updater import read_update_result
+        result=read_update_result()
+        if not result:
+            return
+        status,version,detail=result
+        self.log(f"Resultado da última atualização: {status} {version} {detail}")
+        if status=="ok":
+            QMessageBox.information(self,"Atualização concluída",f"PT2VHF Sat Tool atualizado para a versão {version or __version__}.")
+        else:
+            QMessageBox.warning(self,"Atualização não concluída",
+                f"A atualização não terminou: {detail}\n\nBaixe a versão nova em www.pt2vhf.com/sat ou tente de novo pelo botão de versão.")
 
     def station(self):
         if not self.lat.text().strip() or not self.lon.text().strip():
@@ -1686,6 +1737,17 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self,"CAT",str(exc))
 
     def render_radio_state(self, st):
+        # v1.6.0: medidores e estado do rádio no display LCD (somente leitura).
+        try:
+            ex=dict(getattr(st,"extras",{}) or {})
+            swapped=not getattr(st,"main_downlink",True)
+            signal=st.signal_sub if swapped else st.signal_main
+            # RM SWR do TS-2000 vem em 0–30 pontos do medidor; 1+pontos/10 é uma aproximação exibida como SWR.
+            swr=(1+st.meter_value/10.0 if st.meter_type.upper().startswith("SWR") and st.meter_value is not None else None)
+            self.lcd.set_state(sat_on=bool(st.sat),link="CAT",signal=signal,power_w=st.power_set_w,swr=swr,
+                               transmitting=bool((ex.get("if") or {}).get("tx")),extras=ex,swapped=swapped)
+        except Exception:
+            pass
         self.radio_label.setText(f"{st.model} · SAT {'ON' if st.sat else 'OFF'} · RX {self.radio_freq(st.downlink)} | TX {self.radio_freq(st.uplink)} · Modo {st.mode}")
         self.radio_label.setStyleSheet("color:#69e3bc" if st.sat else "color:#f0c186")
         self.last_cat_success=now_utc()
@@ -2020,6 +2082,10 @@ class MainWindow(QMainWindow):
 
     def choose_satellite(self):
         ident=self.sat_combo.currentData()
+        swapped=bool(self.config.values.get("main_sub_swapped",{}).get(str(ident or ""),False))
+        self.radio.main_downlink_expected=not swapped
+        if hasattr(self,"lcd"):
+            self.lcd.set_state(swapped=swapped)
         if ident and str(ident) in self.omm:
             self.request_satinfo(str(ident),self.omm[str(ident)].get("OBJECT_NAME",str(ident)))
         if ident==self._active_satellite_id and self.sat is not None:
@@ -2194,13 +2260,74 @@ class MainWindow(QMainWindow):
             self.cat_last_gate_time=moment
             self.log("Auto CAT ciclo · "+reason)
 
+    def _track_rx_only(self,note=None):
+        """Somente RX (v1.6.0): acompanha só o downlink pelo CAT; nunca escreve uplink nem PTT."""
+        try:
+            from .operations import frequency_prediction
+            _,dl=self.nominal_hz()
+            dl=int(frequency_prediction({"downlink_hz":dl,"uplink_hz":None},self.last_pos["radial_m_s"])["rx_hz"])
+            threshold=max(1,int(self.threshold.value()))
+            last=self.last_freqs[1] if self.last_freqs else None
+            observed=self.radio.state.downlink
+            if (last is not None and abs(dl-last)<threshold and observed is not None and abs(dl-observed)<threshold):
+                if callable(note):note("Doppler RX dentro do limiar")
+                return False
+            generation=self.cat_selection_generation
+            self.last_tracking_write=time.monotonic()
+            started=self.last_tracking_write
+            def task():
+                if generation!=self.cat_selection_generation or not self.radio.connected:
+                    return generation,None,None,None,0.0
+                return generation,self.radio.set_rx_only(dl),None,dl,time.monotonic()-started
+            self.background("cat-track",task)
+            return True
+        except Exception as exc:
+            self.cat_tune_status.setText("CAT (somente RX) aguardando: "+str(exc))
+            return False
+
+    def toggle_rx_only(self):
+        enabled=not bool(self.config.values.get("rx_only",False))
+        self.config.values["rx_only"]=enabled
+        self.config.save()
+        self.last_freqs=(None,None)
+        self.cat_selection_generation+=1
+        self.lcd.set_state(rx_only=enabled)
+        self.log("Modo Somente RX "+("ligado: nenhum uplink/TX é calculado ou enviado" if enabled else "desligado"))
+        self.preview_doppler()
+        if self.cat_tracking_armed:
+            self.auto_tune_selected_satellite()
+
+    def toggle_main_sub(self):
+        """Botão A/B do display: inverte MAIN↔SUB (TX/RX) no TS-2000 (SA P3), com confirmação."""
+        ident=str(self.sat_combo.currentData() or "")
+        swaps=self.config.values.setdefault("main_sub_swapped",{})
+        target=not bool(swaps.get(ident,False))
+        if not self.config.values.get("main_sub_confirmed",False):
+            if QMessageBox.question(self,"Inverter MAIN↔SUB",
+                "Trocar os papéis das bandas do TS-2000: "+("MAIN transmite e SUB recebe" if target else
+                "MAIN recebe e SUB transmite")+"?\n\nSó com SAT ligado e fora de transmissão; o programa confere "
+                "pela leitura SA/FA/FB e nunca aciona PTT. A escolha fica salva para este satélite.")!=QMessageBox.Yes:
+                return
+            self.config.values["main_sub_confirmed"]=True
+        if not self.radio.connected:
+            swaps[ident]=target;self.config.save()
+            self.lcd.set_state(swapped=target)
+            self.log("MAIN↔SUB salvo para este satélite; será aplicado ao conectar o TS-2000")
+            return
+        def task():
+            if (self.radio.state.extras or {}).get("if",{}) and self.radio.state.extras["if"].get("tx"):
+                raise RuntimeError("Rádio em transmissão: inversão adiada")
+            return self.radio.set_orientation(main_downlink=not target),ident,target
+        self.background("cat-swap",task)
+
     def track_cat_frequencies(self,now):
         """Prioritize changed Doppler frequencies over optional CAT telemetry."""
         note=getattr(self,"cat_tracking_gate",None)
         if not self.cat_tracking_armed or not self.config.values.get("cat_auto_select",True):
             if callable(note):note("desabilitado")
             return False
-        if not self.radio.connected or not self.radio.state.sat:
+        rx_only=bool(self.config.values.get("rx_only",False))
+        if not self.radio.connected or (not self.radio.state.sat and not rx_only):
             if callable(note):note("desconectado ou SAT OFF")
             self.cat_tune_status.setText("CAT: rastreamento pausado · desconectado ou SAT OFF")
             return False
@@ -2234,6 +2361,8 @@ class MainWindow(QMainWindow):
                 self.interval.value())):
             if callable(note):note("aguardando intervalo de atualização CAT")
             return False
+        if rx_only:
+            return self._track_rx_only(note)
         try:
             ul,dl=self.corrected()
             safe,reason=self.selected_cat_pair_info(ul,dl)
@@ -2432,7 +2561,7 @@ class MainWindow(QMainWindow):
             return blocked("rádio desconectado")
         if not self.sat or not self.sat_combo.currentData():
             return blocked("selecione um satélite no menu superior")
-        if not self.radio.state.sat:
+        if not self.radio.state.sat and not self.config.values.get("rx_only",False):
             return blocked("SAT está OFF no TS-2000; ative em Configurações → Conexão CAT")
         if not self.omm_fresh():
             return blocked("OMM/TLE vencido; atualize elementos orbitais antes de sintonizar")
@@ -2466,6 +2595,8 @@ class MainWindow(QMainWindow):
             def task():
                 if generation!=self.cat_selection_generation or not self.radio.connected:
                     return generation,None
+                if self.config.values.get("rx_only",False):
+                    return generation,self.radio.set_rx_only(dl_new,mode)
                 return generation,self.radio.set_satellite_channel(dl_new,ul_new,mode)
             self.background("cat-autotune",task)
             return True
@@ -2520,6 +2651,14 @@ class MainWindow(QMainWindow):
             self.pred_tx.setText(
                 f"TX / UPLINK · {tx_mode}\n{self.radio_freq(calc['tx_hz'])}"
                 if ul is not None else "TX / UPLINK\nSOMENTE RECEPÇÃO\nSem frequência TX")
+            self.lcd.set_state(rx_hz=int(calc['rx_hz']),rx_mode=rx_mode,
+                               tx_hz=int(calc['tx_hz']) if ul is not None else None,tx_mode=tx_mode,
+                               doppler_hz=int(calc['rx_offset_hz']),elevation=float(p['elevation']),
+                               visible=bool(p['visible']),auto=bool(self.cat_tracking_armed),
+                               rx_only=bool(self.config.values.get("rx_only",False)))
+            self.lcd.setToolTip(f"RX nominal {self.radio_freq(dl)}"
+                                +(f" · TX nominal {self.radio_freq(ul)}" if ul is not None else " · somente recepção")
+                                +" · A/B inverte MAIN↔SUB · RX ONLY opera só em recepção")
             self.pred_rx.setToolTip("Frequência nominal: "+self.radio_freq(dl))
             self.pred_tx.setToolTip("Frequência nominal: "+self.radio_freq(ul) if ul is not None else "Canal somente recepção")
             tx=("TX "+self.radio_freq(calc["tx_hz"])+f" ({calc['tx_offset_hz']:+d} Hz)") if ul is not None else "RX apenas"
@@ -2545,6 +2684,8 @@ class MainWindow(QMainWindow):
         except ValueError:raise ValueError('Frequência nominal de TX inválida')
         if not (100000<=dl<=1_299_999_999):raise ValueError("Downlink fora do intervalo CAT")
         if ul is not None and not (100000<=ul<=1_299_999_999):raise ValueError("Uplink fora do intervalo CAT")
+        if self.config.values.get("rx_only",False):
+            ul=None  # v1.6.0: Somente RX — nenhum uplink é calculado nem enviado
         return ul,dl
 
     def corrected(self):
@@ -2578,8 +2719,10 @@ class MainWindow(QMainWindow):
     def doppler_state_changed(self):
         if self.doppler_checkbox.isChecked():
             try:
-                self.saved_station();self.corrected()
-                if not self.radio.connected or not self.radio.state.sat:
+                rx_only=bool(self.config.values.get("rx_only",False))
+                self.saved_station()
+                if not rx_only:self.corrected()
+                if not self.radio.connected or (not self.radio.state.sat and not rx_only):
                     raise ValueError("Conecte ao TS-2000 e ative SAT antes de habilitar o Doppler")
                 if not self.omm_fresh():
                     raise ValueError('OMM antigo: atualize antes de controlar o rádio automaticamente')
@@ -2867,24 +3010,30 @@ class MainWindow(QMainWindow):
 
     def render_pass_table(self):
         """Preenche a tabela (cronológica ou por qualidade) sem recalcular as passagens."""
+        from .passfmt import aos_label, time_label, full_tooltip
+        from .alerts import find_alert
         rows=list(self.passes)
         if self.pass_sort.isChecked():
             rows.sort(key=lambda p:-(p.get("quality").score if p.get("quality") else -1))
         self._pass_rows_view=rows
+        lang=str(self.config.values.get("language","pt-BR"))
+        alerts=self.config.values.get("pass_alerts",[])
         self.pass_table.setRowCount(len(rows))
         for i,p in enumerate(rows):
-            aos=p['aos'].astimezone().strftime('%d/%m %H:%M')
-            peak=p['tca'].astimezone().strftime('%d/%m %H:%M') if p.get('tca') else '—'
-            los=p['los'].astimezone().strftime('%d/%m %H:%M')
+            bell="🔔 " if find_alert(alerts,p['id'],p['aos']) else ""
+            aos=bell+aos_label(p['aos'],lang=lang)
+            peak=time_label(p.get('tca'),p['aos'])
+            los=time_label(p['los'],p['aos'])
             modes=self.suggested_mode_text(p['id'])
             seconds=max(0,int((p['los']-p['aos']).total_seconds()))
             duration=format_duration(seconds)
             q=p.get("quality")
             stars=q.label if q else "—"
+            tips=(full_tooltip(p['aos']),full_tooltip(p.get('tca')),full_tooltip(p['los']))
             for j,value in enumerate((aos,peak,los,duration,f"{p['max_el']:.0f}°",stars,modes)):
                 cell=QTableWidgetItem(value)
-                cell.setTextAlignment(Qt.AlignVCenter | (Qt.AlignLeft if j==6 else Qt.AlignCenter))
-                cell.setToolTip(q.tooltip if (j==5 and q) else value)
+                cell.setTextAlignment(Qt.AlignVCenter | (Qt.AlignLeft if j in (5,6) else Qt.AlignCenter))
+                cell.setToolTip(q.tooltip if (j==5 and q) else tips[j] if j<3 else value)
                 if j==5:
                     cell.setForeground(QBrush(QColor("#f2c94c")))
                 if j==0:
@@ -2894,6 +3043,123 @@ class MainWindow(QMainWindow):
         for i in range(self.pass_table.rowCount()):
             self.pass_table.setRowHeight(i,max(self.pass_table.rowHeight(i),
                 self.pass_table.fontMetrics().height()+12))
+        self.fit_pass_columns()
+
+    def fit_pass_columns(self):
+        """Cada coluna recebe a largura do conteúdo e a sobra é repartida entre todas (sem rolagem lateral)."""
+        table=self.pass_table
+        header=table.horizontalHeader()
+        avail=table.viewport().width()
+        if avail<=0 or table.columnCount()==0:
+            return
+        fm=header.fontMetrics()
+        need=[]
+        for col in range(table.columnCount()):
+            title=table.horizontalHeaderItem(col).text() if table.horizontalHeaderItem(col) else ""
+            content=table.sizeHintForColumn(col) if table.rowCount() else 0
+            need.append(max(content,fm.horizontalAdvance(title)+18,header.minimumSectionSize()))
+        total=sum(need)
+        extra=max(0,avail-total)
+        widths=[w+extra*w//max(1,total) for w in need]
+        widths[-1]+=avail-sum(widths) if extra else 0
+        for col,w in enumerate(widths):
+            header.resizeSection(col,int(w))
+
+    def eventFilter(self,obj,event):
+        try:
+            from PySide6.QtCore import QEvent
+        except ImportError:
+            from PySide2.QtCore import QEvent
+        if obj is getattr(getattr(self,"pass_table",None),"viewport",lambda:None)() and event.type()==QEvent.Resize:
+            QTimer.singleShot(0,self.fit_pass_columns)
+        return super().eventFilter(obj,event)
+
+    def pass_context_menu(self,pos):
+        """Clique direito numa passagem: agendar avisos 30 min / 30 s antes do AOS."""
+        from .alerts import add_alert, remove_alert, find_alert
+        try:
+            from PySide6.QtWidgets import QMenu
+        except ImportError:
+            from PySide2.QtWidgets import QMenu
+        row=self.pass_table.rowAt(pos.y())
+        view=getattr(self,"_pass_rows_view",self.passes)
+        if not 0<=row<len(view):
+            return
+        p=view[row]
+        alerts=self.config.values.setdefault("pass_alerts",[])
+        menu=QMenu(self)
+        title=menu.addAction(f"{p.get('name','')} · AOS {p['aos'].astimezone():%d/%m %H:%M}")
+        title.setEnabled(False)
+        a30m=menu.addAction("🔔 Avisar 30 minutos antes")
+        a30s=menu.addAction("🔔 Avisar 30 segundos antes (contagem com som)")
+        both=menu.addAction("🔔 Avisar nos dois")
+        existing=find_alert(alerts,p['id'],p['aos'])
+        remove=menu.addAction("Remover avisos desta passagem") if existing else None
+        chosen=menu.exec(self.pass_table.viewport().mapToGlobal(pos)) if hasattr(menu,"exec") else menu.exec_(self.pass_table.viewport().mapToGlobal(pos))
+        if chosen is None:
+            return
+        if chosen is remove:
+            remove_alert(alerts,p['id'],p['aos'])
+            self.log(f"Avisos removidos: {p.get('name','')} {p['aos'].astimezone():%d/%m %H:%M}")
+        elif chosen in (a30m,a30s,both):
+            leads={a30m:(1800,),a30s:(30,),both:(1800,30)}[chosen]
+            add_alert(alerts,p,leads)
+            self.log(f"Aviso agendado: {p.get('name','')} AOS {p['aos'].astimezone():%d/%m %H:%M} · "
+                     +", ".join("30 min" if x==1800 else f"{x} s" for x in leads))
+        else:
+            return
+        self.config.save()
+        self.render_pass_table()
+
+    def check_pass_alerts(self,now):
+        """Dispara os avisos agendados pelo clique direito (qualquer satélite, uma vez cada)."""
+        from .alerts import due_alerts
+        alerts=self.config.values.get("pass_alerts",[])
+        if not alerts:
+            return
+        before=len(alerts)
+        fired=due_alerts(alerts,now)
+        if fired or len(alerts)!=before:
+            self.config.save()
+        for alert,lead in fired:
+            aos=datetime.fromisoformat(alert["aos"])
+            if lead<=120:
+                if self.aos_alarm_dialog is None:
+                    row={"name":alert["name"],"id":alert["norad"],"aos":aos,"max_el":alert.get("max_el",0)}
+                    self._open_aos_countdown(row,(aos-now).total_seconds())
+            else:
+                minutes=max(0,round((aos-now).total_seconds()/60))
+                text=(f"{alert['name']} passa em {minutes} min · AOS {aos.astimezone():%H:%M} · "
+                      f"máx {alert.get('max_el',0):.0f}°")
+                self.log("Aviso de passagem: "+text)
+                self._notify_pass(alert,text)
+            if fired:
+                self.render_pass_table()
+
+    def _notify_pass(self,alert,text):
+        try:
+            from PySide6.QtWidgets import QSystemTrayIcon
+            if QSystemTrayIcon.isSystemTrayAvailable():
+                if getattr(self,"_tray",None) is None:
+                    self._tray=QSystemTrayIcon(self.windowIcon(),self);self._tray.show()
+                self._tray.showMessage("PT2VHF Sat Tool · passagem",text)
+        except Exception:
+            pass
+        box=QMessageBox(self)
+        box.setWindowTitle("Aviso de passagem")
+        box.setIcon(QMessageBox.Information)
+        box.setText(text)
+        box.setWindowModality(Qt.NonModal)
+        box.setAttribute(Qt.WA_ShowWithoutActivating,True)
+        go=box.addButton("Selecionar satélite",QMessageBox.AcceptRole)
+        box.addButton("Fechar",QMessageBox.RejectRole)
+        def chosen(button):
+            if button is go:
+                idx=self.sat_combo.findData(alert["norad"])
+                if idx>=0:self.sat_combo.setCurrentIndex(idx)
+                self.tabs.setCurrentIndex(0)
+        box.buttonClicked.connect(chosen)
+        box.show()
 
     def select_pass_satellite(self,row,col):
         view=getattr(self,"_pass_rows_view",self.passes)
@@ -3013,25 +3279,9 @@ class MainWindow(QMainWindow):
                 self.play_aos_sound(critical=True)
             self.aos_alarm_last_second=remaining
 
-    def check_selected_aos_alarm(self,now):
-        '''Read-only audible AOS countdown; never commands radio or CAT.'''
-        if not self.config.values.get('aos_alarm_enabled',True):
-            if self.aos_alarm_dialog is not None:
-                self.aos_alarm_dialog.close()
-                self._clear_aos_dialog()
-            return
-        if self.aos_alarm_dialog is not None:
-            self._update_aos_countdown(now)
-            return
-        selected=self.sat_combo.currentData()
-        seen=set(self.config.values.get('aos_alarm_fired',[]))
-        lead=int(self.config.values.get('aos_alarm_lead_seconds',10))
-        found=selected_aos_alarm(self.passes,selected,now,seen,lead)
-        if found is None:
-            return
-        key,row,remaining=found
-        self.config.values['aos_alarm_fired']=(list(seen)+[key])[-160:]
-        self.config.save()
+    def _open_aos_countdown(self,row,remaining,key=None):
+        """Popup não modal com contagem regressiva e som (alarme do selecionado ou aviso agendado)."""
+        found=(key or f"{row.get('id')}@{row['aos'].isoformat()}",row,remaining)
         self.aos_alarm_target=found
         self.aos_alarm_silenced=False
         self.aos_alarm_last_second=None
@@ -3058,8 +3308,29 @@ class MainWindow(QMainWindow):
         layout.addLayout(actions)
         dialog.finished.connect(lambda *_:self._clear_aos_dialog())
         self.aos_alarm_dialog=dialog
-        self._update_aos_countdown(now)
+        self._update_aos_countdown(now_utc())
         dialog.show()
+
+    def check_selected_aos_alarm(self,now):
+        '''Read-only audible AOS countdown; never commands radio or CAT.'''
+        if not self.config.values.get('aos_alarm_enabled',True):
+            if self.aos_alarm_dialog is not None:
+                self.aos_alarm_dialog.close()
+                self._clear_aos_dialog()
+            return
+        if self.aos_alarm_dialog is not None:
+            self._update_aos_countdown(now)
+            return
+        selected=self.sat_combo.currentData()
+        seen=set(self.config.values.get('aos_alarm_fired',[]))
+        lead=int(self.config.values.get('aos_alarm_lead_seconds',10))
+        found=selected_aos_alarm(self.passes,selected,now,seen,lead)
+        if found is None:
+            return
+        key,row,remaining=found
+        self.config.values['aos_alarm_fired']=(list(seen)+[key])[-160:]
+        self.config.save()
+        self._open_aos_countdown(row,remaining,key)
         self.log(f'Alarme AOS: NORAD {selected} em {remaining:.0f} s')
 
     def tick(self):
@@ -3075,6 +3346,7 @@ class MainWindow(QMainWindow):
                 and "passes" not in self.pending_jobs):
             self.refresh_passes()
         self.check_selected_aos_alarm(now)
+        self.check_pass_alerts(now)
         self.poll_station_map()
         if self.sat:
             try:
@@ -3129,6 +3401,17 @@ class MainWindow(QMainWindow):
             return
         if key=="cat-scan":
             self.cat_scan_finished(data)
+            return
+        if key=="cat-swap":
+            state,ident,target=data
+            self.config.values.setdefault("main_sub_swapped",{})[ident]=target
+            self.config.save()
+            self.lcd.set_state(swapped=target)
+            self.last_freqs=(None,None)
+            self.cat_selection_generation+=1
+            self.log("TS-2000: "+("MAIN TX / SUB RX" if target else "MAIN RX / SUB TX")+" confirmado")
+            if self.cat_tracking_armed:
+                self.auto_tune_selected_satellite()
             return
         if key.startswith("satinfo:"):
             ident=key.split(":",1)[1]
@@ -3328,6 +3611,8 @@ class MainWindow(QMainWindow):
                 self.refresh_passes()
                 return
             self.passes=data[:100]
+            from .alerts import sync_with_passes
+            sync_with_passes(self.config.values.get("pass_alerts",[]),self.passes)
             self.render_pass_table()
             window=int(self.config.values.get("pass_window_hours",36) or 36)
             self.log(f'Previsão: {len(data)} passagens nas próximas {window} h (lista limitada a 100)')
@@ -3740,8 +4025,23 @@ class MainWindow(QMainWindow):
             'orbit':orbit,
         })
     def closeEvent(self,event):
+        try:
+            if self.sdr_dock.isVisible() and not self.sdr_dock.isFloating():
+                self.config.values["sdr_dock_height"]=int(self.sdr_dock.height())
+        except Exception:
+            pass
         if getattr(self,"sdr_panel",None) is not None:
             self.sdr_panel.shutdown()
+        # v1.6.0: desmonta o mapa para os processos QtWebEngine encerrarem junto com o app.
+        try:
+            for timer in (self.tick_timer,self.cat_live_timer,self.diagnostic_timer):
+                timer.stop()
+            self.map.stop()
+            self.map.setHtml("")
+            self.map.close()
+            self.map.deleteLater()
+        except Exception:
+            pass
         self.config.save()
         if self.web_server is not None:
             self.web_server.stop()
@@ -3751,10 +4051,36 @@ class MainWindow(QMainWindow):
         event.accept()
 
 
+def _single_instance_mutex():
+    """Mutex nomeado: o instalador (AppMutex) detecta o app aberto e pede/força o fechamento."""
+    if sys.platform!="win32":
+        return None
+    try:
+        import ctypes
+        return ctypes.windll.kernel32.CreateMutexW(None,False,"PT2VHF_Sat_Tool_Running")
+    except Exception:
+        return None
+
+
 def main():
     app=QApplication(sys.argv)
     app.setStyle('Fusion')
     app.setStyleSheet(STYLE)
+    app.setQuitOnLastWindowClosed(True)
+    mutex=_single_instance_mutex()
     window=MainWindow()
     window.show()
-    sys.exit(qt_exec(app))
+    QTimer.singleShot(2500,window.show_last_update_result)
+    code=qt_exec(app)
+    del mutex
+    # Threads de serial/SDR/rede são daemon; sai imediatamente para não deixar processos órfãos.
+    try:
+        from .crash_diagnostics import clean_shutdown
+        clean_shutdown()
+    except Exception:
+        pass
+    try:
+        sys.stdout.flush();sys.stderr.flush()
+    except Exception:
+        pass
+    os._exit(int(code or 0))

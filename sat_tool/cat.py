@@ -5,7 +5,7 @@ satellite downlink and FB controls satellite uplink. FC is the independent
 SUB receiver VFO and MUST NOT be treated as SAT uplink by the CAT driver.
 """
 from __future__ import annotations
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import threading
 import time
 
@@ -75,6 +75,28 @@ def satellite_mode_command(answer: str) -> str:
 
 
 
+def parse_extra(name: str, answer: str):
+    """Valores de leitura do TS-2000 para o display (v1.6.0). Formatos do manual de comandos PC."""
+    body=answer.rstrip(";")
+    if name=="af_gain":      # AG P1(0/1) P2(000-255)
+        return int(body[3:6])
+    if name=="rf_gain":      # RG P1(000-255)
+        return int(body[2:5])
+    if name=="squelch":      # SQ P1(0/1) P2(000-255)
+        return int(body[3:6])
+    if name=="preamp":       # PA P1(0/1) [P2]
+        return body[2:3]=="1"
+    if name=="attenuator":   # RA P1P2(00/01) P3P4
+        return body[2:4]!="00"
+    if name in ("nb","nr"):  # NB0/1, NR0/1/2
+        return int(body[2:3])
+    if name=="if":           # IF: P8 (TX/RX) na posição 28
+        if len(body)<29:
+            raise ValueError("IF curto")
+        return {"tx":body[28]=="1"}
+    raise ValueError(name)
+
+
 def parse_smeter(answer: str, receiver: int) -> int:
     """SM0/SM1 reports 4 digits, scaled 0-30 MAIN, 0-15 SUB."""
     prefix=f"SM{receiver}"
@@ -121,6 +143,8 @@ class RadioState:
     power_set_w: int | None = None
     meter_type: str = ""
     meter_value: int | None = None
+    main_downlink: bool = True
+    extras: dict = field(default_factory=dict)  # v1.6.0: AG/RG/SQ/PA/RA/NB/NR/IF (leitura)
 
 
 class TS2000:
@@ -130,6 +154,7 @@ class TS2000:
         self.lock = threading.RLock()
         self.state = RadioState()
         self._last_optional_poll = 0.0
+        self.main_downlink_expected = True  # v1.6.0: botão MAIN↔SUB
 
     @property
     def connected(self):
@@ -275,6 +300,17 @@ class TS2000:
                         else:
                             setattr(self.state,attr,None)
                         self.logger(f"CAT leitura opcional {command}: {exc}")
+                # v1.6.0: parâmetros extras para o display (somente leitura, baixa prioridade).
+                extras={}
+                for command,expected,name in (("AG0;","AG","af_gain"),("RG;","RG","rf_gain"),("SQ0;","SQ","squelch"),
+                                              ("PA;","PA","preamp"),("RA;","RA","attenuator"),("NB;","NB","nb"),
+                                              ("NR;","NR","nr"),("IF;","IF","if")):
+                    try:
+                        answer=self._exchange(command,expected)
+                        extras[name]=parse_extra(name,answer)
+                    except (TimeoutError,ValueError,ConnectionError):
+                        extras[name]=None
+                self.state.extras=extras
             return self.state
 
     def read_diagnostics(self) -> dict:
@@ -337,9 +373,15 @@ class TS2000:
             self.state.sat_raw=sa
             status=decode_satellite_status(sa)
             self.state.sat=status["sat"]
-            self.state.downlink=parse_frequency(fa,"FA")
-            self.state.vfo_b=parse_frequency(fb,"FB")
-            self.state.uplink=self.state.vfo_b if self.state.sat else None
+            fa_hz,fb_hz=parse_frequency(fa,"FA"),parse_frequency(fb,"FB")
+            self.state.main_downlink=status["main_downlink"]
+            if self.state.sat and not status["main_downlink"]:
+                # v1.6.0: MAIN TX / SUB RX (botão MAIN↔SUB): papéis de FA/FB invertidos.
+                self.state.downlink,self.state.vfo_b,self.state.uplink=fb_hz,fb_hz,fa_hz
+            else:
+                self.state.downlink=fa_hz
+                self.state.vfo_b=fb_hz
+                self.state.uplink=self.state.vfo_b if self.state.sat else None
             return self.state
 
     def set_frequencies(self, uplink_hz: int, downlink_hz: int):
@@ -349,11 +391,12 @@ class TS2000:
             status=decode_satellite_status(sa)
             if not status["sat"]:
                 raise RuntimeError("Ative SAT no rádio antes de alterar as frequências")
-            if not status["main_downlink"]:
-                raise RuntimeError("A seleção MAIN RX / SUB TX não está configurada")
+            if status["main_downlink"]!=self.main_downlink_expected:
+                raise RuntimeError("A orientação MAIN/SUB do rádio difere da selecionada no programa")
             # Never key TX/PTT. Confirm with short readback, not full SM/RM/FC poll.
-            self._exchange(frequency_command("FA",downlink_hz))
-            self._exchange(frequency_command("FB",uplink_hz))
+            rx_vfo,tx_vfo=("FA","FB") if self.main_downlink_expected else ("FB","FA")
+            self._exchange(frequency_command(rx_vfo,downlink_hz))
+            self._exchange(frequency_command(tx_vfo,uplink_hz))
             state=self.poll_tracking()
             if state.downlink!=downlink_hz or state.uplink!=uplink_hz:
                 raise RuntimeError(
@@ -373,13 +416,16 @@ class TS2000:
         if uplink_hz is not None:frequency_command("FB",uplink_hz)
         with self.lock:
             sa=self._exchange("SA;","SA")
-            if not sa.startswith("SA1") or len(sa)<6 or sa[4]!="1":
-                raise RuntimeError("Ative SAT com MAIN=RX e SUB=TX antes do Auto CAT")
+            want="1" if self.main_downlink_expected else "0"
+            if not sa.startswith("SA1") or len(sa)<6 or sa[4]!=want:
+                raise RuntimeError("Ative SAT com MAIN=RX e SUB=TX antes do Auto CAT" if want=="1" else
+                                   "Ative SAT com MAIN=TX e SUB=RX (MAIN↔SUB invertido) antes do Auto CAT")
             if sa[5]!="0":
                 raise RuntimeError("CTRL está na SUB; selecione CTRL MAIN para alterar o modo de RX")
-            self._exchange(frequency_command("FA",downlink_hz))
+            rx_vfo,tx_vfo=("FA","FB") if want=="1" else ("FB","FA")
+            self._exchange(frequency_command(rx_vfo,downlink_hz))
             if uplink_hz is not None:
-                self._exchange(frequency_command("FB",uplink_hz))
+                self._exchange(frequency_command(tx_vfo,uplink_hz))
             self._exchange("MD"+MODES[rx_mode]+";")
             st=self.poll()
             if st.downlink!=downlink_hz or (uplink_hz is not None and st.uplink!=uplink_hz):
@@ -387,6 +433,42 @@ class TS2000:
             if st.mode!=rx_mode:
                 raise RuntimeError("Rádio não confirmou o modo de recepção")
             return st
+
+    def set_orientation(self, main_downlink: bool):
+        """v1.6.0: MAIN↔SUB. P3 do SA: 1 = MAIN RX/SUB TX, 0 = MAIN TX/SUB RX. Só com SAT ON; sem PTT."""
+        with self.lock:
+            sa=self._exchange("SA;","SA")
+            status=decode_satellite_status(sa)
+            if not status["sat"]:
+                raise RuntimeError("Ative SAT no rádio antes de inverter MAIN/SUB")
+            p=sa[2:9]
+            command=f"SA{p[0]}{p[1]}{'1' if main_downlink else '0'}{p[3:7]};"
+            self._exchange(command)
+            check=decode_satellite_status(self._exchange("SA;","SA"))
+            if check["main_downlink"]!=bool(main_downlink):
+                raise RuntimeError("TS-2000 não confirmou a inversão MAIN/SUB")
+            self.main_downlink_expected=bool(main_downlink)
+            self.state.main_downlink=bool(main_downlink)
+            return self.state
+
+    def set_rx_only(self, downlink_hz: int, mode: str | None = None):
+        """v1.6.0 Somente RX: escreve só o VFO de recepção (FA com SAT OFF; o VFO de RX com SAT ON).
+
+        Nunca escreve o uplink, nunca liga SAT e nunca aciona PTT. Confirma por readback.
+        """
+        with self.lock:
+            sa=self._exchange("SA;","SA")
+            status=decode_satellite_status(sa)
+            vfo="FA" if (not status["sat"] or status["main_downlink"]) else "FB"
+            self._exchange(frequency_command(vfo,downlink_hz))
+            if mode in MODES and (not status["sat"] or not status["ctrl_sub"]):
+                self._exchange("MD"+MODES[mode]+";")
+            got=parse_frequency(self._exchange(vfo+";",vfo),vfo)
+            if got!=downlink_hz:
+                raise RuntimeError(f"TS-2000 não confirmou RX: esperado {downlink_hz}, real {got}")
+            self.state.sat=status["sat"]
+            self.state.downlink=got
+            return self.state
 
     def set_main_mode(self, mode: str):
         if mode not in MODES:

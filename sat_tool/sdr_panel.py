@@ -21,14 +21,43 @@ from .qt_compat import (Qt, QTimer, QWidget, QVBoxLayout, QHBoxLayout, QGridLayo
                         QPushButton, QLineEdit, QComboBox, QGroupBox, QTabWidget, QCheckBox,
                         QTableWidget, QTableWidgetItem, QHeaderView, QDoubleSpinBox,
                         QAbstractItemView, QMessageBox, QProgressBar)
-from . import ax25, dsp, rigs, rtl_driver, sdr, telemetry
+from . import aprs_info, ax25, dsp, rigs, rtl_driver, sdr, telemetry
+from .audio_ring import AudioRing
 
 try:  # PySide6
     from PySide6.QtGui import QImage, QPainter, QColor, QPen
-    from PySide6.QtWidgets import QDockWidget, QSlider
+    from PySide6.QtWidgets import QDockWidget, QSlider, QPlainTextEdit, QSplitter
+    from PySide6.QtCore import QIODevice
 except ImportError:  # PySide2
     from PySide2.QtGui import QImage, QPainter, QColor, QPen
-    from PySide2.QtWidgets import QDockWidget, QSlider
+    from PySide2.QtWidgets import QDockWidget, QSlider, QPlainTextEdit, QSplitter
+    from PySide2.QtCore import QIODevice
+
+
+class RingDevice(QIODevice):
+    """v1.6.0: a placa de som puxa o áudio (modo pull) direto do AudioRing, sem depender do timer da GUI."""
+
+    def __init__(self, ring: AudioRing, parent=None):
+        super().__init__(parent)
+        self.ring = ring
+        self.open(QIODevice.ReadOnly)
+
+    def readData(self, maxlen):
+        n = max(0, int(maxlen) // 2)
+        return dsp.float_to_pcm16(self.ring.pull(n)) if n else b""
+
+    def writeData(self, data):
+        return 0
+
+    def bytesAvailable(self):
+        return 48_000 + super().bytesAvailable()
+
+    def isSequential(self):
+        return True
+
+
+FILTERS = {"FM": (6000, 10000, 12000, 16000), "USB": (1800, 2400, 2800, 3600),
+           "LSB": (1800, 2400, 2800, 3600), "CW": (200, 500, 800, 1000)}
 
 
 def colormap() -> np.ndarray:
@@ -66,6 +95,10 @@ class WaterfallWidget(QWidget):
         self.band = None         # (baixa, alta) do transponder já com Doppler
         self.last_spectrum = None
         self.on_click = lambda delta_hz: None
+        self.on_filter = lambda width_hz: None
+        self.average = 0.0          # 0 = sem média; até 0.9 suaviza as linhas
+        self._avg_row = None
+        self._drag = False
         self.setCursor(Qt.CrossCursor)
         self.setToolTip("Clique para sintonizar o sinal; o Doppler continua corrigindo")
 
@@ -84,6 +117,9 @@ class WaterfallWidget(QWidget):
         if self.auto_floor:
             self.floor_db = float(np.percentile(seg, 20)) - 3
         row = np.interp(np.linspace(0, len(seg) - 1, self.width_px), np.arange(len(seg)), seg)
+        if self.average and self._avg_row is not None and len(self._avg_row) == len(row):
+            row = self.average * self._avg_row + (1 - self.average) * row
+        self._avg_row = row
         idx = np.clip((row - self.floor_db) / max(self.range_db, 1) * 255, 0, 255).astype(np.uint8)
         self.image = np.roll(self.image, 1, axis=0)
         self.image[0] = self.lut[idx]
@@ -116,12 +152,34 @@ class WaterfallWidget(QWidget):
             p.drawText(6, self.height() - 6, f"{self.channel_hz / 1e6:.4f} MHz · ±{self.span_hz / 1e3:.0f} kHz")
         p.end()
 
+    def _edge_hit(self, x: float) -> bool:
+        if not self.channel_hz:
+            return False
+        left, right = self._x(self.channel_hz - self.filter_hz / 2), self._x(self.channel_hz + self.filter_hz / 2)
+        return min(abs(x - left), abs(x - right)) <= 6
+
     def mousePressEvent(self, event):
         if not self.channel_hz:
             return
         pos = event.position().x() if hasattr(event, "position") else event.x()
+        if self._edge_hit(pos):  # arrastar a borda ajusta a largura do filtro
+            self._drag = True
+            return
         delta = (pos / max(1, self.width()) - 0.5) * 2 * self.span_hz
         self.on_click(int(round(delta / 10) * 10))
+
+    def mouseMoveEvent(self, event):
+        pos = event.position().x() if hasattr(event, "position") else event.x()
+        self.setCursor(Qt.SizeHorCursor if (self._drag or self._edge_hit(pos)) else Qt.CrossCursor)
+        if self._drag:
+            hz_per_px = 2 * self.span_hz / max(1, self.width())
+            self.filter_hz = max(100, int(abs(pos - self.width() / 2) * 2 * hz_per_px))
+            self.update()
+
+    def mouseReleaseEvent(self, event):
+        if self._drag:
+            self._drag = False
+            self.on_filter(int(self.filter_hz))
 
 
 class SdrPanel(QWidget):
@@ -134,7 +192,14 @@ class SdrPanel(QWidget):
         self.receiver: sdr.SdrReceiver | None = None
         self.devices: list[sdr.SdrDevice] = []
         self._asked_devices: set[str] = set()
-        self._audio_q: collections.deque = collections.deque(maxlen=50)
+        self._audio_q: collections.deque = collections.deque(maxlen=50)  # mantido por compatibilidade
+        self.ring = AudioRing()
+        self.ring_dev = None
+        self.records: list[dict] = []
+        self.heard: dict = {}
+        self._detached: dict = {}
+        self._known_devices: set = set()
+        self._startup_detect = True
         self._spec_q: queue.Queue = queue.Queue(maxsize=4)
         self._frame_q: queue.Queue = queue.Queue()
         self._decoded_q: queue.Queue = queue.Queue()
@@ -162,6 +227,7 @@ class SdrPanel(QWidget):
         self._prep_running = False
         self._prep_offered = False
         QTimer.singleShot(4000, self.check_preparation)
+        self.change_wf_height()
         if self.cfg.get("kiss_enabled"):
             QTimer.singleShot(1500, self.start_kiss)
 
@@ -175,16 +241,16 @@ class SdrPanel(QWidget):
         # --- Receptor
         rx_page = QWidget(); rl = QVBoxLayout(rx_page); rl.setContentsMargins(2, 2, 2, 2)
         bar = QHBoxLayout()
-        self.sdr_led = QPushButton("SDR")
-        self.sdr_led.setFixedWidth(52)
-        self.sdr_led.setToolTip("Clique para iniciar/parar o RTL-SDR")
+        self.sdr_led = QPushButton("Receptor: DESLIGADO")
+        self.sdr_led.setMinimumWidth(150)
+        self.sdr_led.setToolTip("Liga/desliga o receptor RTL-SDR (desligar fica salvo até você ligar de novo)")
         self.sdr_led.clicked.connect(self.toggle_sdr)
         bar.addWidget(self.sdr_led)
         self.device_combo = QComboBox(); self.device_combo.setMinimumWidth(170)
         bar.addWidget(self.device_combo)
         self.rx_info = QLabel("RX —"); self.rx_info.setStyleSheet("color:#7ee5d4;font-weight:700")
         bar.addWidget(self.rx_info, 1)
-        self.level = QProgressBar(); self.level.setRange(0, 60); self.level.setTextVisible(False)
+        self.level = QProgressBar(); self.level.setRange(0, 100); self.level.setTextVisible(False)
         self.level.setFixedWidth(90); self.level.setMaximumHeight(10)
         bar.addWidget(QLabel("Nível")); bar.addWidget(self.level)
         bar.addWidget(QLabel("Zoom"))
@@ -200,8 +266,10 @@ class SdrPanel(QWidget):
         self.volume.valueChanged.connect(self.change_volume)
         bar.addWidget(self.volume)
         bar.addWidget(QLabel("Squelch"))
-        self.squelch = QSlider(Qt.Horizontal); self.squelch.setRange(-120, 0); self.squelch.setFixedWidth(80)
-        self.squelch.setValue(int(self.cfg.get("sdr_squelch_db", -120)))
+        self.squelch = QSlider(Qt.Horizontal); self.squelch.setRange(0, 100); self.squelch.setFixedWidth(80)
+        self.squelch.setValue(int(self.cfg.get("sdr_squelch_pct", 0)))
+        self.squelch.setToolTip("Qualidade mínima do sinal para abrir o áudio (0 = sempre aberto). "
+                                "A barra Nível mostra a qualidade atual: FM pelo ruído, SSB/CW pelo SNR.")
         self.squelch.valueChanged.connect(self.change_squelch)
         bar.addWidget(self.squelch)
         bar.addWidget(QLabel("Faixa dB"))
@@ -210,10 +278,45 @@ class SdrPanel(QWidget):
         self.contrast.valueChanged.connect(lambda v: setattr(self.waterfall, "range_db", float(v)))
         bar.addWidget(self.contrast)
         rl.addLayout(bar)
+        bar2 = QHBoxLayout()
+        bar2.addWidget(QLabel("Filtro"))
+        self.filter_combo = QComboBox()
+        self.filter_combo.setToolTip("Largura de banda do receptor; também é possível arrastar as bordas do filtro no waterfall")
+        self.filter_combo.currentIndexChanged.connect(self.change_filter)
+        bar2.addWidget(self.filter_combo)
+        bar2.addWidget(QLabel("Velocidade"))
+        self.wf_speed = QComboBox()
+        for rows in (5, 10, 20, 30):
+            self.wf_speed.addItem(f"{rows} linhas/s", rows)
+        self.wf_speed.setCurrentIndex(max(0, self.wf_speed.findData(int(self.cfg.get("wf_rows_per_s", 20)))))
+        self.wf_speed.currentIndexChanged.connect(self.change_wf_speed)
+        bar2.addWidget(self.wf_speed)
+        bar2.addWidget(QLabel("Média"))
+        self.wf_avg = QSlider(Qt.Horizontal); self.wf_avg.setRange(0, 90); self.wf_avg.setFixedWidth(70)
+        self.wf_avg.setValue(int(self.cfg.get("wf_average", 0)))
+        self.wf_avg.valueChanged.connect(lambda v: (setattr(self.waterfall, "average", v / 100),
+                                                    self.cfg.__setitem__("wf_average", int(v))))
+        bar2.addWidget(self.wf_avg)
+        bar2.addWidget(QLabel("Altura"))
+        self.wf_height = QComboBox()
+        for px in (90, 140, 200, 280, 380):
+            self.wf_height.addItem(f"{px} px", px)
+        self.wf_height.setCurrentIndex(max(0, self.wf_height.findData(int(self.cfg.get("wf_height", 90)))))
+        self.wf_height.currentIndexChanged.connect(self.change_wf_height)
+        bar2.addWidget(self.wf_height)
+        bar2.addStretch(1)
+        self.detach_wf = QPushButton("⇱ Destacar waterfall")
+        self.detach_wf.clicked.connect(lambda: self.toggle_detached("waterfall"))
+        bar2.addWidget(self.detach_wf)
+        rl.addLayout(bar2)
         self.waterfall = WaterfallWidget()
         self.waterfall.span_hz = int(self.zoom.currentData())
         self.waterfall.on_click = self.click_tune
-        rl.addWidget(self.waterfall, 1)
+        self.waterfall.on_filter = self.drag_filter
+        self.waterfall.average = self.wf_avg.value() / 100
+        self.wf_holder = QVBoxLayout()
+        self.wf_holder.addWidget(self.waterfall, 1)
+        rl.addLayout(self.wf_holder, 1)
         self.sdr_status = QLabel("RTL-SDR: aguardando detecção")
         self.sdr_status.setWordWrap(True)
         self.sdr_status.setStyleSheet("color:#a8cee0;font-size:11px")
@@ -297,18 +400,49 @@ class SdrPanel(QWidget):
         self.satnogs_upload.setToolTip("Envia cada quadro ao SatNOGS DB com seu indicativo e coordenadas da estação")
         top.addWidget(self.satnogs_upload)
         tv.addLayout(top)
-        self.frames = QTableWidget(0, 5)
-        self.frames.setHorizontalHeaderLabels(["UTC", "Origem", "Quadro (AX.25 / hex)", "Decodificador", "Campos"])
+        flt = QHBoxLayout()
+        flt.addWidget(QLabel("Mostrar"))
+        self.tlm_filter = QComboBox()
+        for label, key in (("Todos", "all"), ("Só APRS", "aprs"), ("Só o satélite atual", "sat")):
+            self.tlm_filter.addItem(label, key)
+        self.tlm_filter.currentIndexChanged.connect(self.apply_tlm_filter)
+        flt.addWidget(self.tlm_filter)
+        self.tlm_call = QLineEdit(); self.tlm_call.setPlaceholderText("indicativo…"); self.tlm_call.setFixedWidth(110)
+        self.tlm_call.textChanged.connect(self.apply_tlm_filter)
+        flt.addWidget(self.tlm_call)
+        self.heard_on_map = QCheckBox("Estações APRS no mapa")
+        self.heard_on_map.setChecked(bool(self.cfg.get("aprs_on_map", True)))
+        self.heard_on_map.toggled.connect(lambda v: (self.cfg.__setitem__("aprs_on_map", bool(v)), self.push_heard()))
+        flt.addWidget(self.heard_on_map)
+        flt.addStretch(1)
+        export = QPushButton("Exportar JSON")
+        export.clicked.connect(self.export_json)
+        flt.addWidget(export)
+        self.detach_tlm = QPushButton("⇱ Destacar telemetria")
+        self.detach_tlm.clicked.connect(lambda: self.toggle_detached("telemetry"))
+        flt.addWidget(self.detach_tlm)
+        tv.addLayout(flt)
+        self.frames = QTableWidget(0, 6)
+        self.frames.setHorizontalHeaderLabels(["UTC", "Origem", "Quadro (AX.25 / hex)", "APRS", "Decodificador", "Campos"])
         self.frames.horizontalHeader().setSectionResizeMode(2, QHeaderView.Stretch)
-        self.frames.horizontalHeader().setSectionResizeMode(4, QHeaderView.Stretch)
+        self.frames.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
         self.frames.verticalHeader().hide()
         self.frames.setMinimumHeight(60)
         self.frames.setEditTriggers(QAbstractItemView.NoEditTriggers)
-        tv.addWidget(self.frames)
+        self.frames.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.frames.itemSelectionChanged.connect(self.show_frame_detail)
+        self.frame_detail = QPlainTextEdit(); self.frame_detail.setReadOnly(True)
+        self.frame_detail.setPlaceholderText("Selecione um pacote para ver os campos, o hex e o texto bruto")
+        self.tlm_split = QSplitter(Qt.Vertical)
+        self.tlm_split.addWidget(self.frames); self.tlm_split.addWidget(self.frame_detail)
+        self.tlm_split.setSizes([3, 1])
+        self.tlm_holder = QVBoxLayout()
+        self.tlm_holder.addWidget(self.tlm_split, 1)
+        tv.addLayout(self.tlm_holder, 1)
         self.tlm_status = QLabel(f"Log CSV: {self.tlm_log.folder}")
         self.tlm_status.setStyleSheet("color:#a8cee0;font-size:11px")
         tv.addWidget(self.tlm_status)
-        tabs.addTab(self._scroll(tl), "Telemetria")
+        tabs.addTab(tl, "Telemetria")
         self._led(False)
 
     @staticmethod
@@ -357,7 +491,14 @@ class SdrPanel(QWidget):
     def _led(self, ok, warn=False):
         color = ("#125743", "#a4f7c9", "#3fd18e") if ok else (("#755225", "#ffead3", "#e0aa55") if warn
                                                                else ("#5a2a2a", "#ffd0c4", "#c96a5a"))
-        self.sdr_led.setStyleSheet(f"font-weight:800;background:{color[0]};color:{color[1]};border:1px solid {color[2]}")
+        style = f"font-weight:800;background:{color[0]};color:{color[1]};border:1px solid {color[2]}"
+        self.sdr_led.setStyleSheet(style)
+        self.sdr_led.setText("Receptor: LIGADO" if ok else "Receptor: DESLIGADO")
+        top = getattr(self.w, "sdr_toggle", None)
+        if top is not None:  # botão "Painel SDR" do topo indica pela cor se o receptor está ligado
+            top.setStyleSheet("font-size:12px;font-weight:800;" + style)
+            top.setToolTip("Mostrar/ocultar o painel SDR (não liga nem desliga o receptor) · receptor "
+                           + ("LIGADO" if ok else "DESLIGADO"))
 
     def save_settings(self):
         c = self.cfg
@@ -396,8 +537,15 @@ class SdrPanel(QWidget):
             dock.setVisible(True)  # primeira detecção: mostra o painel
         self._led(False, warn=True)
         key = devices[0].serial or devices[0].label
+        keys = {d.serial or d.label for d in devices}
+        newly = bool(keys - self._known_devices)
+        first = self._startup_detect
+        self._known_devices, self._startup_detect = keys, False
         if self.cfg.get("rx_device") == "SDR":
-            if self.cfg.get("sdr_autostart", True):
+            # v1.6.0: liga sozinho só ao abrir o programa ou ao reconectar o dongle, nunca depois de
+            # o operador desligar (sdr_user_stopped vale até ele ligar de novo).
+            if (self.cfg.get("sdr_autostart", True) and not self.cfg.get("sdr_user_stopped", False)
+                    and (first or newly)):
                 self.start_sdr()
         elif key not in self._asked_devices and not any(d.remote for d in devices[:1]):
             self._asked_devices.add(key)
@@ -493,8 +641,12 @@ class SdrPanel(QWidget):
     # ------------------------------------------------------------ receptor
     def toggle_sdr(self):
         if self.receiver and self.receiver.status.running:
+            self.cfg["sdr_user_stopped"] = True
+            self.w.config.save()
             self.stop_sdr()
         else:
+            self.cfg["sdr_user_stopped"] = False
+            self.w.config.save()
             self.start_sdr()
 
     def start_sdr(self):
@@ -510,11 +662,12 @@ class SdrPanel(QWidget):
         settings = sdr.SdrSettings(gain_db=self.gain.currentData(), ppm=int(self.ppm.value()),
                                    bias_tee=self.bias.isChecked())
         self.receiver = sdr.SdrReceiver(lambda: sdr.RtlSource(dev, settings),
-                                        on_audio=self._audio_q.append,
+                                        on_audio=self.ring.push,
                                         on_spectrum=self._on_spectrum,
                                         on_frame=lambda f, s: self._frame_q.put((f, s)))
         self.receiver.set_volume(self.volume.value() / 100)
-        self.receiver.set_squelch(self.squelch.value())
+        self.receiver.set_squelch_pct(self.squelch.value())
+        self.receiver.set_spectrum_rate(int(self.wf_speed.currentData() or 20))
         self._open_audio()
         self.dispatch.reset()
         self.fast_tick()
@@ -553,8 +706,11 @@ class SdrPanel(QWidget):
             if want and d.description() == want:
                 device = d
         self.sink = QAudioSink(device, fmt, self)
-        self.sink.setBufferSize(dsp.AUDIO_RATE * 2 // 2)  # ~0,5 s
-        self.sink_io = self.sink.start()
+        self.sink.setBufferSize(dsp.AUDIO_RATE * 2 // 5)  # ~200 ms no dispositivo + jitter buffer no AudioRing
+        self.ring.clear()
+        self.ring_dev = RingDevice(self.ring, self)
+        self.sink.start(self.ring_dev)   # modo pull: a placa de som busca o áudio quando precisa
+        self.sink_io = None
 
     def _close_audio(self):
         if self.sink is not None:
@@ -563,15 +719,106 @@ class SdrPanel(QWidget):
             except Exception:
                 pass
         self.sink = self.sink_io = None
-        self._audio_q.clear()
+        self.ring_dev = None
+        self.ring.clear()
 
     def change_volume(self, v):
         if self.receiver:
             self.receiver.set_volume(v / 100)
 
     def change_squelch(self, v):
+        self.cfg["sdr_squelch_pct"] = int(v)
         if self.receiver:
-            self.receiver.set_squelch(float(v))
+            self.receiver.set_squelch_pct(float(v))
+
+    def _mode_key(self):
+        snap = self.last_snapshot or {}
+        mode = rigs.normalize_mode(snap.get("rx_mode", "FM"))
+        return "FM" if mode in ("FM", "PKT", "AM") else mode
+
+    def refresh_filter_choices(self):
+        mode = self._mode_key()
+        if getattr(self, "_filter_mode", None) == mode:
+            return
+        self._filter_mode = mode
+        saved = (self.cfg.get("sdr_filters") or {}).get(mode)
+        self.filter_combo.blockSignals(True)
+        self.filter_combo.clear()
+        for hz in FILTERS.get(mode, FILTERS["FM"]):
+            self.filter_combo.addItem(f"{hz / 1000:g} kHz" if hz >= 1000 else f"{hz} Hz", hz)
+        if saved and self.filter_combo.findData(saved) < 0:
+            self.filter_combo.addItem(f"{saved / 1000:g} kHz" if saved >= 1000 else f"{saved} Hz", saved)
+        default = saved or dsp.CHANNEL_WIDTH.get(mode, 12000)
+        idx = self.filter_combo.findData(int(default))
+        self.filter_combo.setCurrentIndex(idx if idx >= 0 else 0)
+        self.filter_combo.blockSignals(False)
+        self.change_filter()
+
+    def change_filter(self, *args):
+        hz = self.filter_combo.currentData()
+        if not hz:
+            return
+        mode = self._mode_key()
+        self.cfg.setdefault("sdr_filters", {})[mode] = int(hz)
+        self.waterfall.filter_hz = int(hz)
+        if self.receiver:
+            self.receiver.set_mode(mode, int(hz))
+
+    def drag_filter(self, width_hz):
+        width_hz = int(round(width_hz / 100) * 100) or 100
+        idx = self.filter_combo.findData(width_hz)
+        if idx < 0:
+            self.filter_combo.addItem(f"{width_hz / 1000:g} kHz" if width_hz >= 1000 else f"{width_hz} Hz", width_hz)
+            idx = self.filter_combo.count() - 1
+        self.filter_combo.setCurrentIndex(idx)
+
+    def change_wf_speed(self, *args):
+        rows = int(self.wf_speed.currentData() or 20)
+        self.cfg["wf_rows_per_s"] = rows
+        if self.receiver:
+            self.receiver.set_spectrum_rate(rows)
+
+    def change_wf_height(self, *args):
+        px = int(self.wf_height.currentData() or 90)
+        self.cfg["wf_height"] = px
+        self.waterfall.setMinimumHeight(px)
+
+    # ------------------------------------------- janelas destacáveis (v1.6.0)
+    def toggle_detached(self, which):
+        from .qt_compat import QWidget as _W
+        if which in self._detached:
+            win = self._detached.pop(which)
+            self.cfg.setdefault("detached_geometry", {})[which] = [win.x(), win.y(), win.width(), win.height()]
+            widget, holder, button, label = ((self.waterfall, self.wf_holder, self.detach_wf, "⇱ Destacar waterfall")
+                                             if which == "waterfall" else
+                                             (self.tlm_split, self.tlm_holder, self.detach_tlm, "⇱ Destacar telemetria"))
+            holder.addWidget(widget, 1)
+            button.setText(label)
+            win.close()
+            return
+        widget, button = ((self.waterfall, self.detach_wf) if which == "waterfall" else (self.tlm_split, self.detach_tlm))
+        win = _W(None, Qt.Window)
+        win.setWindowTitle("PT2VHF Sat Tool · " + ("Waterfall" if which == "waterfall" else "Telemetria"))
+        lay = QVBoxLayout(win)
+        top = QHBoxLayout()
+        on_top = QCheckBox("Sempre no topo")
+        def pin(v, w=win):
+            w.setWindowFlag(Qt.WindowStaysOnTopHint, bool(v)); w.show()
+        on_top.toggled.connect(pin)
+        back = QPushButton("⇲ Reacoplar")
+        back.clicked.connect(lambda: self.toggle_detached(which))
+        top.addWidget(on_top); top.addStretch(1); top.addWidget(back)
+        lay.addLayout(top)
+        lay.addWidget(widget, 1)
+        geo = (self.cfg.get("detached_geometry") or {}).get(which)
+        if geo:
+            win.setGeometry(*geo)
+        else:
+            win.resize(900, 360)
+        win.closeEvent = lambda e, k=which: (self._detached.get(k) is not None and self.toggle_detached(k), e.accept())
+        button.setText("Destacado (⇲ reacoplar)")
+        self._detached[which] = win
+        win.show()
 
     def click_tune(self, delta_hz):
         self.w.retune_nominal_downlink(delta_hz)
@@ -590,12 +837,12 @@ class SdrPanel(QWidget):
         self.rx_info.setText(f"RX {rx_hz / 1e6:.5f} MHz · {mode} · Doppler {snap['rx_offset_hz']:+d} Hz")
         self.pipeline_label.setText(f"{snap['name']} · Pipeline: {telemetry.PIPELINE_LABELS.get(snap['pipeline'], '—')}")
         self.waterfall.channel_hz = rx_hz
-        self.waterfall.filter_hz = dsp.CHANNEL_WIDTH.get(rigs.normalize_mode(mode) if mode != "PKT" else "FM", 12_000)
+        self.refresh_filter_choices()
         self.waterfall.band = snap.get("band")
         rec = self.receiver
         if rec and rec.status.running:
             rec.tune(rx_hz)
-            rec.set_mode("FM" if rigs.normalize_mode(mode) in ("FM", "PKT") else rigs.normalize_mode(mode))
+            rec.set_mode(self._mode_key(), int(self.filter_combo.currentData() or 0) or None)
             rec.set_decoder(snap["pipeline"])
             self._recording(snap)
         self._dispatch_rigs(snap)
@@ -728,6 +975,12 @@ class SdrPanel(QWidget):
         def work():
             dec_name, fields = self.decoder.decode(frame, norad) if norad else ("", {})
             record = telemetry.make_record(frame, norad, name, source, dec_name, fields)
+            pkt = aprs_info.parse(record.get("ax25", ""))
+            if pkt:
+                summary, details = aprs_info.describe(pkt, (lat, lon) if call or lat else None)
+                record["aprs"], record["aprs_fields"] = summary, details
+                if "latitude" in pkt and "longitude" in pkt:
+                    record["aprs_pos"] = (float(pkt["latitude"]), float(pkt["longitude"]), pkt.get("from", ""))
             path = self.tlm_log.append(record)
             status = ""
             if upload and norad and call:
@@ -739,17 +992,73 @@ class SdrPanel(QWidget):
         threading.Thread(target=work, daemon=True).start()
 
     def _add_frame_row(self, record, path, status):
+        self.records.insert(0, record)
+        del self.records[1000:]
+        if record.get("aprs_pos"):
+            lat, lon, who = record["aprs_pos"]
+            self.heard[who or record["utc"]] = {"lat": lat, "lon": lon, "call": who, "utc": record["utc"][11:19]}
+            self.push_heard()
+        self.apply_tlm_filter()
+        self.tlm_status.setText(f"{len(self.records)} quadros · log {path}" + (f" · {status}" if status else ""))
+
+    def _record_visible(self, rec):
+        mode = self.tlm_filter.currentData()
+        if mode == "aprs" and not rec.get("aprs"):
+            return False
+        if mode == "sat" and rec.get("norad") != str((self.last_snapshot or {}).get("norad", "")):
+            return False
+        call = self.tlm_call.text().strip().upper()
+        return not call or call in (rec.get("ax25") or "").upper()
+
+    def apply_tlm_filter(self, *args):
+        rows = [r for r in self.records if self._record_visible(r)][:500]
+        self._view = rows
         t = self.frames
-        t.insertRow(0)
-        fields = record["fields"] if record["fields"] != "{}" else ""
-        for col, value in enumerate((record["utc"][11:19], record["source"], record["ax25"] or record["hex"],
-                                     record["decoder"] or "—", fields)):
-            item = QTableWidgetItem(str(value))
-            item.setToolTip(str(value))
-            t.setItem(0, col, item)
-        while t.rowCount() > 500:
-            t.removeRow(t.rowCount() - 1)
-        self.tlm_status.setText(f"{t.rowCount()} quadros · log {path}" + (f" · {status}" if status else ""))
+        t.setRowCount(len(rows))
+        for i, record in enumerate(rows):
+            fields = record["fields"] if record["fields"] != "{}" else ""
+            for col, value in enumerate((record["utc"][11:19], record["source"], record["ax25"] or record["hex"],
+                                         record.get("aprs", ""), record["decoder"] or "—", fields)):
+                item = QTableWidgetItem(str(value))
+                item.setToolTip(str(value))
+                t.setItem(i, col, item)
+
+    def show_frame_detail(self):
+        rows = self.frames.selectionModel().selectedRows() if self.frames.selectionModel() else []
+        view = getattr(self, "_view", [])
+        if not rows or rows[0].row() >= len(view):
+            return
+        rec = view[rows[0].row()]
+        lines = [f"UTC {rec['utc']} · origem {rec['source']} · NORAD {rec.get('norad', '')} {rec.get('satellite', '')}"]
+        for k, v in (rec.get("aprs_fields") or {}).items():
+            lines.append(f"{k}: {v}")
+        if rec.get("decoder"):
+            lines.append(f"Decodificador {rec['decoder']}: {rec['fields']}")
+        lines.append("")
+        lines.append("Texto: " + (rec.get("ax25") or "—"))
+        hexs = rec["hex"]
+        lines.append("Hex: " + " ".join(hexs[i:i + 2] for i in range(0, len(hexs), 2)))
+        self.frame_detail.setPlainText("\n".join(lines))
+
+    def push_heard(self):
+        """Estações APRS ouvidas via satélite no mapa (camada própria, não apaga a órbita)."""
+        import json as _json
+        items = list(self.heard.values())[-200:] if self.heard_on_map.isChecked() else []
+        try:
+            self.w.map.page().runJavaScript("window.updateHeard && window.updateHeard(" + _json.dumps(items) + ");")
+        except Exception:
+            pass
+
+    def export_json(self):
+        import json as _json
+        from datetime import datetime as _dt
+        folder = self.tlm_log.folder
+        folder.mkdir(parents=True, exist_ok=True)
+        path = folder / f"telemetria_{_dt.now():%Y%m%d_%H%M%S}.json"
+        path.write_text(_json.dumps([r for r in self.records if self._record_visible(r)], ensure_ascii=False,
+                                    indent=1, default=str), encoding="utf-8")
+        self.tlm_status.setText(f"Exportado: {path}")
+        self.w.log(f"Telemetria exportada em JSON: {path}")
 
     # -------------------------------------------------------- drenagem GUI
     def drain(self):
@@ -758,7 +1067,9 @@ class SdrPanel(QWidget):
             st = rec.status
             if st.running:
                 self._led(True)
-                self.level.setValue(int(np.clip(st.level_db + 90, 0, 60)))
+                self.level.setValue(int(np.clip(getattr(st, "quality", 0), 0, 100)))
+                self.level.setToolTip(f"Qualidade {getattr(st, 'quality', 0):.0f} % · nível {st.level_db:.1f} dB · "
+                                      f"áudio {self.ring.level_ms:.0f} ms · falhas {self.ring.underruns}")
                 self.sdr_led.setToolTip(f"RTL-SDR ativo · centro {st.center_hz / 1e6:.4f} MHz · {st.mode}"
                                         + (f" · gravando {Path(st.recording).name}" if st.recording else ""))
             elif st.error:
@@ -766,11 +1077,6 @@ class SdrPanel(QWidget):
                 self.sdr_status.setText(st.error)
                 if not self._prep_offered:
                     self.check_preparation(interactive=True)
-        if self.sink_io is not None:
-            while self._audio_q:
-                if self.sink.bytesFree() < 9600:
-                    break
-                self.sink_io.write(dsp.float_to_pcm16(self._audio_q.popleft()))
         try:
             while True:
                 spec, center = self._spec_q.get_nowait()
@@ -800,6 +1106,8 @@ class SdrPanel(QWidget):
             pass
 
     def shutdown(self):
+        for win in list(self._detached.values()):
+            win.close()
         for timer in (self.fast, self.ui_timer, self.detect_timer):
             timer.stop()
         if self.receiver:

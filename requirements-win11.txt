@@ -8,3 +8,4 @@ urllib3==1.26.20
 pyrtlsdr==0.5.1
 pyrtlsdrlib==0.0.7
 satnogs-decoders==1.132.0
+aprslib==0.7.2

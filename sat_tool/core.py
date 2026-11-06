@@ -177,9 +177,12 @@ def transponder_options(rows: list[dict]) -> list[dict]:
         })
     return options
 
-def ground_track_between(sat, begin:datetime, end:datetime, *, ts=None, max_samples:int=220):
+def ground_track_between(sat, begin:datetime, end:datetime, *, ts=None, max_samples:int=1200,
+                         step_s:float=30.0):
     """Ground track between two UTC instants, splitting at the ±180° meridian.
 
+    v1.6.0: amostragem de 30 s (curvas sem quinas, cálculo vetorizado) e ponto interpolado
+    exatamente na borda ±180° nos dois trechos, sem lacuna nem traço atravessando o mapa.
     History here is orbit reconstructed from elements, not received GPS telemetry.
     """
     from skyfield.api import load,wgs84
@@ -188,17 +191,22 @@ def ground_track_between(sat, begin:datetime, end:datetime, *, ts=None, max_samp
     if end<=begin: return []
     ts=ts or load.timescale(builtin=True)
     duration=(end-begin).total_seconds()
-    steps=max(4,min(max_samples,int(duration/120)+1))
-    result=[[]];last_lon=None
-    for i in range(steps+1):
-        when=begin+timedelta(seconds=duration*i/steps)
-        sub=wgs84.subpoint(sat.at(ts.from_datetime(when)))
-        lat,lon=sub.latitude.degrees,sub.longitude.degrees
-        if last_lon is not None and abs(lon-last_lon)>180:
-            result.append([])
+    steps=max(4,min(max_samples,int(duration/step_s)+1))
+    whens=[begin+timedelta(seconds=duration*i/steps) for i in range(steps+1)]
+    sub=wgs84.subpoint(sat.at(ts.from_datetimes(whens)))
+    lats=list(sub.latitude.degrees);lons=list(sub.longitude.degrees)
+    result=[[]]
+    for i,(lat,lon) in enumerate(zip(lats,lons)):
+        if i and abs(lon-lons[i-1])>180:
+            prev_lat,prev_lon=lats[i-1],lons[i-1]
+            edge=180.0 if prev_lon>0 else -180.0
+            span=(edge-prev_lon)+((lon+360 if edge>0 else lon-360)-edge)
+            frac=(edge-prev_lon)/span if span else 0.5
+            mid_lat=prev_lat+(lat-prev_lat)*frac
+            result[-1].append([mid_lat,edge])
+            result.append([[mid_lat,-edge]])
         result[-1].append([lat,lon])
-        last_lon=lon
-    return [p for p in result if len(p)>=2]
+    return [seg for seg in result if len(seg)>=2]
 
 
 def track_period_bounds(now:datetime, period_hours:float, direction:str, last_pass:dict|None=None):

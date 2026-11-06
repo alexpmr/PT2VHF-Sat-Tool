@@ -63,3 +63,24 @@ def test_spectrum_peak_position():
     spec = dsp.power_spectrum_db(_tone_iq(240_000, 0.05), 4096)
     peak_hz = (np.argmax(spec) - 2048) * dsp.SDR_RATE / 4096
     assert abs(peak_hz - 240_000) < dsp.SDR_RATE / 4096 * 2
+
+
+def test_v160_fm_noise_squelch_opens_on_signal_and_closes_on_noise():
+    rng = np.random.default_rng(3)
+    noise = (rng.normal(0, 0.3, 96000) + 1j * rng.normal(0, 0.3, 96000)).astype(np.complex64)
+    d = dsp.Demodulator("FM")
+    d.squelch_pct = 50
+    d.offset_hz = 100_000
+    for _ in range(3):
+        a = d.process(noise)
+    assert d.quality < 50 and np.max(np.abs(a[-4800:])) < 1e-6
+    sig = _tone_iq(100_000, 0.1, fm_audio=1000)
+    for _ in range(3):
+        b = d.process(sig)
+    assert d.quality > 70 and np.std(b[-4800:]) > 0.05
+
+
+def test_v160_custom_filter_width():
+    d = dsp.Demodulator("USB")
+    d.set_mode("USB", 1800)
+    assert d.width_hz == 1800 and d.sideband is not None

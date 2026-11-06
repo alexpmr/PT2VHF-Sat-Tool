@@ -31,8 +31,7 @@ def test_operator_window_constructs_with_new_layout():
             application=gui.QApplication([])
             window=gui.MainWindow()
             assert window.tabs.count()==5
-            assert 58<=window.pred_rx.minimumHeight()<100
-            assert 58<=window.pred_tx.minimumHeight()<100
+            assert window.lcd.minimumHeight()>=100 and window.lcd.maximumHeight()<=170  # v1.6.0: display LCD
             assert window.mode_combo.parent() is not None
             assert window.ports.parent() is not None
             assert window.cat_rx.parent() is not None
@@ -42,10 +41,8 @@ def test_operator_window_constructs_with_new_layout():
                                           for i in range(window.catalog_table.columnCount())]
             assert window.cat_operating_detail.parent() is not None
             header=window.pass_table.horizontalHeader()
-            for col in (0,1,2,3,4):
-                assert header.sectionResizeMode(col)==gui.QHeaderView.ResizeToContents
-            assert header.sectionResizeMode(5)==gui.QHeaderView.ResizeToContents
-            assert header.sectionResizeMode(6)==gui.QHeaderView.Stretch
+            for col in range(7):  # v1.6.0: larguras repartidas por fit_pass_columns
+                assert header.sectionResizeMode(col)==gui.QHeaderView.Interactive
             assert window.pass_table.horizontalHeaderItem(5).text()=="Qualidade"
             assert window.pass_table.wordWrap() is False
             assert window.pass_table.horizontalHeaderItem(0).text().startswith('AOS')

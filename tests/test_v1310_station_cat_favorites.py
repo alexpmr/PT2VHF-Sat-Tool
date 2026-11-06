@@ -86,7 +86,7 @@ def test_next_pass_countdown_is_inside_lower_orbital_telemetry_panel():
     app=(ROOT/"sat_tool"/"app.py").read_text(encoding="utf-8")
     assert 'sv.addWidget(upcoming)' not in app  # bloco removido na v1.3.15
     assert 'op.addWidget(upcoming)' not in app
-    assert 'rv.insertWidget(0,nextpass,1)' in app
+    assert 'self.right_splitter.addWidget(nextpass)' in app and 'rv.insertWidget(0,self.right_splitter,1)' in app  # v1.6.0
     assert 'self.next_countdown=label("--:--:--")' in app
 
 

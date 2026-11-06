@@ -25,7 +25,9 @@ def test_live_read_only_telemetry_queries_cat_mode_and_meters():
     assert state.signal_main==12 and state.signal_sub==4
     assert state.power_set_w==25
     assert state.meter_type=="ALC" and state.meter_value==11
-    assert sim.writes==["SA;","MD;","FC;","SM0;","SM1;","PC;","RM;"]
+    assert sim.writes==["SA;","MD;","FC;","SM0;","SM1;","PC;","RM;",
+                        "AG0;","RG;","SQ0;","PA;","RA;","NB;","NR;","IF;"]  # v1.6.0: extras do display
+    assert state.extras["af_gain"]==128 and state.extras["preamp"] is True and state.extras["nr"]==1
     assert not any(x.startswith(("TX","RX","FA00","FB00","SA1")) for x in sim.writes)
 
 

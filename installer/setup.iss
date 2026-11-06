@@ -1,5 +1,5 @@
 #define AppName "PT2VHF Sat Tool"
-#define AppVersion "1.5.0"
+#define AppVersion "1.6.0"
 #ifndef BuildFlavor
   #define BuildFlavor "Win11-x64"
 #endif
@@ -41,7 +41,9 @@ PrivilegesRequired=lowest
 WizardStyle=modern
 UninstallDisplayIcon={app}\PT2VHF-Sat-Tool.exe
 CloseApplications=yes
+CloseApplicationsFilter=*.exe,*.dll,*.pak,*.dat,*.bin
 RestartApplications=no
+AppMutex=PT2VHF_Sat_Tool_Running
 [Files]
 Source: "..\dist\PT2VHF-Sat-Tool\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 [Icons]

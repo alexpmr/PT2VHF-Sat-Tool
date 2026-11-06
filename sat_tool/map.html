@@ -12,8 +12,8 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#061628;fon
 .coast{fill:none;stroke:#70a8ad;stroke-opacity:.16;stroke-width:1.8}
 .waterline{stroke:#31789b;stroke-opacity:.13;stroke-width:2}
 .track{fill:none;stroke:#f6d964;stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round}
-.track-history{fill:none;stroke:#f6d964;stroke-width:1.8;stroke-opacity:.62;stroke-linecap:round}
-.track-forecast{fill:none;stroke:#f6d964;stroke-width:2.4;stroke-dasharray:8 4;stroke-linecap:round}
+.track-history{fill:none;stroke:#f6d964;stroke-width:2.4;stroke-opacity:.95;stroke-linecap:round;stroke-linejoin:round}
+.track-forecast{fill:none;stroke:#ffe9a3;stroke-width:2.2;stroke-dasharray:8 5;stroke-linecap:round;stroke-linejoin:round}
 .foot{fill:none;stroke:#3caaff;stroke-width:1.7;stroke-opacity:.92;stroke-dasharray:6 3}
 #shade{fill:#0c2f4b;opacity:.13;pointer-events:none}
 .city{font-size:14px;paint-order:stroke;stroke:#072437;stroke-width:2.5px;fill:#d6f7fa;font-weight:700}
@@ -139,6 +139,14 @@ window.updateOrbit=function(p){
  const box=document.getElementById("satinfo");if(box&&box.classList.contains("pinned")&&p&&p.info)document.getElementById("satinfo-body").innerHTML=p.info;
 };
 document.addEventListener("DOMContentLoaded",function(){const c=document.querySelector("#satinfo .close");if(c)c.addEventListener("click",function(){const b=document.getElementById("satinfo");b.classList.remove("pinned");b.style.display="none";});});
+const heardLayer=document.createElementNS(ns,"g");heardLayer.setAttribute("id","heard");root.appendChild(heardLayer);
+window.updateHeard=function(list){
+ while(heardLayer.firstChild)heardLayer.removeChild(heardLayer.firstChild);
+ (list||[]).forEach(h=>{if(!Number.isFinite(+h.lat)||!Number.isFinite(+h.lon))return;const [x,y]=xy(h.lat,h.lon);
+  const c=add("circle",{cx:x,cy:y,r:3.2,fill:"#ff8fd6",stroke:"#3a0b2a","stroke-width":".8"},heardLayer);
+  const t=document.createElementNS(ns,"title");t.textContent=(h.call||"")+" · APRS via satélite · "+(h.utc||"")+" UTC";c.appendChild(t);
+  const e=add("text",{x:x+5,y:y-4,class:"city",fill:"#ffc6ea"},heardLayer);e.textContent=h.call||"";});
+};
 window.fitStation=function(lat,lon){const [x,y]=xy(lat,lon);vb={x:Math.max(0,Math.min(600,x-180)),y:Math.max(0,Math.min(300,y-90)),w:360,h:180};updateBox();};
 window.reset=function(){vb={x:0,y:0,w:960,h:480};updateBox();};
 window.zoom=function(factor){const cx=vb.x+vb.w/2,cy=vb.y+vb.h/2;let w=Math.max(65,Math.min(960,vb.w*factor)),h=w/2;vb={x:Math.max(0,Math.min(960-w,cx-w/2)),y:Math.max(0,Math.min(480-h,cy-h/2)),w,h};updateBox();};
