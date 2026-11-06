@@ -140,6 +140,17 @@
     (MAIN à esquerda, SUB à direita, cada uma com o rótulo RX/TX e modo), e não uma embaixo da outra; manter
     S-meter/elevação e indicadores (SAT, AUTO, Doppler, potência, SWR) em linha abaixo; tamanho dos dígitos
     legível nas duas frequências, sem cortar em 1366×768.
+  - **Mockup aprovado pelo operador (06/11/2026):** `docs/backlog/lcd-mockup-ts2000-normal.png` e
+    `docs/backlog/lcd-mockup-ts2000-negrito.png` — MAIN à esquerda e SUB à direita na mesma linha (etiquetas
+    MAIN/SUB + RX/TX + modo), dígito de 1 Hz menor, S-meter sob o lado RX e PO/SWR sob o lado TX, linha de
+    indicadores (SAT, CAT, AUTO, DOP, VIS, EL, MAIN<>SUB, TX ON) e teclas A/B e RX ONLY à direita; Somente RX
+    mostra "TX OFF" e frequência apagada; em telas estreitas os dígitos diminuem mantendo a disposição.
+    Pontos sempre em grade inteira de pixels (causa provável dos "pixels defeituosos": posições fracionárias),
+    pontos grandes com só 1 px físico de separação e pontos apagados mais claros.
+  - **Fonte do display configurável em Configurações** (registrado em 06/11/2026): opção "Fonte do display"
+    com **Normal** (traço de 1 ponto, mockup "normal") e **Negrito** (traço de 2 pontos, matriz 6×7, mockup
+    "negrito"); **Normal por padrão**; salva em `settings.json`, aplicada na hora sem reiniciar; vale também
+    para o display destacado e os temas âmbar/verde/azul.
   - Testes: renderização sem pontos falhos (comparação de imagem/grade), clique na tecla A/B com CAT simulado
     (SA P3 + readback) e caso bloqueado com aviso, layout lado a lado em larguras pequenas e grandes.
 
