@@ -101,27 +101,24 @@ jobs:
         shell: cmd
         env:
           WDK_URL: https://go.microsoft.com/fwlink/p/?LinkID=253170
-          LIBUSB0_URL: https://github.com/mcuee/libusb-win32/releases/download/release_1.5.0.0/libusb-win32-bin-1.5.0.0.zip
-          LIBUSBK_URL: https://github.com/mcuee/libusbk/releases/download/V3.1.0.0/libusbK-3.1.0.0-bin.7z
         run: |
           git clone --depth 1 --branch v1.5.1 https://github.com/pbatard/libwdi.git ..\libwdi || exit /b 1
           cd ..\libwdi
+          rem Somente WinUSB: retira libusb0/libusbK do embedder (o PT2VHF nunca instala esses drivers).
+          powershell -NoProfile -Command "(Get-Content msvc\config.h) | Where-Object { $_ -notmatch '^#define LIBUSB(0|K)_DIR' } | Set-Content msvc\config.h" || exit /b 1
+          findstr /R "^#define LIBUSB" msvc\config.h && exit /b 1
           curl -sSL %WDK_URL% -o wdk-redist.msi || exit /b 1
-          curl -sSL %LIBUSB0_URL% -o libusb0-redist.zip || exit /b 1
-          curl -sSL %LIBUSBK_URL% -o libusbk-redist.7z || exit /b 1
           msiexec /a wdk-redist.msi /qn TARGETDIR=%CD%\wdk
-          7z x -y libusb0-redist.zip >nul
-          7z x -y libusbk-redist.7z >nul
-          for /d %%D in (libusb-win32*) do move "%%D" libusb0
-          for /d %%D in (libusbK*) do move "%%D" libusbk
+          if not exist "wdk\Windows Kits\8.0\redist\wdf\x64" (echo WDK redist ausente & exit /b 1)
           call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat" -arch=x64 >nul
           rem o embedder inclui os instaladores de 32 e 64 bits: compilar Win32 antes do x64
-          msbuild libwdi.sln /m /p:Configuration=Release,Platform=Win32,BuildMacros="WDK_DIR=\"../wdk/Windows Kits/8.0\";LIBUSB0_DIR=\"../libusb0\";LIBUSBK_DIR=\"../libusbk/bin\"" || exit /b 1
-          msbuild libwdi.sln /m /p:Configuration=Release,Platform=x64,BuildMacros="WDK_DIR=\"../wdk/Windows Kits/8.0\";LIBUSB0_DIR=\"../libusb0\";LIBUSBK_DIR=\"../libusbk/bin\"" || exit /b 1
+          msbuild libwdi.sln /m /p:Configuration=Release,Platform=Win32,BuildMacros="WDK_DIR=\"../wdk/Windows Kits/8.0\"" || exit /b 1
+          msbuild libwdi.sln /m /p:Configuration=Release,Platform=x64,BuildMacros="WDK_DIR=\"../wdk/Windows Kits/8.0\"" || exit /b 1
           if not exist x64\Release\examples\wdi-simple.exe exit /b 1
           mkdir %GITHUB_WORKSPACE%\drivers
           copy /y x64\Release\examples\wdi-simple.exe %GITHUB_WORKSPACE%\drivers\ || exit /b 1
           copy /y COPYING-LGPL %GITHUB_WORKSPACE%\drivers\libwdi-COPYING-LGPL.txt
+          %GITHUB_WORKSPACE%\drivers\wdi-simple.exe --help | findstr /C:"WinUSB" || exit /b 1
       - name: PyInstaller (native Windows EXE)
         shell: pwsh
         run: |
