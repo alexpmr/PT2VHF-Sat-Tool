@@ -35,7 +35,7 @@ th{color:#9cdcec}.muted{color:#a8c7d6;font-size:.85rem}footer{text-align:center;
 <section class="cards"><div class="card"><h2>RX / DOWNLINK</h2><div class="data" id="rx">—</div></div><div class="card"><h2>TX / UPLINK</h2><div class="data" id="tx">—</div></div><div class="card"><h2>Próxima passagem</h2><div class="data" id="nextpass">—</div></div></section>
 <div class="content"><section class="card"><h2>Mapa orbital · trajetória e estação</h2><iframe id="map" src="/map" title="Mapa vetorial offline"></iframe></section>
 <section class="card"><h2>Telemetria orbital</h2><div id="metrics"></div><p id="visibility" class="muted">—</p><p id="catdetail" class="muted"></p></section></div>
-<section class="card"><h2>Passagens nas próximas 36 h</h2><div class="table"><table><thead><tr><th>AOS local</th><th>TCA local</th><th>LOS local</th><th>Duração</th><th>Máx °</th><th>Modos</th></tr></thead><tbody id="passes"></tbody></table></div></section></main>
+<section class="card"><h2>Próximas passagens</h2><div class="table"><table><thead><tr><th>AOS local</th><th>TCA local</th><th>LOS local</th><th>Duração</th><th>Máx °</th><th>Qualidade</th><th>Modos</th></tr></thead><tbody id="passes"></tbody></table></div></section></main>
 <footer>PT2VHF.com · Interface Web somente leitura. O CAT e o PTT permanecem sob controle da aplicação desktop. HTTP LAN não é criptografado: não exponha a porta à Internet.</footer>
 <script>
 (function(){"use strict";const el=id=>document.getElementById(id);
@@ -48,7 +48,7 @@ cat.textContent="CAT "+(s.cat_state||"desconectado");
 let m=el("metrics");m.replaceChildren();
 Object.entries(s.metrics||{}).forEach(([k,v])=>{let p=document.createElement("p");p.textContent=k+": "+v;m.appendChild(p)});
 let tbody=el("passes");tbody.replaceChildren();(s.passes||[]).forEach(row=>{let tr=document.createElement("tr");
-["aos","tca","los","duration","max_el","modes"].forEach(k=>{let td=document.createElement("td");td.textContent=row[k]||"—";tr.appendChild(td)});
+["aos","tca","los","duration","max_el","quality","modes"].forEach(k=>{let td=document.createElement("td");td.textContent=row[k]||"—";tr.appendChild(td)});
 tbody.appendChild(tr)});
 try{let iframe=el("map");if(iframe.contentWindow&&typeof iframe.contentWindow.updateOrbit==="function"&&s.orbit){iframe.contentWindow.updateOrbit(s.orbit)}}catch(e){}
 }

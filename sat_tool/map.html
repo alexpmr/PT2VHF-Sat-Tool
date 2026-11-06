@@ -29,6 +29,9 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#061628;fon
 .pick-ring{fill:none;stroke:#ffe071;stroke-width:2.2;stroke-dasharray:5 3;pointer-events:none}
 #pick-instruction{position:absolute;top:44px;left:50%;transform:translateX(-50%);background:#0b3f53;border:1px solid #41c8e8;border-radius:5px;padding:7px 13px;color:#f2ffff;font-size:12px;font-weight:700;display:none;pointer-events:none}
 #label{position:absolute;bottom:10px;right:12px;text-align:right;max-width:46%;font-size:11px;color:#b8d8e6;background:#06192de0;padding:7px 9px;border-radius:5px;border:1px solid #28506b}
+#satinfo{position:absolute;display:none;z-index:20;max-width:400px;max-height:calc(100vh - 12px);overflow-y:auto;background:#0d2236;border:1px solid #41c8e8;border-radius:8px;padding:10px 12px;color:#e8f6ff;font:12px "Segoe UI",Arial,sans-serif;box-shadow:0 6px 22px rgba(0,0,0,.55);user-select:text;line-height:1.35}
+#satinfo a{color:#6cc7ff}#satinfo .close{display:none;position:absolute;top:3px;right:7px;cursor:pointer;color:#9ad;font-size:15px}
+#satinfo.pinned .close{display:block}.sat-hit{cursor:pointer}
 </style>
 </head><body><div id="frame">
 <svg id="world" viewBox="0 0 960 480" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
@@ -44,6 +47,7 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#061628;fon
 <div id="source">MAPA VETORIAL OFFLINE · NATURAL EARTH</div>
 <div id="pick-instruction">MARCAR ESTAÇÃO · Clique no mapa ou arraste o marcador · Depois confirme</div>
 <div id="legend"><span class="gold">━ Passado reconstruído</span><span class="gold">╌ Futuro previsto</span><span class="sky">╌ Cobertura</span><span class="green">● Satélite</span></div>
+<div id="satinfo"><span class="close" title="Fechar">✕</span><div id="satinfo-body"></div></div>
 <div id="label">Aguardando efemérides e estação configurada.</div>
 </div>
 <script>
@@ -113,11 +117,28 @@ window.updateOrbit=function(p){
  }
  if(p&&p.satellite&&Number.isFinite(+p.satellite.lat)&&Number.isFinite(+p.satellite.lon)){
  const [x,y]=xy(p.satellite.lat,p.satellite.lon);
- add("circle",{cx:x,cy:y,r:13,fill:"#35f4b8",opacity:".20"});
+ const hit=add("circle",{cx:x,cy:y,r:13,fill:"#35f4b8",opacity:".20",class:"sat-hit"});
  add("circle",{cx:x,cy:y,r:5.7,class:"satellite"});text(x+12,y-12,p.name||"SAT");
+ window.__satInfoHtml=p.info||"";
+ if(p.info){
+  const show=function(e){const box=document.getElementById("satinfo");if(box.classList.contains("pinned"))return;
+   document.getElementById("satinfo-body").innerHTML=window.__satInfoHtml;box.style.display="block";
+   const place=function(){const W=window.innerWidth,H=window.innerHeight,bw=box.offsetWidth,bh=box.offsetHeight;
+    const left=e.clientX+16+bw>W?e.clientX-bw-16:e.clientX+16;
+    const top=e.clientY>H/2?e.clientY-bh-12:e.clientY+12;
+    box.style.left=Math.max(4,Math.min(W-bw-4,left))+"px";box.style.top=Math.max(4,Math.min(H-bh-4,top))+"px";};
+   place();box.querySelectorAll("img").forEach(function(i){if(!i.complete)i.addEventListener("load",place,{once:true});});};
+  let timer=null;
+  hit.addEventListener("mouseenter",function(e){clearTimeout(timer);timer=setTimeout(function(){show(e);},400);});
+  hit.addEventListener("mousemove",function(e){const box=document.getElementById("satinfo");if(box.style.display==="block"&&!box.classList.contains("pinned"))show(e);});
+  hit.addEventListener("mouseleave",function(){clearTimeout(timer);const box=document.getElementById("satinfo");if(!box.classList.contains("pinned"))box.style.display="none";});
+  hit.addEventListener("pointerdown",function(e){e.stopPropagation();show(e);document.getElementById("satinfo").classList.add("pinned");});
+ }
  }
  document.getElementById("label").textContent=(p&&p.label)||"Sem dados orbitais";
+ const box=document.getElementById("satinfo");if(box&&box.classList.contains("pinned")&&p&&p.info)document.getElementById("satinfo-body").innerHTML=p.info;
 };
+document.addEventListener("DOMContentLoaded",function(){const c=document.querySelector("#satinfo .close");if(c)c.addEventListener("click",function(){const b=document.getElementById("satinfo");b.classList.remove("pinned");b.style.display="none";});});
 window.fitStation=function(lat,lon){const [x,y]=xy(lat,lon);vb={x:Math.max(0,Math.min(600,x-180)),y:Math.max(0,Math.min(300,y-90)),w:360,h:180};updateBox();};
 window.reset=function(){vb={x:0,y:0,w:960,h:480};updateBox();};
 window.zoom=function(factor){const cx=vb.x+vb.w/2,cy=vb.y+vb.h/2;let w=Math.max(65,Math.min(960,vb.w*factor)),h=w/2;vb={x:Math.max(0,Math.min(960-w,cx-w/2)),y:Math.max(0,Math.min(480-h,cy-h/2)),w,h};updateBox();};

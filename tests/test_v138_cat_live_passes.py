@@ -74,15 +74,15 @@ def test_selected_pass_ui_no_manual_recalculate_button_and_periodic_refresh():
     app=(ROOT/"sat_tool"/"app.py").read_text(encoding="utf-8")
     assert "Recalcular passagens" not in app
     assert "refresh_passes_btn" not in app
-    assert 'group("PASSAGENS DO SATÉLITE SELECIONADO · 36 H")' in app
+    assert 'group(f"PASSAGENS DO SATÉLITE SELECIONADO · {window_h} H")' in app  # janela configurável (v1.5.0)
     assert "nextpass.setMinimumWidth(0)" in app
     assert "self.pass_table.setWordWrap(False)" in app
     assert "self.pass_table.resizeRowsToContents()" in app
-    assert "for col in (0,1,2,3,4):" in app
+    assert "for col in (0,1,2,3,4,5):" in app
     assert "pass_header.setSectionResizeMode(col,QHeaderView.ResizeToContents)" in app
-    assert "pass_header.setSectionResizeMode(5,QHeaderView.Stretch)" in app
+    assert "pass_header.setSectionResizeMode(6,QHeaderView.Stretch)" in app
     assert "setMaximumHeight(230)" not in app
-    assert "cell.setToolTip(value)" in app
+    assert "cell.setToolTip(q.tooltip if (j==5 and q) else value)" in app
     assert "cell.setTextAlignment(" in app
     assert "self.refresh_passes()" in app.split("    def choose_satellite(self):",1)[1].split("    def refresh_modes(",1)[0]
     assert "time.monotonic()-self._pass_refresh_last>=300" in app

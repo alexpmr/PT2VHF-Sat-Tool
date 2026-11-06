@@ -44,7 +44,9 @@ def test_operator_window_constructs_with_new_layout():
             header=window.pass_table.horizontalHeader()
             for col in (0,1,2,3,4):
                 assert header.sectionResizeMode(col)==gui.QHeaderView.ResizeToContents
-            assert header.sectionResizeMode(5)==gui.QHeaderView.Stretch
+            assert header.sectionResizeMode(5)==gui.QHeaderView.ResizeToContents
+            assert header.sectionResizeMode(6)==gui.QHeaderView.Stretch
+            assert window.pass_table.horizontalHeaderItem(5).text()=="Qualidade"
             assert window.pass_table.wordWrap() is False
             assert window.pass_table.horizontalHeaderItem(0).text().startswith('AOS')
             assert window.pass_table.horizontalHeaderItem(3).text()=='Duração'

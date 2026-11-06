@@ -4,16 +4,16 @@
 
 ## Downloads — Windows, Linux e macOS
 
-**PT2VHF Sat Tool v1.4.0 — Windows 10/11 x64, Linux x64 e macOS Apple Silicon**.
+**PT2VHF Sat Tool v1.5.0 — Windows 10/11 x64, Linux x64 e macOS Apple Silicon**.
 
 **Novo site oficial: [www.PT2VHF.com](https://www.pt2vhf.com/sat)** — downloads (Setup e Portátil), novas versões e somas SHA-256 ficam no site. A partir da v1.3.14 o atualizador consulta exclusivamente `https://www.pt2vhf.com/update.php?product=sat`.
 
 | Edição | Download direto |
 | --- | --- |
-| **Instalável x64** | [Setup (.exe)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.4.0-Win11-x64-Setup.exe) |
-| **Portátil x64** | [Portable (.exe)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.4.0-Win11-x64-Portable.exe) |
-| **Linux x64** | [Pacote (.tar.gz)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.4.0-Linux-x64.tar.gz) |
-| **macOS ARM64** | [Imagem (.dmg)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.4.0-macOS-arm64.dmg) |
+| **Instalável x64** | [Setup (.exe)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.5.0-Win11-x64-Setup.exe) |
+| **Portátil x64** | [Portable (.exe)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.5.0-Win11-x64-Portable.exe) |
+| **Linux x64** | [Pacote (.tar.gz)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.5.0-Linux-x64.tar.gz) |
+| **macOS ARM64** | [Imagem (.dmg)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.5.0-macOS-arm64.dmg) |
 
 O sufixo `Win11-x64` é mantido para compatibilidade com o atualizador e também atende ao Windows 10 1809+.
 
@@ -28,7 +28,17 @@ O sufixo `Win11-x64` é mantido para compatibilidade com o atualizador e também
 3. O acesso local usa `http://127.0.0.1:8094/`. Para outros dispositivos da mesma LAN, marque **Permitir outros dispositivos da rede local (LAN)** e use **Copiar endereço**; a URL inclui uma chave temporária e a primeira visita cria um cookie de sessão.
 4. Se outro computador/celular não alcançar a página, confira o IPv4 do computador e libere a porta TCP de entrada **apenas na rede privada** no firewall local. Não configure redirecionamento de porta no roteador.
 
-**Escopo do painel Web v1.4.0:** consulta em tempo real ao satélite, frequências previstas, CAT, telemetria, mapa vetorial offline e passagens. **Somente leitura:** o navegador não muda satélite/configurações nem executa comandos CAT/PTT. O desktop deve permanecer aberto. O HTTP na LAN não é criptografado; não divulgue a URL fora da rede.
+**Escopo do painel Web v1.5.0:** consulta em tempo real ao satélite, frequências previstas, CAT, telemetria, mapa vetorial offline e passagens. **Somente leitura:** o navegador não muda satélite/configurações nem executa comandos CAT/PTT. O desktop deve permanecer aberto. O HTTP na LAN não é criptografado; não divulgue a URL fora da rede.
+## Novidades v1.5.0 — RTL-SDR plug and play, CAT automático e passagens com qualidade
+
+- **RTL-SDR reconhecido:** corrigida a listagem do dongle (erro "expected LP_c_ubyte… c_char_Array_256" que fazia o programa pedir o Zadig mesmo com driver instalado).
+- **Plug and play:** no Windows o próprio programa instala o driver WinUSB **somente na interface 0** do RTL-SDR (libwdi, a base do Zadig, embarcada; um único pedido de administrador; opção também no instalador). No Linux, aplica a regra udev e desativa o driver de TV com `pkexec`. Botões **Diagnosticar RTL-SDR** e **Preparar RTL-SDR**.
+- **CAT autodetectado:** clicar em **CAT** sem porta configurada (ou se a porta salva falhar) varre portas e velocidades e conecta ao TS-2000; um FT-817/818 encontrado é configurado no painel de equipamentos. Só comandos de leitura, nunca PTT.
+- **Qualidade da passagem (★ a ★★★★★):** nota composta — elevação, tempo útil, distância, taxa de Doppler (SSB/CW), estado do satélite, iluminação (AO-7 só opera ao sol) e movimento provável em FM; tooltip explica os motivos; opção de ordenar por qualidade.
+- **Janela de passagens configurável:** 6, 12, 24, 36, 48, 72 h ou 7 dias.
+- **Popup do satélite:** ao passar o mouse no mapa, no seletor ou no catálogo — imagem, nomes, status, lançamento, situação agora, próxima passagem com estrelas, canais, decodificador e resumo da Wikipedia (cache para uso offline; clique fixa o popup no mapa).
+- **Boas-vindas:** convite para conhecer as demais aplicações PT2VHF em www.PT2VHF.com.
+
 ## Novidades v1.4.0 — SDR, waterfall, FT-817 e telemetria
 
 - **RTL-SDR embutido para RX:** detectado automaticamente na USB (pergunta se deve usar para RX); Doppler em tempo real por deslocamento digital do canal (sem ressintonizar o dongle a cada passo); FM, USB, LSB e CW conforme o transponder; áudio com volume/squelch e saída selecionável (ex.: cabo virtual para o SoundModem); ganho, correção PPM, bias-tee e `rtl_tcp`.
