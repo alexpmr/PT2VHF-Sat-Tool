@@ -58,6 +58,16 @@
 
 ## Pendentes
 
+- **Popup de boas-vindas: convite para conhecer as demais aplicações PT2VHF** (registrado em 06/11/2026)
+  - Substitui o aviso atual "Downloads no site oficial" (`show_official_site_notice`, botão "Entendi").
+  - Texto sugerido — título "Feito por radioamadores, para radioamadores"; corpo: "Obrigado por usar o
+    PT2VHF Sat Tool! Conheça também as outras aplicações gratuitas desenvolvidas para a comunidade:
+    APRS Client, Prop Tool, Mesh Analyzer, Prog Tool e mais." ; link clicável **www.PT2VHF.com**
+    (abre https://www.pt2vhf.com no navegador); um único botão **Fechar**.
+  - Mesmo visual do aviso atual (tema escuro, não modal em relação ao restante do fluxo, sem roubar foco
+    de diálogos de CAT/AOS); textos nos idiomas da interface.
+  - Ajustar o teste do aviso (título, link e botão "Fechar").
+
 - **Janela da lista de passagens configurável** (registrado em 06/11/2026)
   - Hoje fixa em 36 h (`core.passes(..., hours=36)`, título "PASSAGENS DO SATÉLITE SELECIONADO · 36 H",
     log "próximas 36 h"). Tornar configurável: 6, 12, 24, 36, 48, 72 h ou personalizado (1–168 h).
