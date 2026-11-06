@@ -81,6 +81,28 @@
 
 ## Pendentes
 
+- **Controle de rotor Yaesu G-5400B via interface ERC-M (DF9GR, Easy Rotor Control) pela USB** (registrado em 06/11/2026)
+  - Equipamento do operador: **G-5400B** (az/el) + **ERC-M by DF9GR** (interface modular 2 eixos; DC 12–14 V,
+    USB, RS232, LAN; cabo DB15 → mini-DIN para o controle externo do rotor). Fotos em 05/11/2026.
+  - **Ligação somente por USB:** testado pelo operador — a interface é **reconhecida como porta serial (COM)**.
+    Usar o protocolo **Yaesu GS-232B (com opção GS-232A)** emulado pelo ERC, direto pela COM, sem exigir Hamlib;
+    `rotctld` (Hamlib) como alternativa opcional por TCP.
+  - **Configurações → Rotor:** habilitar (desligado por padrão), porta COM (lista + autodetecção sem mover o
+    rotor, só leitura de posição `C2`), velocidade, protocolo GS-232A/B, perfil **G-5400B** com limites (elevação
+    0–180°, azimute conforme o batente — confirmar no manual), offset/calibração de norte, posição de
+    estacionamento, tolerância (ex.: 3–5°) e intervalo mínimo entre comandos (motor lento, sem liga/desliga a cada
+    segundo). Não confundir com as portas CAT (a varredura CAT não deve aceitar o ERC).
+  - **Leitura contínua** da posição real (az/el) exibida no display/telemetria e no mapa (marca da antena ao lado do
+    satélite), com erro de apontamento.
+  - **Rastreamento por passagem**, ativado explicitamente pelo operador (botão/menu da passagem): pré-posicionar no
+    azimute do AOS minutos antes; acompanhar durante a passagem coordenado com o Auto CAT/Doppler; estacionar no
+    LOS. **Modo flip** (el 0–180°) para passagens que cruzam o batente: az+180° e el 180−el, evitando giro completo.
+  - **Segurança:** botão **PARAR** sempre visível (GS-232 `S`); nenhum movimento por simples seleção de satélite;
+    watchdog que para o rotor em perda de comunicação, erro ou fechamento do programa; respeitar limites
+    mecânicos e horizon mask; log auditável dos comandos.
+  - Testes: simulador GS-232 (leitura, movimento, stop, timeout), cálculo de flip e limites, passagens sobre o
+    norte/sul, e homologação com o G-5400B + ERC-M reais.
+
 - **OTA automático, sem perguntar, assim que houver versão nova (opção em Configurações; ligado por padrão)** (registrado em 06/11/2026)
   - Nova opção em Configurações: **"Atualizar automaticamente"** (Sim/Não), **Sim por padrão** em instalações novas e
     nas existentes ao migrar (salva em `settings.json`).
