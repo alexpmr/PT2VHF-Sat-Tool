@@ -126,8 +126,15 @@
     - **ajuste manual/teste**: ir para AZ/EL digitado, setas/jog, estacionar, **PARAR** sempre visível, bússola e
       indicador de elevação para conferir a posição real enquanto ajusta;
     - **log do rotor** (TX/RX GS-232, falhas, watchdog) e diagnóstico.
-  - A aba **Operação** mantém só a barra compacta do rotor (posição, Rastrear passagem, Estacionar, **PARAR**) com
-    atalho "Configurar rotores…" que abre Configurações → Rotores.
+  - **Controles na página principal (aprovado pelo operador, 07/11/2026)** — aparecem **só quando há rotor ativado**
+    (habilitado em Configurações → Rotores); sem rotor, nada ocupa espaço na tela:
+    - mini-bússola com a posição real (AZ/EL) × alvo do satélite e indicador de flip;
+    - **Rastrear passagem** (liga/desliga), **Estacionar** e **PARAR** (vermelho, sempre visível enquanto o rotor
+      estiver ativo; também atalho de teclado Esc/F12 com confirmação desnecessária);
+    - status em uma linha: conectado/desconectado, modo do plano (normal/flip/reposiciona), "pré-posicionando",
+      "rastreando", "estacionado", erro do controlador;
+    - atalho "Configurar rotores…" para Configurações → Rotores.
+    - Com vários rotores/controladores configurados, um seletor compacto do rotor ativo.
   - Testes: migração das configurações atuais do rotor sem perda; PARAR acessível; simulador GS-232 na calibração e
     no ajuste manual.
 
