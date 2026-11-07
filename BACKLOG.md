@@ -176,6 +176,13 @@
       - o painel/moldura acompanha o formato do rádio (frente compacta do 706, controlador inclinado do 7100) em
         vez do mesmo painel para todos;
       - entregar mockup para aprovação antes de implementar.
+      - **Mockup v2 entregue (07/11/2026):** `docs/backlog/display-ic706-ic7100-realista-v2.png` — 706: frente
+        compacta e larga, LCD baixo com medidor S/Po no topo, coluna de ícones (FM/SAT/AUTO/VFO A), frequência
+        7 seg. com dígitos menores, área de memória (satélite, LOS, TX), página F-1 com legendas sobre F1/F2/F3
+        (A/B, SAT, RX ONLY), teclas FUNC/MODE/AUTO/ROTOR/SCOPE/MENU, AF·RF/SQL concêntrico, M-CH, LOCK/TS;
+        7100: controlador inclinado (trapézio), LCD de matriz branco com barra de status invertida, medidor S,
+        VFO A grande, SUB/TX, abas touch, teclas A/B·SAT·RX ONLY·POWER à esquerda e MENU/AUTO/CAT/ROTOR/TIPO/LUZ
+        sob o LCD. Aproximação sem fotos de referência — refinar com fotos do operador. Aguardando aprovação.
     - **FT-847, FT-991A, IC-705, TS-2000:** levantar referências visuais (fotos/manuais) antes dos mockups.
   - Fontes: manuais FT-857/FT-897 (rigpix.com/yaesu/ft857_manual.pdf, rigpix.com/yaesu/ft897_manual.pdf),
     IC-910H (rigpix.com/icom/ic910h_manual.pdf), IC-9700 (icomamerica.com/lineup/products/IC-9700/),
