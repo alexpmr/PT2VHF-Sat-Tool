@@ -112,30 +112,24 @@
 
 ## Pendentes
 
-- **Aba principal "Rotores"** (registrado em 07/11/2026)
-  - Hoje (v1.7.0) o rotor fica em Configurações → Rotor + uma barra na aba Operação. Criar uma **aba principal
-    "Rotores"** (ao lado de Operação, Satélites, Configurações, LOGs/CAT, Sobre) reunindo tudo do rotor:
-    - **conexão e configuração** (porta COM/autodetecção só leitura, velocidade, protocolo, perfil G-5400B/G-5500/
-      genérico, limites 360/450° e 90/180°, correção do norte, estacionamento, tolerância, intervalo, pré-posição) —
-      **ajuste do operador (07/11/2026): toda a configuração de rotor fica em Configurações → "Rotores"** (a sub-aba
-      atual "Rotor" é renomeada para "Rotores" e passa a reunir tudo: protocolos GS-232A/B e futuros rotctld/
-      EasyComm/SPID, vários controladores/perfis, porta, limites, calibração, estacionamento, tolerâncias,
-      pré-posição, autodetecção); a aba
-      Rotores mostra só o status da conexão (porta, protocolo, perfil, conectado/desconectado) com botões
-      Conectar/Desconectar e um atalho "Configurar rotor…" que abre Configurações → Rotores; (confirmar com o operador se a aba principal de operação do rotor continua
-      desejada ou se tudo fica só em Configurações → Rotores);
-    - **painel visual**: bússola de azimute (posição real × alvo × satélite, zona de sobreposição 360–450° e batente)
-      e indicador de elevação 0–180° (flip), com valores numéricos grandes;
-    - **controle manual**: ir para AZ/EL digitado, setas/jog, estacionar, calibrar 0°/fim de curso (guiado),
-      **PARAR** grande sempre visível;
-    - **rastreamento**: passagem atual/próxima do satélite selecionado, plano (normal/flip/reposiciona) com gráfico
-      da trajetória polar AOS→LOS, pré-posição, botão Rastrear/Parar;
-    - **log do rotor** (comandos TX/RX GS-232, falhas, watchdog) e diagnóstico.
-  - Preparar para **vários controladores/protocolos** (o nome "Rotores"): GS-232A/B (atual), e futuros Hamlib
-    rotctld, EasyComm, SPID Rot2Prog — com seleção do protocolo na aba.
-  - A barra compacta do rotor na aba Operação continua (posição, Rastrear, PARAR) com atalho para a aba Rotores.
-  - Testes: migração das configurações atuais do rotor sem perda; PARAR acessível em todas as telas; simulador
-    GS-232 nos testes da aba.
+- **Configurações → "Rotores": tudo de configuração e ajustes de rotor** (registrado em 07/11/2026; definição final do
+  operador no mesmo dia — **sem aba principal separada**)
+  - A sub-aba atual Configurações → "Rotor" é renomeada para **"Rotores"** e reúne **toda a configuração e todos os
+    ajustes**:
+    - **conexão**: porta COM/autodetecção só leitura, velocidade, protocolo (GS-232A/B hoje; futuros Hamlib rotctld,
+      EasyComm, SPID Rot2Prog), vários controladores/perfis (G-5400B, G-5500, genérico 360/90), conectar/desconectar
+      e status;
+    - **limites e calibração**: azimute 360/450°, elevação 90/180° (flip), correção do norte, batente, **calibração
+      guiada** 0°/fim de curso com leitura ao vivo (C2), teste de movimento curto supervisionado;
+    - **ajustes de rastreamento**: tolerância, intervalo mínimo entre comandos, pré-posição antes do AOS,
+      estacionamento (AZ/EL), máscara de horizonte do rotor, preferência normal/flip;
+    - **ajuste manual/teste**: ir para AZ/EL digitado, setas/jog, estacionar, **PARAR** sempre visível, bússola e
+      indicador de elevação para conferir a posição real enquanto ajusta;
+    - **log do rotor** (TX/RX GS-232, falhas, watchdog) e diagnóstico.
+  - A aba **Operação** mantém só a barra compacta do rotor (posição, Rastrear passagem, Estacionar, **PARAR**) com
+    atalho "Configurar rotores…" que abre Configurações → Rotores.
+  - Testes: migração das configurações atuais do rotor sem perda; PARAR acessível; simulador GS-232 na calibração e
+    no ajuste manual.
 
 - **Destacar só o display para outro monitor** (registrado em 07/11/2026)
   - Botão/tecla "Destacar display" (e menu de contexto do display): abre **só o display** (com ou sem a moldura do
