@@ -98,7 +98,17 @@
   — a troca feita no TS-2000 é refletida corretamente no display e no Auto CAT.
 - [ ] Rotor G-5400B + ERC-M real (calibração, flip, PARAR): **aguardando cabo** DB15 (ERC-M) ↔ DIN 8 pinos (G-5400B);
   interface já reconhecida como porta serial USB.
-- [ ] OTA automático 1.6.0→1.7.0 no Windows: sem retorno ainda.
+- [ ] **OTA 1.6.0→1.7.0 no Windows NÃO concluiu (retorno do operador em 07/11/2026):** "não funcionou redondo, tive que
+  baixar e rodar. Acho que tem relação com o final, do driver RTL". Instalação manual da v1.7.0 funcionou.
+  Investigar na próxima versão:
+  - coletar `%TEMP%\PT2VHF-Sat-Tool-setup.log` (log do Inno com `/LOG`) e o resultado da tentativa;
+  - etapa final do driver RTL-SDR (`wdi-simple.exe`, tarefa `rtlsdr` com `Check: not WizardSilent`, UAC/admin com
+    `PrivilegesRequired=lowest`, espera de até 60 s `-o 60000`): confirmar que nunca roda nem trava em atualização
+    silenciosa; se o operador marcou a tarefa antes, o Inno lembra a escolha — garantir que o OTA a ignore
+    (ex.: parâmetro `/TASKS=` sem `rtlsdr` ou `/MERGETASKS="!rtlsdr"`) e que o driver só seja instalado pelo
+    botão do painel SDR quando faltar;
+  - registrar no app o motivo exato (código de saída, última etapa do log) e oferecer o link de download manual;
+  - teste de atualização real 1.7.0→1.7.x com e sem RTL-SDR conectado e com a tarefa do driver marcada antes.
 
 ## Pendentes
 
