@@ -99,6 +99,18 @@
 
 ## Pendentes
 
+- **Configurações: menus e campos do tamanho do conteúdo (não esticados na largura toda)** (registrado em 07/11/2026)
+  - Hoje os menus suspensos (ex.: Apresentação → Tipo de display, Fonte, Cor) e os campos de texto/número
+    (ex.: Estação → Indicativo, Latitude, Longitude, Altitude, Elevação mínima, Grid Locator; Rotor; Rádio) ocupam
+    a largura inteira da janela — um campo de indicativo comporta mais de 300 caracteres.
+  - Dimensionar cada controle pelo conteúdo esperado, medido pela fonte/DPI: menus pela opção mais longa + seta;
+    indicativo ~12 caracteres; latitude/longitude ~12; locator 10; altitude/elevação/ângulos/segundos/baud/porta
+    COM pela maior entrada válida; nomes/URLs/caminhos podem continuar mais largos (com limite).
+  - Grade de formulário alinhada (rótulo à esquerda, campo logo ao lado, sobra à direita), sem `stretch` nos
+    campos; vale para todas as abas (Apresentação, Estação, Rádio, Rotor, Geral) e diálogos.
+  - Limitar também o tamanho de entrada onde fizer sentido (`maxLength`: indicativo, locator).
+  - Testes: larguras máximas por tipo de campo em 1366×768 e 1920×1080, DPI 100–200% e idiomas; nada cortado.
+
 - **Display: teclas para alternar o tipo e a cor do backlight; novos modelos simulando rádios reais** (registrado em 07/11/2026)
   - **Tecla "TIPO"** no próprio display (ao lado de A/B e RX ONLY): cada clique passa para o próximo modelo
     (matriz → LED 7 seg. → LCD 7 seg. → Digital → Clássico → novos modelos…); menu de contexto (clique direito)
