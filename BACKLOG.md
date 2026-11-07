@@ -99,6 +99,27 @@
 
 ## Pendentes
 
+- **Acesso pela web de outro computador, como no PT2VHF APRS Client** (registrado em 07/11/2026)
+  - Situação atual (v1.3.18+): painel Web **somente leitura** (mapa, frequências, CAT, telemetria, passagens),
+    localhost e LAN opt-in com chave temporária na URL. Ampliar para o mesmo modelo do APRS Client
+    (`pt2vhf_aprs/local_server.py`, `lan_access.py`, `web.py`):
+  - **Configurações → Geral → Acesso pela rede:** ligar/desligar LAN, porta TCP, lista de **todos os IPv4 da LAN**
+    (`lan_ipv4_candidates`) com o endereço pronto para copiar/QR code, botão **"Liberar no firewall do Windows"**
+    (regra de entrada só para a porta, perfil privado, com UAC — `request_windows_firewall_rule`), e diagnóstico
+    (servidor escutando, regra de firewall presente, último acesso remoto com IP/horário e **navegador remoto ativo
+    agora** via heartbeat — `lan_diagnostics`, `note_remote_request`, `mark_remote_web_presence`).
+  - **Interface Web completa** no navegador do outro computador (desktop e celular): mapa com trajetória,
+    **display do rádio** (mesmos modelos), tabela de passagens com contagem, telemetria orbital, painel SDR/
+    telemetria decodificada (APRS), estado do CAT e do rotor; atualização ao vivo (SSE/WebSocket ou polling curto).
+  - **Controles remotos opcionais**, desligados por padrão e habilitados explicitamente ("Permitir controle pela
+    rede"): selecionar satélite/transponder, Auto CAT liga/desliga, A/B e RX ONLY, rastreamento do rotor e
+    **PARAR** do rotor. **Nunca PTT/TX.** Ações exigem sessão autenticada (chave/PIN da estação), registram IP no
+    log e respeitam as mesmas travas de segurança da janela local.
+  - Segurança: só rede privada (recusar IPs públicos), sem encaminhamento para a Internet, aviso de HTTP sem
+    criptografia na LAN, chave renovável, opção de expirar sessões; localhost sempre disponível.
+  - Testes: acesso de outro IP da LAN (simulado), firewall (mock), presença remota, recusa de IP público,
+    controles bloqueados quando desabilitados, nenhuma rota de PTT.
+
 - **Configurações: menus e campos do tamanho do conteúdo (não esticados na largura toda)** (registrado em 07/11/2026)
   - Hoje os menus suspensos (ex.: Apresentação → Tipo de display, Fonte, Cor) e os campos de texto/número
     (ex.: Estação → Indicativo, Latitude, Longitude, Altitude, Elevação mínima, Grid Locator; Rotor; Rádio) ocupam
