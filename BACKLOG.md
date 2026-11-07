@@ -162,7 +162,20 @@
       `docs/backlog/display-ic706-ic7100-mockup.png` — 706: 7 segmentos, medidor S/Po com escala impressa, ícones
       fixos (FM, SAT, TONE, P.AMP…), nome de memória e LOS em matriz, band scope simples, legendas das teclas soft
       no LCD; 7100: tudo em matriz de pontos com fundo branco, barra de status, MAIN grande e SUB menor, scope e
-      abas de menu touch. **Aguardando aprovação do operador.**
+      abas de menu touch.
+    - **Retorno do operador (07/11/2026):** ficar **mais parecido com o real**, mantendo os comandos específicos do
+      Sat Tool. Próxima rodada de mockups:
+      - reproduzir com fidelidade a **disposição real** de cada display (posição e proporção da frequência,
+        medidor, ícones, linha de memória/soft keys, fonte dos dígitos, espessura dos segmentos, cor de fundo e
+        contraste reais do backlight), a partir de **fotos de referência** (do operador ou de manuais) — sem
+        logotipos;
+      - os comandos do app entram **no lugar das funções equivalentes do rádio**, com o mesmo visual das
+        legendas originais: teclas soft/menu do LCD → A/B (MAIN↔SUB), SAT/TRACE, RX ONLY, TIPO, LUZ, AUTO
+        (Doppler), CAT, ROTOR/PARAR, SCOPE (waterfall do SDR); ícones do LCD → SAT, AUTO, CAT, ROTOR, DOP, LOS;
+        área de memória → nome do satélite + LOS m:ss;
+      - o painel/moldura acompanha o formato do rádio (frente compacta do 706, controlador inclinado do 7100) em
+        vez do mesmo painel para todos;
+      - entregar mockup para aprovação antes de implementar.
     - **FT-847, FT-991A, IC-705, TS-2000:** levantar referências visuais (fotos/manuais) antes dos mockups.
   - Fontes: manuais FT-857/FT-897 (rigpix.com/yaesu/ft857_manual.pdf, rigpix.com/yaesu/ft897_manual.pdf),
     IC-910H (rigpix.com/icom/ic910h_manual.pdf), IC-9700 (icomamerica.com/lineup/products/IC-9700/),
