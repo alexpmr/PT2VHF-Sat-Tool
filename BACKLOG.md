@@ -135,6 +135,10 @@
       "rastreando", "estacionado", erro do controlador;
     - atalho "Configurar rotores…" para Configurações → Rotores.
     - Com vários rotores/controladores configurados, um seletor compacto do rotor ativo.
+    - **Mockup (07/11/2026):** `docs/backlog/tela-principal-rotor-mockup.png` — faixa ROTOR entre o display e o mapa
+      (mini-bússola real × alvo, arco de elevação, AZ/EL grandes, status RASTREANDO/MODO FLIP, plano AOS→LOS,
+      Rastrear/Estacionar/PARAR/Configurar…, seletor do rotor ativo), "ROT az/el" no display e linha verde no mapa
+      com a direção da antena; sem rotor ativado a faixa some. Aguardando aprovação.
   - Testes: migração das configurações atuais do rotor sem perda; PARAR acessível; simulador GS-232 na calibração e
     no ajuste manual.
 
