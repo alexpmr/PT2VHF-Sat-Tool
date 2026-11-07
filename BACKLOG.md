@@ -117,7 +117,9 @@
     "Rotores"** (ao lado de Operação, Satélites, Configurações, LOGs/CAT, Sobre) reunindo tudo do rotor:
     - **conexão e configuração** (porta COM/autodetecção só leitura, velocidade, protocolo, perfil G-5400B/G-5500/
       genérico, limites 360/450° e 90/180°, correção do norte, estacionamento, tolerância, intervalo, pré-posição) —
-      sai de Configurações → Rotor;
+      **ajuste do operador (07/11/2026): a configuração continua em Configurações → Rotor ("fica legal")**; a aba
+      Rotores mostra só o status da conexão (porta, protocolo, perfil, conectado/desconectado) com botões
+      Conectar/Desconectar e um atalho "Configurar rotor…" que abre Configurações → Rotor;
     - **painel visual**: bússola de azimute (posição real × alvo × satélite, zona de sobreposição 360–450° e batente)
       e indicador de elevação 0–180° (flip), com valores numéricos grandes;
     - **controle manual**: ir para AZ/EL digitado, setas/jog, estacionar, calibrar 0°/fim de curso (guiado),
