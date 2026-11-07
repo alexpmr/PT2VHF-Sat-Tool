@@ -112,6 +112,21 @@
 
 ## Pendentes
 
+- **Seletor de idioma no menu superior (como no PT2VHF APRS Client) + revisão e tradução completa** (registrado em 07/11/2026)
+  - Referência enviada pelo operador: menu suspenso no topo da janela, com **bandeira + nome nativo**, igual ao APRS
+    Client: Português (Brasil), English, Español, Français, Deutsch, Italiano, 日本語, Polski, Nederlands, 简体中文.
+  - Hoje o Sat Tool tem o idioma só em Configurações e `sat_tool/i18n.py` cobre **6 idiomas** (pt-BR, en, es, fr, de,
+    it) com ~440 linhas de tradução parcial (muitos textos ainda só em português). Acrescentar **ja, pl, nl e zh-Hans**
+    (10 idiomas) e manter o seletor das Configurações sincronizado com o do topo.
+  - **Revisar e traduzir tudo**: abas, blocos, botões, tooltips, menus de contexto, diálogos/QMessageBox, mensagens
+    de status e de erro, display (indicadores curtos: SAT/AUTO/LOS etc. permanecem como siglas de rádio),
+    Configurações (todas as abas), painel SDR/Telemetria/APRS, rotor, avisos de passagem (Hoje/Amanhã já
+    traduzidos), popups do satélite e de boas-vindas, painel Web; datas/números no formato do idioma.
+  - Troca de idioma **na hora**, sem reiniciar, salva em `settings.json`; padrão = idioma do sistema quando suportado,
+    senão pt-BR. Fontes com suporte a japonês/chinês no Windows/Linux/macOS (sem caracteres "tofu").
+  - Teste automatizado de cobertura: nenhuma string visível da interface sem tradução nos 10 idiomas; capturas de
+    tela por idioma sem textos cortados (alemão/polonês mais longos).
+
 - **Configurações → aba "Aparência": tema do programa (cores, brilho etc.) + configuração do display** (registrado em 07/11/2026)
   - Nova aba **Aparência** (substitui/absorve a aba "Apresentação" da v1.7.0): a configuração do display
     (tipo, fonte, cor do backlight, prévia ao vivo) é **movida para dentro dela**, junto com idioma/formato de
