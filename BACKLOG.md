@@ -121,6 +121,11 @@
     funcionais clicáveis); opção de ocultar a moldura e usar só o display. Mockup:
     `docs/backlog/display-moldura-etiqueta-mockup.png` (A: etiqueta "TS-2000" digitada pelo operador; B: indicativo
     "PT2VHF" com LCD 7 seg.; C: etiqueta vazia com LED 7 seg.) — **aguardando aprovação do operador**.
+  - Operador pediu mais realismo (07/11/2026) → mockup v2 `docs/backlog/display-painel-realista-mockup.png`:
+    painel metálico escovado com parafusos e sombra, LCD rebaixado com sombra interna e reflexo de vidro, botão de
+    sintonia MAIN serrilhado com covinha, knobs AF/RF/SQL, MULTI/CH e SUB, teclas de borracha com LEDs e legendas
+    secundárias (MAIN↔SUB, TRACE, DOPPLER…), PWR, PHONES/MIC e grade de alto-falante; etiqueta do operador
+    (TS-2000 / PT2VHF / vazia). Elementos decorativos sem função ficam inertes; teclas com função são clicáveis.
   - Correção observada no mockup: no modelo matriz de pontos com display largo o texto "SWR 1.2" do lado SUB é
     cortado na borda — medir o texto e reduzir/ajustar a barra PO.
 
