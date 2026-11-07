@@ -152,10 +152,18 @@
       sintonia pelo toque — modelo "TFT com escopo" (pode usar o waterfall do SDR quando houver RTL-SDR).
     - **TS-790:** LCD com display de sub-receptor iluminado por lâmpadas (calor/âmbar suave) — confirmar o visual do
       display principal por foto/manual antes do mockup.
-    - **FT-847, FT-991A, IC-705, IC-7100, TS-2000:** levantar referências visuais (fotos/manuais) antes dos mockups.
+    - **IC-706MKIIG (pedido do operador, 07/11/2026):** frente destacável/remotável; LCD grande com nomes de memória
+      alfanuméricos (9 caracteres), **legendas das teclas soft no próprio display** e **band scope simples** no LCD;
+      retroiluminação alta/baixa/desligada (cor a confirmar por foto).
+    - **IC-7100 (pedido do operador, 07/11/2026):** controlador inclinado com **LCD de matriz de pontos touch**
+      (~48,6 × 75,9 mm, resistivo), funções de band scope, gráfico de SWR e decodificador RTTY na tela; é também o
+      menu de configuração. Cor do LCD a confirmar por foto.
+    - **FT-847, FT-991A, IC-705, TS-2000:** levantar referências visuais (fotos/manuais) antes dos mockups.
   - Fontes: manuais FT-857/FT-897 (rigpix.com/yaesu/ft857_manual.pdf, rigpix.com/yaesu/ft897_manual.pdf),
     IC-910H (rigpix.com/icom/ic910h_manual.pdf), IC-9700 (icomamerica.com/lineup/products/IC-9700/),
-    TS-790 (kenwood.com/i/products/info/amateur/ts790.html; m1abk.blogspot.com/2016/10/ts-790-repair.html).
+    TS-790 (kenwood.com/i/products/info/amateur/ts790.html; m1abk.blogspot.com/2016/10/ts-790-repair.html),
+    IC-706MKIIG (universal-radio.com/catalog/hamhf/3450.html; manualshive IC-706MKIIG p.53),
+    IC-7100 (icomamerica.com/lineup/products/IC-7100USA/; manualslib IC-7100 Basic Manual p.11).
   - Novos modelos selecionáveis em Configurações (Tipo de display), além dos atuais (matriz Normal/Negrito, LED 7 seg.,
     LCD 7 seg., Digital, Clássico); complementa o item "teclas TIPO/LUZ e modelos simulando rádios reais".
   - Candidatos (rádios que operam 144/440 em FM e SSB, comuns em satélite): **Yaesu** FT-897/857, FT-817/818,
