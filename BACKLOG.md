@@ -91,7 +91,11 @@
 - [x] Tabela de passagens sem rolagem horizontal; largura mínima = soma das colunas; mapa cede largura.
 - [x] Rotor GS-232 (G-5400B + ERC-M pela USB): autodetecção só leitura, perfis, flip, pré-posicionamento, estacionar, PARAR, watchdog, parada ao fechar.
 - [x] OTA automático sem perguntar (padrão ligado; adia em operação; nova tentativa em 6 h após falha).
-- [ ] Homologar em campo: A/B no TS-2000 físico, rotor G-5400B + ERC-M real (calibração, flip), OTA automático 1.6.0→1.7.0 no Windows.
+- [x] **Homologado pelo operador em 07/11/2026 (v1.7.0):** "Display ficou perfeito. CAT operacional. Bloco de passagens OK.
+  Telemetria orbital em km/h, ok." — display (layout TS-2000/modelos), CAT com o TS-2000, tabela de passagens sem
+  rolagem lateral e velocidade radial em km/h aprovados em uso real.
+- [ ] Homologar em campo (ainda sem retorno): tecla A/B (MAIN↔SUB) no TS-2000 físico, rotor G-5400B + ERC-M real
+  (calibração, flip) e OTA automático 1.6.0→1.7.0 no Windows.
 
 ## Pendentes
 
