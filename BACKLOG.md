@@ -99,7 +99,24 @@
 
 ## Pendentes
 
-- (nenhum item novo em aberto)
+- **Display: teclas para alternar o tipo e a cor do backlight; novos modelos simulando rádios reais** (registrado em 07/11/2026)
+  - **Tecla "TIPO"** no próprio display (ao lado de A/B e RX ONLY): cada clique passa para o próximo modelo
+    (matriz → LED 7 seg. → LCD 7 seg. → Digital → Clássico → novos modelos…); menu de contexto (clique direito)
+    com a lista para escolher direto. Salva a escolha (mesma configuração de Apresentação → Tipo de display).
+  - **Tecla "LUZ" (backlight)**: alterna a cor da retroiluminação — âmbar, verde, azul e outras (ex.: branco,
+    vermelho, laranja), como a seleção de cor de display de rádios reais; quando o modelo não usa backlight
+    (LED/Digital), troca a cor dos segmentos/realce. Salva a escolha; também disponível em Apresentação.
+  - Ambas as teclas com tooltip e atalho de teclado; aplicam na hora, sem reiniciar, inclusive no display destacado
+    e na prévia das Configurações.
+  - **Novos modelos simulando rádios reais** (visual inspirado, sem logotipos, marcas ou nomes de fabricantes na
+    tela): por exemplo LCD monocromático com segmentos e ícones fixos de transceptor HF/VHF clássico; LCD
+    negativo (texto claro sobre fundo escuro azul/âmbar) de rádios móveis; tela colorida com bandas MAIN/SUB em
+    painéis e S-meter analógico (ponteiro); VFD verde-azulado (fluorescente) de rádios antigos; display de
+    duas linhas estilo HT/portátil. Cada um com o mesmo estado (`LcdState`), teclas A/B / RX ONLY / TIPO / LUZ
+    e o layout MAIN | SUB. Gerar **mockup para aprovação do operador** antes de implementar cada modelo.
+  - Testes: ciclo da tecla TIPO e da LUZ (persistência, limites, modelos sem backlight), renderização de todos os
+    modelos em larguras/DPI diferentes com teclas clicáveis.
+
 
 ## Detalhamento dos itens resolvidos na v1.7.0
 
