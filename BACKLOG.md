@@ -94,8 +94,11 @@
 - [x] **Homologado pelo operador em 07/11/2026 (v1.7.0):** "Display ficou perfeito. CAT operacional. Bloco de passagens OK.
   Telemetria orbital em km/h, ok." — display (layout TS-2000/modelos), CAT com o TS-2000, tabela de passagens sem
   rolagem lateral e velocidade radial em km/h aprovados em uso real.
-- [ ] Homologar em campo (ainda sem retorno): tecla A/B (MAIN↔SUB) no TS-2000 físico, rotor G-5400B + ERC-M real
-  (calibração, flip) e OTA automático 1.6.0→1.7.0 no Windows.
+- [x] **Tecla A/B (MAIN↔SUB) homologada pelo operador em 07/11/2026 (v1.7.0):** "Tecla A/B no rádio, troca certo no app"
+  — a troca feita no TS-2000 é refletida corretamente no display e no Auto CAT.
+- [ ] Rotor G-5400B + ERC-M real (calibração, flip, PARAR): **aguardando cabo** DB15 (ERC-M) ↔ DIN 8 pinos (G-5400B);
+  interface já reconhecida como porta serial USB.
+- [ ] OTA automático 1.6.0→1.7.0 no Windows: sem retorno ainda.
 
 ## Pendentes
 
