@@ -182,7 +182,13 @@
         (A/B, SAT, RX ONLY), teclas FUNC/MODE/AUTO/ROTOR/SCOPE/MENU, AF·RF/SQL concêntrico, M-CH, LOCK/TS;
         7100: controlador inclinado (trapézio), LCD de matriz branco com barra de status invertida, medidor S,
         VFO A grande, SUB/TX, abas touch, teclas A/B·SAT·RX ONLY·POWER à esquerda e MENU/AUTO/CAT/ROTOR/TIPO/LUZ
-        sob o LCD. Aproximação sem fotos de referência — refinar com fotos do operador. Aguardando aprovação.
+        sob o LCD. Aproximação sem fotos de referência — refinar com fotos do operador. **Aprovado pelo operador
+        (07/11/2026): "Ficou bom".**
+      - **Mockup de outros modelos (07/11/2026):** `docs/backlog/display-outros-modelos-mockup.png` — estilo
+        FT-897/857 (LCD com backlight colorido, 32 cores no 857; linha multifunção A/B/C → A/B, SAT, RX ONLY; teclas
+        A/B/C/F), FT-991A (TFT colorido touch com escopo/waterfall do RTL-SDR, abas A/B…MENU), IC-910H (LCD âmbar
+        MAIN em cima/SUB embaixo com S-meter por banda, teclas SATELLITE, MAIN/SUB…), IC-9700 (TFT 4,3" MAIN/SUB,
+        escopo e waterfall, abas touch). Mesmos comandos do app em todos. Aguardando aprovação.
     - **FT-847, FT-991A, IC-705, TS-2000:** levantar referências visuais (fotos/manuais) antes dos mockups.
   - Fontes: manuais FT-857/FT-897 (rigpix.com/yaesu/ft857_manual.pdf, rigpix.com/yaesu/ft897_manual.pdf),
     IC-910H (rigpix.com/icom/ic910h_manual.pdf), IC-9700 (icomamerica.com/lineup/products/IC-9700/),
