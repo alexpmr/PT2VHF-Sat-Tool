@@ -154,10 +154,10 @@
       display principal por foto/manual antes do mockup.
     - **IC-706MKIIG (pedido do operador, 07/11/2026):** frente destacável/remotável; LCD grande com nomes de memória
       alfanuméricos (9 caracteres), **legendas das teclas soft no próprio display** e **band scope simples** no LCD;
-      retroiluminação alta/baixa/desligada (cor a confirmar por foto).
+      retroiluminação alta/baixa/desligada; **backlight verde ou âmbar** (confirmado pelo operador, 07/11/2026) — tecla LUZ alterna as duas.
     - **IC-7100 (pedido do operador, 07/11/2026):** controlador inclinado com **LCD de matriz de pontos touch**
       (~48,6 × 75,9 mm, resistivo), funções de band scope, gráfico de SWR e decodificador RTTY na tela; é também o
-      menu de configuração. Cor do LCD a confirmar por foto.
+      menu de configuração. **Backlight somente branco** (confirmado pelo operador, 07/11/2026) — tecla LUZ só ajusta brilho.
     - **FT-847, FT-991A, IC-705, TS-2000:** levantar referências visuais (fotos/manuais) antes dos mockups.
   - Fontes: manuais FT-857/FT-897 (rigpix.com/yaesu/ft857_manual.pdf, rigpix.com/yaesu/ft897_manual.pdf),
     IC-910H (rigpix.com/icom/ic910h_manual.pdf), IC-9700 (icomamerica.com/lineup/products/IC-9700/),
