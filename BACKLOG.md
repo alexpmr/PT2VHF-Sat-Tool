@@ -112,6 +112,18 @@
 
 ## Pendentes
 
+- **Display com moldura de rádio e etiqueta de marca/modelo (como um rádio real)** (registrado em 07/11/2026)
+  - Pedido do operador: mostrar marca e modelo no display, como num rádio real. **Decisão:** não reproduzir logotipos
+    (marcas registradas; não sugerir produto oficial/endossado num programa distribuído). Em vez disso, **moldura de
+    rádio opcional** ao redor do display, com **etiqueta preenchida pelo operador** em Configurações (texto livre:
+    marca e modelo do seu rádio, indicativo, frase), em fonte neutra; padrão vazio.
+  - Moldura: painel metálico escuro, dial decorativo e fileira de teclas (MODE, A/B, SAT, RX ONLY, TIPO, LUZ — as
+    funcionais clicáveis); opção de ocultar a moldura e usar só o display. Mockup:
+    `docs/backlog/display-moldura-etiqueta-mockup.png` (A: etiqueta "TS-2000" digitada pelo operador; B: indicativo
+    "PT2VHF" com LCD 7 seg.; C: etiqueta vazia com LED 7 seg.) — **aguardando aprovação do operador**.
+  - Correção observada no mockup: no modelo matriz de pontos com display largo o texto "SWR 1.2" do lado SUB é
+    cortado na borda — medir o texto e reduzir/ajustar a barra PO.
+
 - **Displays inspirados em rádios VHF/UHF (144/440 MHz, FM e SSB) de Yaesu, Icom e Kenwood** (registrado em 07/11/2026)
   - Novos modelos selecionáveis em Configurações (Tipo de display), além dos atuais (matriz Normal/Negrito, LED 7 seg.,
     LCD 7 seg., Digital, Clássico); complementa o item "teclas TIPO/LUZ e modelos simulando rádios reais".
