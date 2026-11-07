@@ -99,6 +99,20 @@
 
 ## Pendentes
 
+- **Configurações → aba "Aparência": tema do programa (cores, brilho etc.) + configuração do display** (registrado em 07/11/2026)
+  - Nova aba **Aparência** (substitui/absorve a aba "Apresentação" da v1.7.0): a configuração do display
+    (tipo, fonte, cor do backlight, prévia ao vivo) é **movida para dentro dela**, junto com idioma/formato de
+    frequência e mapa/trajetória que hoje estão em Apresentação.
+  - **Ajuste de tema do programa:** temas prontos (escuro atual, escuro alto contraste, claro, noturno vermelho para
+    preservar visão noturna) e ajustes finos — cor de destaque, cor de fundo/painéis, **brilho**, **contraste**,
+    saturação e tamanho da fonte da interface; prévia ao vivo e botão "Restaurar padrão".
+  - Aplicar na hora em toda a janela (folha de estilo gerada a partir do tema), no painel SDR, janelas destacadas e
+    diálogos; mapa e display podem acompanhar o brilho (opcional). Salvar em `settings.json`.
+  - Garantir legibilidade: contraste mínimo de texto (WCAG AA) checado ao ajustar, sem cores que escondam
+    alertas (CAT, PARAR do rotor, avisos de passagem).
+  - Testes: troca de tema/brilho sem reiniciar, persistência, restaurar padrão, contraste mínimo, nenhuma
+    configuração perdida ao mover o display para a aba Aparência.
+
 - **Acesso pela web de outro computador, como no PT2VHF APRS Client** (registrado em 07/11/2026)
   - Situação atual (v1.3.18+): painel Web **somente leitura** (mapa, frequências, CAT, telemetria, passagens),
     localhost e LAN opt-in com chave temporária na URL. Ampliar para o mesmo modelo do APRS Client
