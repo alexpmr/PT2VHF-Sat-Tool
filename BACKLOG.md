@@ -112,6 +112,25 @@
 
 ## Pendentes
 
+- **Aba principal "Rotores"** (registrado em 07/11/2026)
+  - Hoje (v1.7.0) o rotor fica em Configurações → Rotor + uma barra na aba Operação. Criar uma **aba principal
+    "Rotores"** (ao lado de Operação, Satélites, Configurações, LOGs/CAT, Sobre) reunindo tudo do rotor:
+    - **conexão e configuração** (porta COM/autodetecção só leitura, velocidade, protocolo, perfil G-5400B/G-5500/
+      genérico, limites 360/450° e 90/180°, correção do norte, estacionamento, tolerância, intervalo, pré-posição) —
+      sai de Configurações → Rotor;
+    - **painel visual**: bússola de azimute (posição real × alvo × satélite, zona de sobreposição 360–450° e batente)
+      e indicador de elevação 0–180° (flip), com valores numéricos grandes;
+    - **controle manual**: ir para AZ/EL digitado, setas/jog, estacionar, calibrar 0°/fim de curso (guiado),
+      **PARAR** grande sempre visível;
+    - **rastreamento**: passagem atual/próxima do satélite selecionado, plano (normal/flip/reposiciona) com gráfico
+      da trajetória polar AOS→LOS, pré-posição, botão Rastrear/Parar;
+    - **log do rotor** (comandos TX/RX GS-232, falhas, watchdog) e diagnóstico.
+  - Preparar para **vários controladores/protocolos** (o nome "Rotores"): GS-232A/B (atual), e futuros Hamlib
+    rotctld, EasyComm, SPID Rot2Prog — com seleção do protocolo na aba.
+  - A barra compacta do rotor na aba Operação continua (posição, Rastrear, PARAR) com atalho para a aba Rotores.
+  - Testes: migração das configurações atuais do rotor sem perda; PARAR acessível em todas as telas; simulador
+    GS-232 nos testes da aba.
+
 - **Destacar só o display para outro monitor** (registrado em 07/11/2026)
   - Botão/tecla "Destacar display" (e menu de contexto do display): abre **só o display** (com ou sem a moldura do
     painel realista) numa janela própria, que pode ser arrastada para **outro monitor**; voltar ao lugar com o mesmo
