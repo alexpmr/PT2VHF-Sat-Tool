@@ -112,6 +112,19 @@
 
 ## Pendentes
 
+- **Displays inspirados em rádios VHF/UHF (144/440 MHz, FM e SSB) de Yaesu, Icom e Kenwood** (registrado em 07/11/2026)
+  - Novos modelos selecionáveis em Configurações (Tipo de display), além dos atuais (matriz Normal/Negrito, LED 7 seg.,
+    LCD 7 seg., Digital, Clássico); complementa o item "teclas TIPO/LUZ e modelos simulando rádios reais".
+  - Candidatos (rádios que operam 144/440 em FM e SSB, comuns em satélite): **Yaesu** FT-897/857, FT-817/818,
+    FT-991A, FT-847, FT-736R; **Icom** IC-9700, IC-910H, IC-821H, IC-705, IC-7100; **Kenwood** TS-790 (o TS-2000 já é
+    a base do layout atual). Escolher com o operador quais entram primeiro (sugestão: FT-897, IC-9700, IC-910H, TS-790).
+  - Cada modelo reproduz o **estilo visual** do display (tipo de LCD/cores, disposição dos dígitos, S-meter,
+    ícones/indicadores), mantendo as mesmas informações e teclas do Sat Tool (MAIN/SUB, A/B, RX ONLY, TIPO, LUZ,
+    LOS m:ss). Sem logotipos nem marcas desenhadas no display; o nome do modelo aparece apenas na lista de
+    seleção como referência de estilo (ex.: "Estilo FT-897").
+  - **Mockup de cada modelo para aprovação do operador antes de implementar**; renderizadores vetoriais/pixel-perfect
+    como os atuais (nítidos em qualquer DPI), com teste de renderização e teclas clicáveis.
+
 - **Seletor de idioma no menu superior (como no PT2VHF APRS Client) + revisão e tradução completa** (registrado em 07/11/2026)
   - Referência enviada pelo operador: menu suspenso no topo da janela, com **bandeira + nome nativo**, igual ao APRS
     Client: Português (Brasil), English, Español, Français, Deutsch, Italiano, 日本語, Polski, Nederlands, 简体中文.
