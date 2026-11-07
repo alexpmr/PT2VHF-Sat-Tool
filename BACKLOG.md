@@ -112,6 +112,16 @@
 
 ## Pendentes
 
+- **Destacar só o display para outro monitor** (registrado em 07/11/2026)
+  - Botão/tecla "Destacar display" (e menu de contexto do display): abre **só o display** (com ou sem a moldura do
+    painel realista) numa janela própria, que pode ser arrastada para **outro monitor**; voltar ao lugar com o mesmo
+    botão ou fechando a janela (mesmo padrão do waterfall/telemetria destacáveis do painel SDR).
+  - Janela redimensionável mantendo a proporção (dígitos crescem nítidos), opção **tela cheia** (F11/duplo clique),
+    **sempre visível** (on top) e sem bordas; lembra monitor, posição, tamanho e modo entre sessões; se o monitor
+    salvo não existir mais, volta para o principal.
+  - O display destacado continua funcional (A/B, RX ONLY, TIPO, LUZ, contagem LOS) e sincronizado com a janela
+    principal; teste com 1 e 2 monitores e DPI diferentes em cada um.
+
 - **Display com moldura de rádio e etiqueta de marca/modelo (como um rádio real)** (registrado em 07/11/2026)
   - Pedido do operador: mostrar marca e modelo no display, como num rádio real. **Decisão:** não reproduzir logotipos
     (marcas registradas; não sugerir produto oficial/endossado num programa distribuído). Em vez disso, **moldura de
@@ -130,6 +140,22 @@
     cortado na borda — medir o texto e reduzir/ajustar a barra PO.
 
 - **Displays inspirados em rádios VHF/UHF (144/440 MHz, FM e SSB) de Yaesu, Icom e Kenwood** (registrado em 07/11/2026)
+  - **Aprovado pelo operador (07/11/2026):** o painel realista (`docs/backlog/display-painel-realista-mockup.png`)
+    é a base; os estilos dos rádios reais entram como modelos de display **dentro desse painel**.
+  - Pesquisa inicial (manuais/fabricantes, 07/11/2026) — características a reproduzir:
+    - **FT-857/FT-897:** LCD multifunção com retroiluminação de cor selecionável (FT-857: 32 cores; FT-897: cor por
+      faixa, ARTS, grupo de memória ou fixa), ajuste de brilho/contraste, linha de 3 teclas multifunção A/B/C com
+      legendas no próprio display (tecla F alterna o conjunto).
+    - **IC-910H (e IC-821H):** display multifunção com banda **MAIN em cima e SUB embaixo** (MAIN = TX/RX, SUB só RX),
+      medidores por banda — base para um modelo "duas linhas".
+    - **IC-9700:** tela colorida TFT 4,3" touch, bandas MAIN/SUB, **espectro/waterfall em tempo real** (±500 kHz) com
+      sintonia pelo toque — modelo "TFT com escopo" (pode usar o waterfall do SDR quando houver RTL-SDR).
+    - **TS-790:** LCD com display de sub-receptor iluminado por lâmpadas (calor/âmbar suave) — confirmar o visual do
+      display principal por foto/manual antes do mockup.
+    - **FT-847, FT-991A, IC-705, IC-7100, TS-2000:** levantar referências visuais (fotos/manuais) antes dos mockups.
+  - Fontes: manuais FT-857/FT-897 (rigpix.com/yaesu/ft857_manual.pdf, rigpix.com/yaesu/ft897_manual.pdf),
+    IC-910H (rigpix.com/icom/ic910h_manual.pdf), IC-9700 (icomamerica.com/lineup/products/IC-9700/),
+    TS-790 (kenwood.com/i/products/info/amateur/ts790.html; m1abk.blogspot.com/2016/10/ts-790-repair.html).
   - Novos modelos selecionáveis em Configurações (Tipo de display), além dos atuais (matriz Normal/Negrito, LED 7 seg.,
     LCD 7 seg., Digital, Clássico); complementa o item "teclas TIPO/LUZ e modelos simulando rádios reais".
   - Candidatos (rádios que operam 144/440 em FM e SSB, comuns em satélite): **Yaesu** FT-897/857, FT-817/818,
