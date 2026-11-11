@@ -43,6 +43,20 @@ function Wait-Exit([int[]]$pids, [int]$seconds) {
     return @($pids | Where-Object { Get-Process -Id $_ -ErrorAction SilentlyContinue })
 }
 
+function Get-InnoExitMeaning([int]$code) {
+    switch ($code) {
+        1 { 'o instalador nao iniciou; o programa pode ainda estar aberto' }
+        2 { 'cancelado antes de instalar' }
+        3 { 'erro fatal ao preparar a proxima etapa' }
+        4 { 'erro fatal durante a instalacao' }
+        5 { 'falha ao preparar a instalacao (arquivo em uso)' }
+        6 { 'instalador encerrado a forca' }
+        7 { 'falha ao preparar a instalacao' }
+        8 { 'reinicio do Windows necessario antes de instalar' }
+        default { 'erro desconhecido' }
+    }
+}
+
 try {
     $children = @(Get-Descendants $WaitPid)
     $left = Wait-Exit (@($WaitPid) + $children) 90
@@ -63,10 +77,28 @@ try {
     }
     if ($Mode -eq 'Setup') {
         if (-not (Test-Path -LiteralPath $Package -PathType Leaf)) { throw 'Instalador ausente.' }
-        $setupArgs = @('/SILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/SP-', '/CLOSEAPPLICATIONS', "/LOG=`"$setupLog`"")
+        # v1.7.1: a tarefa do driver RTL-SDR (wdi-simple, pede UAC e espera ate 60 s) nunca roda no OTA,
+        # mesmo que o operador a tenha marcado numa instalacao anterior (o Inno lembra as tarefas).
+        # O driver so e instalado pelo botao do painel SDR quando faltar.
+        $setupArgs = @('/SILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/SP-', '/CLOSEAPPLICATIONS',
+                       '/MERGETASKS="!rtlsdr"', '/OTA', "/LOG=`"$setupLog`"")
         if ($Destination) { $setupArgs += "/DIR=`"$Destination`"" }
-        $p = Start-Process -FilePath $Package -ArgumentList $setupArgs -Wait -PassThru
-        if ($p.ExitCode -ne 0) { throw "Instalador terminou com codigo $($p.ExitCode) (log: $setupLog)" }
+        $code = -1
+        for ($attempt = 1; $attempt -le 2; $attempt++) {
+            $p = Start-Process -FilePath $Package -ArgumentList $setupArgs -Wait -PassThru
+            $code = $p.ExitCode
+            # 1 = Setup nao iniciou (ex.: AppMutex ainda presente); 5 = falha em "Preparando para instalar"
+            # (arquivo em uso). Uma nova tentativa apos alguns segundos costuma resolver.
+            if ($code -eq 0 -or ($code -ne 1 -and $code -ne 5)) { break }
+            Start-Sleep -Seconds 5
+        }
+        if ($code -ne 0) {
+            $last = ''
+            if (Test-Path -LiteralPath $setupLog) {
+                $last = (Get-Content -LiteralPath $setupLog -Tail 3 -ErrorAction SilentlyContinue) -join ' | '
+            }
+            throw "Instalador terminou com codigo $code ($(Get-InnoExitMeaning $code)). Ultima etapa: $last (log: $setupLog)"
+        }
     } else {
         if (-not (Test-Path -LiteralPath $Package -PathType Leaf) -or
             -not $Package.EndsWith('.exe', [System.StringComparison]::OrdinalIgnoreCase)) {

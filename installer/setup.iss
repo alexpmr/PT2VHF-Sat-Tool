@@ -53,6 +53,17 @@ Name: "{autodesktop}\PT2VHF Sat Tool {#BuildFlavor}"; Filename: "{app}\PT2VHF-Sa
 Name: "desktopicon"; Description: "Criar atalho na Área de Trabalho"; GroupDescription: "Atalhos adicionais:"
 Name: "rtlsdr"; Description: "Preparar RTL-SDR (instala o driver WinUSB somente na interface 0 do dongle)"; GroupDescription: "Receptor SDR:"
 [Run]
-Filename: "{app}\_internal\drivers\wdi-simple.exe"; Parameters: "-n ""RTL2832U (PT2VHF Sat Tool)"" -m Realtek -v 0x0BDA -p 0x2838 -i 0 -t 0 -f rtlsdr_2838_pt2vhf.inf -d ""{tmp}\rtlsdr"" --stealth-cert -s -o 60000"; StatusMsg: "Preparando driver do RTL-SDR (WinUSB)..."; Flags: runhidden waituntilterminated skipifdoesntexist; Tasks: rtlsdr; Check: not WizardSilent
-Filename: "{app}\_internal\drivers\wdi-simple.exe"; Parameters: "-n ""RTL2832U (PT2VHF Sat Tool)"" -m Realtek -v 0x0BDA -p 0x2832 -i 0 -t 0 -f rtlsdr_2832_pt2vhf.inf -d ""{tmp}\rtlsdr"" --stealth-cert -s -o 60000"; Flags: runhidden waituntilterminated skipifdoesntexist; Tasks: rtlsdr; Check: not WizardSilent
+Filename: "{app}\_internal\drivers\wdi-simple.exe"; Parameters: "-n ""RTL2832U (PT2VHF Sat Tool)"" -m Realtek -v 0x0BDA -p 0x2838 -i 0 -t 0 -f rtlsdr_2838_pt2vhf.inf -d ""{tmp}\rtlsdr"" --stealth-cert -s -o 60000"; StatusMsg: "Preparando driver do RTL-SDR (WinUSB)..."; Flags: runhidden waituntilterminated skipifdoesntexist; Tasks: rtlsdr; Check: not WizardSilent and not IsOta
+Filename: "{app}\_internal\drivers\wdi-simple.exe"; Parameters: "-n ""RTL2832U (PT2VHF Sat Tool)"" -m Realtek -v 0x0BDA -p 0x2832 -i 0 -t 0 -f rtlsdr_2832_pt2vhf.inf -d ""{tmp}\rtlsdr"" --stealth-cert -s -o 60000"; Flags: runhidden waituntilterminated skipifdoesntexist; Tasks: rtlsdr; Check: not WizardSilent and not IsOta
 Filename: "{app}\PT2VHF-Sat-Tool.exe"; Description: "Executar PT2VHF Sat Tool"; Flags: nowait postinstall skipifsilent
+[Code]
+// v1.7.1: atualizacao automatica (OTA) passa /OTA; a etapa do driver RTL-SDR nunca roda nela.
+function IsOta(): Boolean;
+var
+  I: Integer;
+begin
+  Result := False;
+  for I := 1 to ParamCount do
+    if CompareText(ParamStr(I), '/OTA') = 0 then
+      Result := True;
+end;

@@ -1429,8 +1429,11 @@ class MainWindow(RotorUiMixin, QMainWindow):
         if status=="ok":
             QMessageBox.information(self,"Atualização concluída",f"PT2VHF Sat Tool atualizado para a versão {version or __version__}.")
         else:
-            QMessageBox.warning(self,"Atualização não concluída",
-                f"A atualização não terminou: {detail}\n\nBaixe a versão nova em www.pt2vhf.com/sat ou tente de novo pelo botão de versão.")
+            from .updater import update_failure_message
+            box=QMessageBox(QMessageBox.Warning,"Atualização não concluída",update_failure_message(detail),parent=self)
+            box.setTextFormat(Qt.RichText)
+            box.setTextInteractionFlags(Qt.TextBrowserInteraction)
+            box.exec() if hasattr(box,"exec") else box.exec_()
 
     def station(self):
         if not self.lat.text().strip() or not self.lon.text().strip():
