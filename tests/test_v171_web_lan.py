@@ -55,9 +55,12 @@ def test_lan_candidates_are_private_ipv4_only_and_unique(monkeypatch):
     monkeypatch.setattr(socket, "gethostbyname_ex", lambda h: (h, [], ["8.8.8.8", "192.168.0.10", "127.0.0.1",
                                                                         "169.254.1.1", "10.0.0.7", "192.168.0.10"]))
     monkeypatch.setattr(socket, "getaddrinfo", lambda *a, **k: [(0, 0, 0, "", ("172.20.0.2", 0))])
-    got = web_ui.lan_ipv4_candidates()
+    got = web_ui.lan_ipv4_candidates(max_age=0)
     assert "8.8.8.8" not in got and "127.0.0.1" not in got and "169.254.1.1" not in got
     assert {"192.168.0.10", "10.0.0.7", "172.20.0.2"} <= set(got) and len(got) == len(set(got))
+    # resolução lenta do nome da máquina não se repete a cada atualização do diagnóstico
+    monkeypatch.setattr(socket, "gethostbyname_ex", lambda h: (_ for _ in ()).throw(AssertionError("sem cache")))
+    assert web_ui.lan_ipv4_candidates() == got
 
 
 def test_firewall_rule_is_port_only_private_profile_and_local_subnet():

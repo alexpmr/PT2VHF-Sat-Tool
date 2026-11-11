@@ -132,8 +132,17 @@ def _private_ipv4(raw):
     return ip.version == 4 and ip.is_private and not ip.is_loopback and not ip.is_link_local
 
 
-def lan_ipv4_candidates():
-    """Todos os IPv4 privados desta máquina (Wi-Fi, cabo, VPN de casa), o da rota padrão primeiro."""
+_LAN_CACHE = [0.0, []]
+
+
+def lan_ipv4_candidates(max_age=30.0):
+    """Todos os IPv4 privados desta máquina (Wi-Fi, cabo, VPN de casa), o da rota padrão primeiro.
+
+    Guardado por `max_age` s: a resolução do nome da máquina pode levar vários segundos (ex.: macOS sem DNS
+    local) e o diagnóstico é atualizado na janela a cada 2 s."""
+    now = time.monotonic()
+    if max_age and _LAN_CACHE[0] and now - _LAN_CACHE[0] < max_age:
+        return list(_LAN_CACHE[1])
     found = []
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
@@ -156,6 +165,7 @@ def lan_ipv4_candidates():
     for raw in found:
         if _private_ipv4(raw) and raw not in out:
             out.append(raw)
+    _LAN_CACHE[0], _LAN_CACHE[1] = time.monotonic(), list(out)
     return out
 
 
@@ -316,11 +326,12 @@ class LocalStatusServer:
             return sorted(ip for ip, t in self._presence.items() if now - t <= window)
 
     def diagnostics(self):
+        active = self.remote_active()
         last = ""
         if self.last_remote:
             last = self.last_remote[0] + " às " + self.last_remote[1].strftime("%H:%M:%S")
         return {"listening": self.listening, "port": self.port, "lan": self.lan, "controls": self.controls,
-                "addresses": self.urls(), "last_remote": last, "remote_active": self.remote_active()}
+                "addresses": self.urls(), "last_remote": last, "remote_active": active}
 
     def rotate_key(self):
         """Nova chave: os links antigos e todas as sessões abertas deixam de valer."""
