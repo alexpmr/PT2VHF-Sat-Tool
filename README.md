@@ -26,9 +26,20 @@ O sufixo `Win11-x64` é mantido para compatibilidade com o atualizador e também
 1. Abra o Sat Tool no computador onde os elementos orbitais e o CAT estão configurados.
 2. Em **Configurações → Interface Web**, habilite o painel Web, escolha a porta TCP (padrão **8094**) e clique em **Abrir interface Web**.
 3. O acesso local usa `http://127.0.0.1:8094/`. Para outros dispositivos da mesma LAN, marque **Permitir outros dispositivos da rede local (LAN)** e use **Copiar endereço**; a URL inclui uma chave temporária e a primeira visita cria um cookie de sessão.
-4. Se outro computador/celular não alcançar a página, confira o IPv4 do computador e libere a porta TCP de entrada **apenas na rede privada** no firewall local. Não configure redirecionamento de porta no roteador.
+4. Se outro computador/celular não alcançar a página, use **Liberar no firewall do Windows** (regra só para a porta, perfil Privado, só a rede local; o Windows pede confirmação) e confira na lista **Endereços desta máquina** o IPv4 da mesma rede do outro aparelho. Não configure redirecionamento de porta no roteador.
+5. Opcional: **Permitir controle pela rede (sem PTT)** com **PIN da estação** (4 a 12 dígitos). O navegador passa a poder escolher satélite, ligar/desligar Auto CAT, A/B, RX ONLY e rastrear/estacionar/PARAR o rotor. Cada ação pede o PIN e vai para o log com o IP; PTT/TX nunca é acionado pela rede.
 
-**Escopo do painel Web v1.7.0:** consulta em tempo real ao satélite, frequências previstas, CAT, telemetria, mapa vetorial offline e passagens. **Somente leitura:** o navegador não muda satélite/configurações nem executa comandos CAT/PTT. O desktop deve permanecer aberto. O HTTP na LAN não é criptografado; não divulgue a URL fora da rede.
+**Escopo do painel Web v1.7.1:** satélite, frequências, display do rádio (mesmo modelo da janela), rotor, CAT, telemetria orbital e APRS decodificado, mapa vetorial offline e passagens, atualizados a cada 1,5 s. Só aparelhos da rede privada (IP público é recusado); **Renovar chave** derruba links e sessões antigos; diagnóstico mostra último acesso remoto e navegador remoto ativo. O desktop deve permanecer aberto. O HTTP na LAN não é criptografado; não divulgue a URL fora da rede.
+
+## Novidades v1.7.1 — estilos de rádio, rotores, aparência, idiomas e acesso pela rede
+
+- **Displays no estilo de rádios reais** (sem logotipos): IC-706MKIIG (LCD verde/âmbar), IC-7100 (matriz branca), FT-897/857 (backlight colorido), IC-910H (MAIN em cima, SUB embaixo), FT-991A e IC-9700 (tela colorida). Escopo e waterfall do display usam os dados reais do RTL-SDR; clique no escopo sintoniza.
+- **Display:** teclas **TIPO** (F6) e **LUZ** (F7), 6 cores de backlight, menu do clique direito e **display destacável** (F8) para outro monitor, com tela cheia (F11), sempre visível e sem bordas.
+- **Configurações → Rotores** completa (conexão, limites e calibração, ajustes de rastreamento, ajuste manual e teste, log) e **faixa ROTOR** na tela principal com bússola, alvo, PARAR (Esc/F12) e linha da antena no mapa.
+- **Aparência:** temas escuro, claro, alto contraste e noturno (vermelho), cor de destaque, brilho, contraste, saturação e tamanho da fonte, com verificação de contraste.
+- **Idioma no topo** com bandeiras: português, inglês, espanhol, francês, alemão, italiano, japonês, polonês, holandês e chinês simplificado; troca sem reiniciar.
+- **Configurações** com campos e menus do tamanho do conteúdo; **porta COM** ocupada ou ausente com mensagem clara; **OTA** não trava mais na instalação do driver RTL-SDR; **painel SDR** fechado não reabre sozinho.
+
 ## Novidades v1.7.0 — modelos de display, rotor e atualização automática
 
 - **Display no layout do TS-2000:** MAIN e SUB lado a lado, dígito de 1 Hz menor, S-meter sob o lado RX e PO/SWR sob o lado TX, indicadores e contagem **LOS m:ss / AOS** (pisca nos últimos 30 s). Pontos sempre em pixels inteiros (sem "pixels defeituosos").
