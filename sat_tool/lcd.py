@@ -58,7 +58,12 @@ THEMES = {
     "âmbar": ("#ffc34d", "#e09a22", "#2b1802", "#d99a2e"),
     "verde": ("#b8f06a", "#7fc23a", "#13280a", "#86c24a"),
     "azul": ("#9ad8ff", "#5aa8e0", "#08182a", "#6aaee0"),
+    # v1.7.1: mais cores de retroiluminação (tecla LUZ), como a seleção de cor de rádios reais
+    "branco": ("#f4f6f2", "#c9cec6", "#15181a", "#b9beb6"),
+    "vermelho": ("#ff8a7a", "#d8483a", "#2a0604", "#d86a5e"),
+    "laranja": ("#ffad5c", "#e07a1e", "#2b1302", "#d98a3e"),
 }
+THEME_ORDER = ("âmbar", "verde", "azul", "branco", "vermelho", "laranja")
 
 
 def text_width(text: str) -> int:
@@ -88,6 +93,18 @@ MODELS = {
 FONTS = {"normal": "Normal", "negrito": "Negrito"}
 SEG = {"0": "abcdef", "1": "bc", "2": "abged", "3": "abgcd", "4": "fgbc", "5": "afgcd", "6": "afgedc",
        "7": "abc", "8": "abcdefg", "9": "abcdfg", "-": "g", " ": ""}
+
+
+# Teclas do display, da direita para a esquerda (v1.7.1: TIPO e LUZ).
+DISPLAY_KEYS = (("rxonly", "RX ONLY"), ("swap", "A/B"), ("light", "LUZ"), ("type", "TIPO"))
+
+
+def next_in(seq, current, step: int = 1):
+    """Próximo item de `seq` depois de `current` (circular); desconhecido → primeiro."""
+    seq = list(seq)
+    if current not in seq:
+        return seq[0]
+    return seq[(seq.index(current) + step) % len(seq)]
 
 
 def countdown_text(seconds: float | None) -> str:
@@ -436,7 +453,8 @@ class _Digital(_Style):
 
     def __init__(self, p, w, h, u, theme):
         super().__init__(p, w, h, u, theme)
-        self.ink = QColor("#f2f5f8")
+        # sem backlight: a tecla LUZ troca a cor dos dígitos (âmbar = branco padrão da tela colorida)
+        self.ink = QColor("#f2f5f8") if theme == "âmbar" else QColor(THEMES.get(theme, THEMES["âmbar"])[0])
         self.off = QColor(255, 255, 255, 22)
         self.tag_bg, self.tag_fg = QColor("#1f3f66"), QColor("#cfe6ff")
         self.dim = QColor(255, 255, 255, 110)
@@ -549,7 +567,7 @@ def paint_ts2000(style: _Style, st: LcdState) -> dict:
     y = H - 27 * u
     keys = {}
     kx = W - margin
-    for key, lab in (("rxonly", "RX ONLY"), ("swap", "A/B")):
+    for key, lab in DISPLAY_KEYS:
         kx -= style.key_w(lab)
         keys[key] = style.key(kx, y, lab)
         kx -= 8 * u
@@ -596,7 +614,7 @@ def paint_classic(style: _Matrix, st: LcdState) -> dict:
     y += 10 * sp
     keys = {}
     kx = W - 8 * u
-    for key, lab in (("rxonly", "RX ONLY"), ("swap", "A/B")):
+    for key, lab in DISPLAY_KEYS:
         w = (len(lab) * 6 - 1 + 8) * sp
         kx -= w
         keys[key] = style.key(kx, y, lab)
@@ -613,6 +631,12 @@ class LcdDisplay(QWidget):
     """Widget do display. set_state() atualiza; teclas A/B (MAIN↔SUB) e RX ONLY emitem sinais."""
     swap_clicked = Signal()
     rx_only_clicked = Signal()
+    type_clicked = Signal()          # v1.7.1: tecla TIPO → próximo modelo
+    light_clicked = Signal()         # v1.7.1: tecla LUZ → próxima cor de backlight
+    model_chosen = Signal(str)       # menu de contexto → modelo escolhido direto
+    theme_chosen = Signal(str)       # menu de contexto → cor escolhida direto
+    detach_requested = Signal()      # menu de contexto / duplo clique fora das teclas → destacar/voltar
+    fullscreen_requested = Signal()  # duplo clique no display destacado → tela cheia
 
     def __init__(self, parent=None, theme: str = "âmbar", model: str = "matriz", font: str = "normal"):
         super().__init__(parent)
@@ -625,7 +649,10 @@ class LcdDisplay(QWidget):
         self._keys = {}
         self.setMouseTracking(True)
         self.setCursor(Qt.ArrowCursor)
-        self.setToolTip("Clique em A/B para inverter MAIN↔SUB (TX/RX) · RX ONLY para operar só em recepção")
+        self.detached = False
+        self.extra_menu = None           # janela destacada acrescenta tela cheia/sempre visível/sem bordas
+        self.setToolTip("A/B inverte MAIN↔SUB (TX/RX) · RX ONLY opera só em recepção · TIPO troca o modelo (F6) · "
+                        "LUZ troca a cor do backlight (F7) · clique direito: escolher modelo/cor ou destacar o display")
 
     def set_theme(self, theme: str):
         if theme in THEMES:
@@ -696,7 +723,42 @@ class LcdDisplay(QWidget):
         pos = event.position() if hasattr(event, "position") else event.pos()
         key = self.key_at(pos)
         if key:
-            (self.swap_clicked if key == "swap" else self.rx_only_clicked).emit()
+            {"swap": self.swap_clicked, "rxonly": self.rx_only_clicked,
+             "type": self.type_clicked, "light": self.light_clicked}[key].emit()
             event.accept()
             return
         super().mousePressEvent(event)
+
+    def mouseDoubleClickEvent(self, event):
+        pos = event.position() if hasattr(event, "position") else event.pos()
+        if self.key_at(pos):
+            self.mousePressEvent(event)   # duplo clique rápido numa tecla = dois cliques
+            return
+        (self.fullscreen_requested if self.detached else self.detach_requested).emit()
+        event.accept()
+
+    def context_menu(self):
+        """Menu do clique direito: modelos, cores e destacar (montado aqui para os testes)."""
+        from .qt_compat import QMenu
+        menu = QMenu(self)
+        models = menu.addMenu("Tipo de display (TIPO)")
+        for code, name in MODELS.items():
+            act = models.addAction(name)
+            act.setCheckable(True); act.setChecked(code == self.model)
+            act.triggered.connect(lambda _=False, c=code: self.model_chosen.emit(c))
+        colors = menu.addMenu("Cor do backlight (LUZ)")
+        for name in THEME_ORDER:
+            act = colors.addAction(name.capitalize())
+            act.setCheckable(True); act.setChecked(name == self.theme)
+            act.triggered.connect(lambda _=False, n=name: self.theme_chosen.emit(n))
+        menu.addSeparator()
+        if self.detached and self.extra_menu is not None:
+            self.extra_menu(menu)
+        detach = menu.addAction("Voltar o display para a janela principal" if self.detached
+                                else "Destacar display (outro monitor)")
+        detach.triggered.connect(self.detach_requested.emit)
+        return menu
+
+    def contextMenuEvent(self, event):
+        menu = self.context_menu()
+        menu.exec(event.globalPos()) if hasattr(menu, "exec") else menu.exec_(event.globalPos())

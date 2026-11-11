@@ -54,7 +54,7 @@ def test_every_model_renders_with_clickable_keys():
                             los_s=342)
                 img, keys = d.render_image(w, h, dpr)
                 assert img.width() == round(w * dpr) and img.height() == round(h * dpr), model
-                assert set(keys) == {"swap", "rxonly"}, model
+                assert set(keys) == {"swap", "rxonly", "type", "light"}  # v1.7.1: TIPO e LUZ, model
                 for rect in keys.values():
                     assert 0 <= rect.left() and rect.right() <= w and 0 <= rect.top() and rect.bottom() <= h, (model, rect)
                 d._keys = keys

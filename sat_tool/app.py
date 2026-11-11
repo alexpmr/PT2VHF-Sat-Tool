@@ -218,6 +218,20 @@ class MainWindow(RotorUiMixin, QMainWindow):
             QTimer.singleShot(1200, self.startup_cat_connect)
         if self.config.values.get("web_enabled",False):
             QTimer.singleShot(700,self.start_web_server)
+        if self.config.values.get("display_detached",False):
+            QTimer.singleShot(400,self.toggle_display_detached)
+        self.install_display_shortcuts()
+
+    def install_display_shortcuts(self):
+        """Atalhos do display: F6 = TIPO, F7 = LUZ, F8 = destacar/voltar."""
+        from .qt_compat import QShortcut, QKeySequence
+        self.display_shortcuts=[]
+        for key,func in (("F6",lambda:self.cycle_display("model")),("F7",lambda:self.cycle_display("theme")),
+                         ("F8",self.toggle_display_detached)):
+            sc=QShortcut(QKeySequence(key),self)
+            sc.setContext(Qt.ApplicationShortcut)
+            sc.activated.connect(func)
+            self.display_shortcuts.append(sc)
 
     def show_official_site_notice(self):
         """Boas-vindas (v1.5.0): convite às demais aplicações PT2VHF, com link e botão Fechar."""
@@ -447,10 +461,23 @@ class MainWindow(RotorUiMixin, QMainWindow):
                             font=str(self.config.values.get("display_font","normal")))
         self.lcd.swap_clicked.connect(self.toggle_main_sub)
         self.lcd.rx_only_clicked.connect(self.toggle_rx_only)
+        # v1.7.1: teclas TIPO/LUZ, menu de contexto e destacar o display
+        self.lcd.type_clicked.connect(lambda:self.cycle_display("model"))
+        self.lcd.light_clicked.connect(lambda:self.cycle_display("theme"))
+        self.lcd.model_chosen.connect(lambda code:self.set_display_choice(model=code))
+        self.lcd.theme_chosen.connect(lambda name:self.set_display_choice(theme=name))
+        self.lcd.detach_requested.connect(self.toggle_display_detached)
         self.lcd.set_state(rx_only=bool(self.config.values.get("rx_only",False)))
         for card in (self.pred_rx,self.pred_tx):
             card.setVisible(False)
         frequency_cards.addWidget(self.lcd,1)
+        self.display_cards=frequency_cards
+        self.display_window=None
+        self.display_placeholder=label("Display destacado em outra janela · clique para trazer de volta")
+        self.display_placeholder.setStyleSheet("color:#9fb8c4;font-size:11px;padding:4px")
+        self.display_placeholder.setVisible(False)
+        self.display_placeholder.mousePressEvent=lambda _e:self.toggle_display_detached()
+        frequency_cards.addWidget(self.display_placeholder,1)
         ov.addLayout(frequency_cards)
         self.corrected_label=label("Previsão orbital sem CAT e sem transmissão")
         self.corrected_label.setStyleSheet("color:#a4d5df;font-size:11px")
@@ -2453,7 +2480,8 @@ class MainWindow(RotorUiMixin, QMainWindow):
         for code,name in FONTS.items():
             self.display_font.addItem(name,code)
         self.display_theme=QComboBox()
-        for name in THEMES:
+        from .lcd import THEME_ORDER
+        for name in THEME_ORDER:
             self.display_theme.addItem(name.capitalize(),name)
         for row,(txt,widget) in enumerate((("Tipo de display",self.display_model),
                                            ("Fonte (matriz de pontos)",self.display_font),
@@ -2482,13 +2510,59 @@ class MainWindow(RotorUiMixin, QMainWindow):
         font=self.display_font.currentData() or "normal"
         theme=self.display_theme.currentData() or "âmbar"
         self.display_font.setEnabled(model=="matriz")
-        self.display_theme.setEnabled(model!="digital")
         for widget in (getattr(self,"lcd",None),getattr(self,"display_preview",None)):
             if widget is not None:
                 widget.set_model(model);widget.set_font_style(font);widget.set_theme(theme)
         if save:
             self.config.values.update(display_model=model,display_font=font,lcd_theme=theme)
             self.config.save()
+
+    def toggle_display_detached(self):
+        """Destaca o display numa janela própria (outro monitor) ou o devolve à aba Operação."""
+        from .display_window import DisplayWindow, MAX_HEIGHT_DOCKED
+        if self.display_window is None:
+            self.display_window=DisplayWindow(self.lcd,self.config,self._dock_display)
+            self.display_placeholder.setVisible(True)
+            if self.config.values.get("display_window_fullscreen",False):
+                self.display_window.showFullScreen()
+            else:
+                self.display_window.show()
+            self.config.values["display_detached"]=True
+            self.config.save()
+            self.log("Display destacado em janela própria (F11 tela cheia; fechar a janela devolve o display)")
+        else:
+            self.display_window.close()
+
+    def _dock_display(self):
+        from .display_window import MAX_HEIGHT_DOCKED
+        window,self.display_window=self.display_window,None
+        self.lcd.detached=False
+        self.lcd.setMinimumHeight(118)
+        self.lcd.setMaximumHeight(MAX_HEIGHT_DOCKED)
+        self.display_cards.insertWidget(0,self.lcd,1)
+        self.lcd.show()
+        self.display_placeholder.setVisible(False)
+        if not getattr(self,"_closing_app",False):
+            self.config.values["display_detached"]=False
+            self.config.save()
+
+    def set_display_choice(self,model=None,theme=None):
+        """Escolhe modelo/cor do display pelas mesmas caixas de Apresentação (salva e aplica na hora)."""
+        for combo,value in ((self.display_model,model),(self.display_theme,theme)):
+            if value is not None:
+                index=combo.findData(value)
+                if index>=0:
+                    combo.setCurrentIndex(index)
+
+    def cycle_display(self,what):
+        """Teclas TIPO (modelo) e LUZ (cor do backlight) do display: passam para o próximo item."""
+        from .lcd import MODELS, THEME_ORDER, next_in
+        if what=="model":
+            self.set_display_choice(model=next_in(MODELS,self.display_model.currentData()))
+            self.log("Display: "+self.display_model.currentText())
+        else:
+            self.set_display_choice(theme=next_in(THEME_ORDER,self.display_theme.currentData()))
+            self.log("Display: backlight "+self.display_theme.currentText())
 
     def toggle_rx_only(self):
         enabled=not bool(self.config.values.get("rx_only",False))
@@ -4278,6 +4352,9 @@ class MainWindow(RotorUiMixin, QMainWindow):
         })
     def closeEvent(self,event):
         self.rotor_shutdown()
+        self._closing_app=True
+        if getattr(self,"display_window",None) is not None:
+            self.display_window.close()   # lembra posição/monitor; display_detached continua True
         try:
             if self.sdr_dock.isVisible() and not self.sdr_dock.isFloating():
                 self.config.values["sdr_dock_height"]=int(self.sdr_dock.height())

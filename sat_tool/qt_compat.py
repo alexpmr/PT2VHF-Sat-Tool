@@ -39,8 +39,10 @@ except ImportError as qt6_error:
 
 try:
     from PySide6.QtWidgets import QSizePolicy
+    from PySide6.QtGui import QShortcut, QKeySequence
 except ImportError:  # pragma: no cover - Qt5 legacy build
-    from PySide2.QtWidgets import QSizePolicy
+    from PySide2.QtWidgets import QSizePolicy, QShortcut
+    from PySide2.QtGui import QKeySequence
 QSizePolicy_Maximum = QSizePolicy.Maximum if hasattr(QSizePolicy, "Maximum") else QSizePolicy.Policy.Maximum
 
 
