@@ -29,6 +29,7 @@ from .qt_compat import QWebEngineView, QGeoPositionInfoSource, qt_exec, QT_BINDI
 from skyfield.api import load
 from . import __version__
 from .passfmt import radial_kmh_text
+from .appearance import DEFAULTS as THEME_DEFAULTS
 from .rotor_ui import RotorUiMixin
 from .cat import TS2000, available_ports, decode_satellite_status
 from .catalog import refresh_orbits, load_orbits, refresh_transmitters, load_transmitters, age_hours, satellite_search_text, normalized_satellite_search, DEFAULT_GROUPS
@@ -221,6 +222,8 @@ class MainWindow(RotorUiMixin, QMainWindow):
         if self.config.values.get("display_detached",False):
             QTimer.singleShot(400,self.toggle_display_detached)
         self.install_display_shortcuts()
+        if self.theme_options()!=THEME_DEFAULTS:
+            QTimer.singleShot(0,self.apply_appearance)
 
     def install_display_shortcuts(self):
         """Atalhos do display: F6 = TIPO, F7 = LUZ, F8 = destacar/voltar."""
@@ -829,7 +832,7 @@ class MainWindow(RotorUiMixin, QMainWindow):
             scroll.setWidget(frame);self.settings_tabs.addTab(scroll,title)
             self.settings_pages[title]=scroll
             return lay
-        look_l=settings_page("Apresentação")
+        look_l=settings_page("Aparência")
         station_l=settings_page("Estação")
         radio_l=settings_page("Rádio")
         rotor_l=settings_page("Rotores")
@@ -2466,15 +2469,16 @@ class MainWindow(RotorUiMixin, QMainWindow):
 
     def open_settings(self,page="Rádio"):
         """Abre Configurações direto na aba pedida (Apresentação, Estação, Rádio, Rotores, Geral)."""
-        if page=="Rotor":page="Rotores"  # nome até a v1.7.0
+        page={"Rotor":"Rotores","Apresentação":"Aparência"}.get(page,page)  # nomes até a v1.7.0
         self.tabs.setCurrentIndex(2)
         widget=getattr(self,"settings_pages",{}).get(page)
         if widget is not None:
             self.settings_tabs.setCurrentWidget(widget)
 
     def build_presentation_settings(self,layout):
-        """v1.7.0: aba Apresentação — tipo de display, fonte, cores e prévia ao vivo."""
+        """v1.7.1: aba Aparência — tema do programa + display (tipo, fonte, cores e prévia ao vivo)."""
         from .lcd import LcdDisplay, MODELS, FONTS, THEMES
+        self.build_theme_settings(layout)
         box,bv=group("DISPLAY DE RÁDIO")
         grid=QGridLayout();grid.setColumnStretch(1,1)
         self.display_model=QComboBox()
@@ -2508,6 +2512,116 @@ class MainWindow(RotorUiMixin, QMainWindow):
             combo.currentIndexChanged.connect(self.change_display_settings)
         layout.addWidget(box)
         self.change_display_settings(save=False)
+
+    def build_theme_settings(self,layout):
+        """Tema do programa: pronto + ajustes finos, prévia ao vivo (aplica na hora) e Restaurar padrão."""
+        from .appearance import PRESETS, ACCENT_HUES, DEFAULTS
+        box,bv=group("TEMA DO PROGRAMA")
+        grid=QGridLayout()
+        c=self.config.values
+        self.theme_preset=QComboBox()
+        for code,name in PRESETS.items():
+            self.theme_preset.addItem(name,code)
+        self.theme_accent=QComboBox()
+        for name,hue in ACCENT_HUES.items():
+            self.theme_accent.addItem(name,hue)
+        def spin(lo,hi,suffix):
+            w=QDoubleSpinBox();w.setRange(lo,hi);w.setDecimals(0);w.setSingleStep(5 if hi>50 else 1);w.setSuffix(suffix);return w
+        self.theme_brightness=spin(50,150," %");self.theme_contrast=spin(50,160," %")
+        self.theme_saturation=spin(0,150," %");self.theme_font=spin(9,18," px")
+        self.theme_follow_display=QCheckBox("Display acompanha o brilho")
+        self.theme_follow_map=QCheckBox("Mapa acompanha o brilho")
+        rows=(("Tema",self.theme_preset),("Cor de destaque",self.theme_accent),("Brilho",self.theme_brightness),
+              ("Contraste",self.theme_contrast),("Saturação",self.theme_saturation),("Tamanho da fonte",self.theme_font))
+        for i,(txt,w) in enumerate(rows):
+            grid.addWidget(label(txt),i,0);grid.addWidget(w,i,1)
+        bv.addLayout(grid)
+        follow=QHBoxLayout();follow.addWidget(self.theme_follow_display);follow.addWidget(self.theme_follow_map)
+        self.theme_reset=QPushButton("Restaurar padrão")
+        follow.addWidget(self.theme_reset)
+        bv.addLayout(follow)
+        self.theme_status=label("")
+        self.theme_status.setStyleSheet("font-size:11px")
+        bv.addWidget(self.theme_status)
+        layout.addWidget(box)
+        self.load_theme_controls()
+        for w in (self.theme_preset,self.theme_accent):
+            w.currentIndexChanged.connect(self.change_theme)
+        for w in (self.theme_brightness,self.theme_contrast,self.theme_saturation,self.theme_font):
+            w.valueChanged.connect(self.change_theme)
+        for w in (self.theme_follow_display,self.theme_follow_map):
+            w.toggled.connect(self.change_theme)
+        self.theme_reset.clicked.connect(self.reset_theme)
+
+    def theme_options(self):
+        from .appearance import DEFAULTS
+        return {k:self.config.values.get(k,v) for k,v in DEFAULTS.items()}
+
+    def load_theme_controls(self):
+        o=self.theme_options()
+        widgets=(self.theme_preset,self.theme_accent,self.theme_brightness,self.theme_contrast,self.theme_saturation,
+                 self.theme_font,self.theme_follow_display,self.theme_follow_map)
+        for w in widgets:w.blockSignals(True)
+        self.theme_preset.setCurrentIndex(max(0,self.theme_preset.findData(o["theme_preset"])))
+        self.theme_accent.setCurrentIndex(max(0,self.theme_accent.findData(int(o["theme_accent_hue"]))))
+        self.theme_brightness.setValue(o["theme_brightness"]);self.theme_contrast.setValue(o["theme_contrast"])
+        self.theme_saturation.setValue(o["theme_saturation"]);self.theme_font.setValue(o["theme_font_px"])
+        self.theme_follow_display.setChecked(bool(o["theme_follow_display"]))
+        self.theme_follow_map.setChecked(bool(o["theme_follow_map"]))
+        for w in widgets:w.blockSignals(False)
+
+    def change_theme(self,*_):
+        self.config.values.update(
+            theme_preset=self.theme_preset.currentData() or "escuro",
+            theme_accent_hue=int(self.theme_accent.currentData() if self.theme_accent.currentData() is not None else -1),
+            theme_brightness=int(self.theme_brightness.value()),theme_contrast=int(self.theme_contrast.value()),
+            theme_saturation=int(self.theme_saturation.value()),theme_font_px=int(self.theme_font.value()),
+            theme_follow_display=self.theme_follow_display.isChecked(),theme_follow_map=self.theme_follow_map.isChecked())
+        self.config.save()
+        self.apply_appearance()
+
+    def reset_theme(self):
+        from .appearance import DEFAULTS
+        self.config.values.update(DEFAULTS)
+        self.config.save()
+        self.load_theme_controls()
+        self.apply_appearance()
+
+    def apply_appearance(self):
+        """Gera a folha de estilo do tema e aplica na hora em toda a janela, painéis, janelas destacadas e diálogos."""
+        from .appearance import transform_qss, text_contrast, display_dim
+        o=self.theme_options()
+        app=QApplication.instance()
+        if app is not None:
+            app.setStyleSheet(transform_qss(STYLE,o))
+            identity=o==THEME_DEFAULTS
+            for w in app.allWidgets():
+                original=w.property("pt2vhf_qss")
+                if original is None:
+                    current=w.styleSheet()
+                    if not current:
+                        continue
+                    w.setProperty("pt2vhf_qss",current)
+                    original=current
+                w.setStyleSheet(original if identity else transform_qss(original,o))
+        ratio=text_contrast(o)
+        if hasattr(self,"theme_status"):
+            ok=ratio>=4.5
+            self.theme_status.setText(f"Contraste do texto: {ratio:.1f}:1 · "+("OK (WCAG AA)" if ok else
+                                      "abaixo de 4,5:1 — texto pode ficar ilegível; reduza o brilho/ajuste o contraste"))
+            from .appearance import transform
+            self.theme_status.setProperty("pt2vhf_qss",None)
+            self.theme_status.setStyleSheet("font-size:11px;font-weight:700;color:"+
+                                            (transform("#2fae5f" if o["theme_preset"]=="claro" else "#5af08a",o) if ok else "#d93030"))
+        dim=display_dim(o)
+        for lcd in (getattr(self,"lcd",None),getattr(self,"display_preview",None)):
+            if lcd is not None:
+                lcd.set_dim(dim if o["theme_follow_display"] else 1.0)
+        try:
+            self.map.page().runJavaScript("document.documentElement.style.filter="+
+                                          json.dumps(f"brightness({dim:.2f})" if o["theme_follow_map"] else "none"))
+        except Exception:
+            pass
 
     def change_display_settings(self,*_,save=True):
         model=self.display_model.currentData() or "matriz"

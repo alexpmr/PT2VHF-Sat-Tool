@@ -27,7 +27,7 @@ def test_settings_controls_are_sized_by_content():
             assert w.callsign.maxLength()==12 and w.grid_locator.maxLength()==10
             assert w.callsign.width()<200, w.callsign.width()
             assert w.lat.width()<200 and w.min_el.width()<160
-            w.open_settings("Apresentação"); app.processEvents()
+            w.open_settings("Aparência"); app.processEvents()
             fm=w.display_model.fontMetrics()
             longest=max(fm.horizontalAdvance(w.display_model.itemText(i)) for i in range(w.display_model.count()))
             assert longest < w.display_model.width() < longest+120

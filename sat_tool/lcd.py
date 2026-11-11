@@ -650,7 +650,8 @@ class LcdDisplay(QWidget):
         self.setMouseTracking(True)
         self.setCursor(Qt.ArrowCursor)
         self.detached = False
-        self.extra_menu = None           # janela destacada acrescenta tela cheia/sempre visível/sem bordas
+        self.extra_menu = None
+        self.dim = 1.0                   # v1.7.1: acompanha o brilho do tema (Aparência)           # janela destacada acrescenta tela cheia/sempre visível/sem bordas
         self.setToolTip("A/B inverte MAIN↔SUB (TX/RX) · RX ONLY opera só em recepção · TIPO troca o modelo (F6) · "
                         "LUZ troca a cor do backlight (F7) · clique direito: escolher modelo/cor ou destacar o display")
 
@@ -663,6 +664,10 @@ class LcdDisplay(QWidget):
         if model in MODELS:
             self.model = model
             self.update()
+
+    def set_dim(self, dim: float):
+        self.dim = max(0.3, min(1.0, float(dim)))
+        self.update()
 
     def set_font_style(self, font: str):
         if font in FONTS:
@@ -697,6 +702,8 @@ class LcdDisplay(QWidget):
         style = make_style("matriz" if self.model == "classico" else self.model, p, pw, ph, u, self.theme,
                            "normal" if self.model == "classico" else self.font_style)
         keys = paint_classic(style, self.state) if self.model == "classico" else paint_ts2000(style, self.state)
+        if self.dim < 0.999:
+            p.fillRect(QRectF(0, 0, pw, ph), QColor(0, 0, 0, int(round((1.0 - self.dim) * 255))))
         p.end()
         img.setDevicePixelRatio(dpr)
         return img, {k: QRectF(r.x() / dpr, r.y() / dpr, r.width() / dpr, r.height() / dpr) for k, r in keys.items()}
