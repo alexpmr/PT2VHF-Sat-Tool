@@ -1,6 +1,7 @@
 """GUI label catalog: translated static display texts, not hardware tokens."""
-LANGUAGES={"pt-BR":"Português (Brasil)","en":"English","es":"Español","fr":"Français","de":"Deutsch","it":"Italiano"}
-TRANSLATIONS={
+LANGUAGES={"pt-BR":"Português (Brasil)","en":"English","es":"Español","fr":"Français","de":"Deutsch","it":"Italiano",
+           "ja":"日本語","pl":"Polski","nl":"Nederlands","zh-Hans":"简体中文"}  # v1.7.1: 10 idiomas
+TRANSLATIONS={"ja":{},"pl":{},"nl":{},"zh-Hans":{},
     "en":{
         "Operação": "Operation",
         "Satélites": "Satellites",
@@ -443,3 +444,112 @@ for _locale,_labels in _V120_LABELS.items():
 
 def translated(original,locale):
     return TRANSLATIONS.get(locale,{}).get(original,original)
+
+
+# v1.7.1: catálogo completo em sat_tool/locales/<idioma>.json, alinhado a source.pt-BR.json (mesma ordem).
+def _load_locale_files():
+    import json
+    from pathlib import Path
+    folder = Path(__file__).with_name("locales")
+    try:
+        source = json.loads((folder / "source.pt-BR.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+    for code in LANGUAGES:
+        if code == "pt-BR":
+            continue
+        try:
+            values = json.loads((folder / f"{code}.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if len(values) == len(source):
+            TRANSLATIONS.setdefault(code, {}).update(dict(zip(source, values)))
+    return source
+
+
+SOURCE_STRINGS = _load_locale_files()
+
+# Textos novos (v1.7.1) criados em tempo de execução: menu de idioma e afins.
+_RUNTIME = {
+    "Idioma": {"en": "Language", "es": "Idioma", "fr": "Langue", "de": "Sprache", "it": "Lingua", "ja": "言語",
+               "pl": "Język", "nl": "Taal", "zh-Hans": "语言"},
+}
+for _text, _per in _RUNTIME.items():
+    for _code, _value in _per.items():
+        TRANSLATIONS.setdefault(_code, {})[_text] = _value
+
+
+def resolve_language(saved, system_name=None):
+    """Idioma salvo; se vazio, o do sistema quando suportado (ex.: 'de_DE' → 'de', 'zh_CN' → 'zh-Hans'); senão pt-BR."""
+    if saved in LANGUAGES:
+        return saved
+    if system_name is None:
+        try:
+            from PySide6.QtCore import QLocale
+        except ImportError:  # pragma: no cover
+            from PySide2.QtCore import QLocale
+        system_name = QLocale.system().name()
+    name = str(system_name or "").replace("-", "_")
+    if name.startswith("pt"):
+        return "pt-BR"
+    if name.startswith("zh"):
+        return "zh-Hans"
+    base = name.split("_")[0]
+    return base if base in LANGUAGES else "pt-BR"
+
+
+# Bandeiras desenhadas (sem emoji: o Windows não mostra bandeiras em emoji). Faixas simples por idioma.
+FLAGS = {
+    "pt-BR": ("br",), "en": ("gb",), "es": ("h", "#c60b1e", "#ffc400", "#ffc400", "#c60b1e"),
+    "fr": ("v", "#0055a4", "#ffffff", "#ef4135"), "de": ("h", "#000000", "#dd0000", "#ffce00"),
+    "it": ("v", "#009246", "#ffffff", "#ce2b37"), "ja": ("jp",), "pl": ("h", "#ffffff", "#dc143c"),
+    "nl": ("h", "#ae1c28", "#ffffff", "#21468b"), "zh-Hans": ("cn",),
+}
+
+
+def flag_icon(code, width=22, height=15):
+    """QIcon da bandeira do idioma, desenhado com QPainter (nítido em qualquer DPI)."""
+    try:
+        from PySide6.QtGui import QPixmap, QPainter, QColor, QIcon, QPolygonF, QPen
+        from PySide6.QtCore import QPointF, QRectF
+    except ImportError:  # pragma: no cover
+        from PySide2.QtGui import QPixmap, QPainter, QColor, QIcon, QPolygonF, QPen
+        from PySide2.QtCore import QPointF, QRectF
+    scale = 3
+    w, h = width * scale, height * scale
+    pm = QPixmap(w, h)
+    pm.fill(QColor("#ffffff"))
+    p = QPainter(pm)
+    p.setRenderHint(QPainter.Antialiasing, True)
+    spec = FLAGS.get(code, ("h", "#888888"))
+    kind = spec[0]
+    if kind in ("h", "v"):
+        colors = spec[1:]
+        n = len(colors)
+        for i, c in enumerate(colors):
+            r = QRectF(0, h * i / n, w, h / n + 1) if kind == "h" else QRectF(w * i / n, 0, w / n + 1, h)
+            p.fillRect(r, QColor(c))
+    elif kind == "br":
+        p.fillRect(QRectF(0, 0, w, h), QColor("#009c3b"))
+        p.setBrush(QColor("#ffdf00")); p.setPen(QColor("#ffdf00"))
+        p.drawPolygon(QPolygonF([QPointF(w * .5, h * .1), QPointF(w * .92, h * .5), QPointF(w * .5, h * .9), QPointF(w * .08, h * .5)]))
+        p.setBrush(QColor("#002776")); p.setPen(QColor("#002776"))
+        p.drawEllipse(QPointF(w * .5, h * .5), h * .23, h * .23)
+    elif kind == "gb":
+        p.fillRect(QRectF(0, 0, w, h), QColor("#012169"))
+        p.setPen(QPen(QColor("#ffffff"), h * .2)); p.drawLine(QPointF(0, 0), QPointF(w, h)); p.drawLine(QPointF(w, 0), QPointF(0, h))
+        p.setPen(QPen(QColor("#c8102e"), h * .07)); p.drawLine(QPointF(0, 0), QPointF(w, h)); p.drawLine(QPointF(w, 0), QPointF(0, h))
+        p.fillRect(QRectF(w * .42, 0, w * .16, h), QColor("#ffffff")); p.fillRect(QRectF(0, h * .36, w, h * .28), QColor("#ffffff"))
+        p.fillRect(QRectF(w * .455, 0, w * .09, h), QColor("#c8102e")); p.fillRect(QRectF(0, h * .41, w, h * .18), QColor("#c8102e"))
+    elif kind == "jp":
+        p.setBrush(QColor("#bc002d")); p.setPen(QColor("#bc002d"))
+        p.drawEllipse(QPointF(w * .5, h * .5), h * .3, h * .3)
+    elif kind == "cn":
+        import math
+        p.fillRect(QRectF(0, 0, w, h), QColor("#de2910"))
+        cx, cy, r = w * .2, h * .3, h * .17
+        pts = [QPointF(cx + (r if k % 2 == 0 else r * .4) * math.sin(math.pi * k / 5), cy - (r if k % 2 == 0 else r * .4) * math.cos(math.pi * k / 5)) for k in range(10)]
+        p.setBrush(QColor("#ffde00")); p.setPen(QColor("#ffde00")); p.drawPolygon(QPolygonF(pts))
+    p.setPen(QPen(QColor(0, 0, 0, 90), scale)); p.setBrush(QColor(0, 0, 0, 0)); p.drawRect(QRectF(0, 0, w - 1, h - 1))
+    p.end()
+    return QIcon(pm)

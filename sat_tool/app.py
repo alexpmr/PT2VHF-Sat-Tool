@@ -39,7 +39,7 @@ from .maidenhead import maidenhead_to_latlon
 from .location_map import parse_coordinate_fields, sanitize_map_pick, valid_coordinates
 from .frequency import format_frequency,parse_mhz_input,frequency_label
 from .transponder import prioritized_transponders,cat_pair_diagnostic
-from .i18n import LANGUAGES,translated
+from .i18n import LANGUAGES,translated,resolve_language,flag_icon
 from .satellite_info import orbital_characteristics, operational_characteristics, characteristics_text
 from .updater import check_for_update, download_update, install_flavor, launch_staged_update
 from .profile import choose_satellites, capability, render_service, CANDIDATES
@@ -333,6 +333,7 @@ class MainWindow(RotorUiMixin, QMainWindow):
         self.sdr_toggle.setToolTip("Mostrar/ocultar o painel SDR (não liga nem desliga o receptor)")
         self.sdr_toggle.setStyleSheet("font-size:12px;font-weight:800")
         header.addWidget(self.sdr_toggle)
+        self.build_language_menu(header)
         self.utc = QLabel("DATA/HORA UTC —")
         self.utc.setStyleSheet("font-size:12px;font-weight:700;color:#dff9ff;padding:4px;background:#153751;border:1px solid #34758c;border-radius:5px")
         self.utc.setWordWrap(False)
@@ -1198,7 +1199,7 @@ class MainWindow(RotorUiMixin, QMainWindow):
         self.update_minutes.setValue(float(c.get('version_check_minutes',15)))
         self.include_prerelease.setChecked(bool(c.get('include_prereleases', True)))
         self.language_combo.blockSignals(True)
-        self.language_combo.setCurrentIndex(max(0,self.language_combo.findData(c.get("language","pt-BR"))))
+        self.language_combo.setCurrentIndex(max(0,self.language_combo.findData(self.ui_language())))
         self.language_combo.blockSignals(False)
         self.freq_style_combo.blockSignals(True)
         self.freq_style_combo.setCurrentIndex(max(0,self.freq_style_combo.findData(c.get("frequency_style","radio10"))))
@@ -1217,8 +1218,13 @@ class MainWindow(RotorUiMixin, QMainWindow):
         # Always require an explicit enable on each launch to avoid surprise CAT writes.
         self.doppler_checkbox.setChecked(False)
 
+    def ui_language(self):
+        """Idioma da interface: o salvo, ou o do sistema quando suportado (padrão pt-BR)."""
+        return resolve_language(self.config.values.get("language",""))
+
     def capture_static_language(self):
-        """Snapshot only creation-time UI strings; do not translate live CAT telemetry."""
+        """Snapshot only creation-time UI strings; do not translate live CAT telemetry.
+        v1.7.1: inclui tooltips, textos de exemplo, sub-abas das Configurações e itens de menus com dados."""
         self._language_texts=[]
         for widget in self.findChildren(QWidget):
             if isinstance(widget,QGroupBox):
@@ -1227,7 +1233,15 @@ class MainWindow(RotorUiMixin, QMainWindow):
             elif isinstance(widget,(QPushButton,QCheckBox,QLabel)):
                 original=widget.text()
                 if original:self._language_texts.append((widget,"text",original))
-        self._language_tabs=[self.tabs.tabText(i) for i in range(self.tabs.count())]
+            if widget.toolTip() and "<" not in widget.toolTip():
+                self._language_texts.append((widget,"tooltip",widget.toolTip()))
+            if isinstance(widget,QLineEdit) and widget.placeholderText():
+                self._language_texts.append((widget,"placeholder",widget.placeholderText()))
+            if isinstance(widget,QComboBox) and not widget.isEditable() and widget is not getattr(self,"language_combo",None):
+                # só menus cujo código vem do itemData: traduzir o texto não muda o comportamento
+                if widget.count() and all(widget.itemData(i) is not None for i in range(widget.count())):
+                    self._language_texts.append((widget,"items",[widget.itemText(i) for i in range(widget.count())]))
+        self._language_tabs=[(tabs,[tabs.tabText(i) for i in range(tabs.count())]) for tabs in self.findChildren(QTabWidget)]
         self._language_tables=[]
         for widget in self.findChildren(QTableWidget):
             labels=[]
@@ -1237,32 +1251,70 @@ class MainWindow(RotorUiMixin, QMainWindow):
             self._language_tables.append((widget,labels))
 
     def apply_language(self):
-        locale=self.config.values.get("language","pt-BR")
+        locale=self.ui_language()
         old=getattr(self,"_language_active","pt-BR")
         for widget,kind,original in self._language_texts:
+            if kind=="items":
+                for i,text in enumerate(original):
+                    if i<widget.count():widget.setItemText(i,translated(text,locale))
+                continue
+            names={"group":("title","setTitle"),"text":("text","setText"),"tooltip":("toolTip","setToolTip"),
+                   "placeholder":("placeholderText","setPlaceholderText")}[kind]
+            getter,setter=getattr(widget,names[0]),getattr(widget,names[1])
             old_value=translated(original,old)
-            new_value=translated(original,locale)
-            current=widget.title() if kind=="group" else widget.text()
-            if current in (old_value,original):
-                if kind=="group":widget.setTitle(new_value)
-                else:widget.setText(new_value)
-        for i,original in enumerate(self._language_tabs):
-            self.tabs.setTabText(i,translated(original,locale))
+            current=getter()
+            if current in (old_value,original):  # não sobrescreve textos que mudaram em tempo de execução
+                setter(translated(original,locale))
+        for tabs,originals in self._language_tabs:
+            for i,original in enumerate(originals):
+                if i<tabs.count():tabs.setTabText(i,translated(original,locale))
         for widget,originals in self._language_tables:
             for i,original in enumerate(originals):
                 item=widget.horizontalHeaderItem(i)
                 if item:item.setText(translated(original,locale))
-        if hasattr(self,"tracked_search"):
-            self.tracked_search.setPlaceholderText(translated("Pesquisar por nome ou NORAD…",locale))
+        if hasattr(self,"language_menu_button"):
+            self.language_menu_button.setIcon(flag_icon(locale))
+            self.language_menu_button.setText(LANGUAGES[locale])
+            self.language_menu_button.setToolTip(translated("Idioma",locale))
+            for action in self.language_actions:
+                action.setChecked(action.data()==locale)
+        if hasattr(self,"language_combo"):
+            self.language_combo.blockSignals(True)
+            self.language_combo.setCurrentIndex(max(0,self.language_combo.findData(locale)))
+            self.language_combo.blockSignals(False)
         self._language_active=locale
 
-    def change_language(self,*args):
-        locale=self.language_combo.currentData()
+    def build_language_menu(self,header):
+        """v1.7.1: seletor de idioma no topo (bandeira + nome nativo), sincronizado com Configurações."""
+        from .qt_compat import QMenu
+        try:
+            from PySide6.QtWidgets import QToolButton
+        except ImportError:  # pragma: no cover
+            from PySide2.QtWidgets import QToolButton
+        self.language_menu_button=QToolButton()
+        self.language_menu_button.setPopupMode(QToolButton.InstantPopup)
+        self.language_menu_button.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+        self.language_menu_button.setStyleSheet("font-size:12px;font-weight:700;padding:3px 6px")
+        menu=QMenu(self.language_menu_button)
+        self.language_actions=[]
+        for code,native in LANGUAGES.items():
+            action=menu.addAction(flag_icon(code),native)
+            action.setData(code);action.setCheckable(True)
+            action.triggered.connect(lambda _=False,c=code:self.set_language(c))
+            self.language_actions.append(action)
+        self.language_menu_button.setMenu(menu)
+        header.addWidget(self.language_menu_button)
+
+    def set_language(self,locale):
+        """Troca o idioma na hora, sem reiniciar, e salva em settings.json."""
         if locale not in LANGUAGES:return
         self.config.values["language"]=locale
         self.config.save()
         self.apply_language()
         self.log(f"Idioma da interface: {LANGUAGES[locale]}")
+
+    def change_language(self,*args):
+        self.set_language(self.language_combo.currentData())
 
     def change_frequency_style(self,*args):
         style=self.freq_style_combo.currentData()
@@ -3373,7 +3425,7 @@ class MainWindow(RotorUiMixin, QMainWindow):
         cached=load_cached(self.config.dir,ident)
         if cached:
             self.satinfo[ident]=cached
-        lang=str(self.config.values.get("language","pt-BR")).split("-")[0]
+        lang=self.ui_language().split("-")[0]
         self.background(f"satinfo:{ident}",lambda:fetch_info(self.config.dir,ident,name,lang))
 
     def satinfo_html(self,ident,for_qt=True):
@@ -3437,7 +3489,7 @@ class MainWindow(RotorUiMixin, QMainWindow):
         if self.pass_sort.isChecked():
             rows.sort(key=lambda p:-(p.get("quality").score if p.get("quality") else -1))
         self._pass_rows_view=rows
-        lang=str(self.config.values.get("language","pt-BR"))
+        lang=self.ui_language()
         alerts=self.config.values.get("pass_alerts",[])
         self.pass_table.setRowCount(len(rows))
         for i,p in enumerate(rows):
