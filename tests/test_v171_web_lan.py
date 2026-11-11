@@ -229,6 +229,12 @@ def test_gui_settings_controls_and_command_queue():
             w.web_enabled.setChecked(False); app.processEvents()
             assert w.web_server is None and "parado" in w.web_diag.text()
     ''')
-    result = subprocess.run([sys.executable, "-c", source], capture_output=True, text=True, timeout=120,
-                            env={**os.environ, "QT_QPA_PLATFORM": "offscreen"})
-    assert result.returncode == 0, result.stdout + result.stderr
+    # se travar, o faulthandler mostra onde (pilhas de todas as threads) antes do tempo-limite
+    source = "import faulthandler; faulthandler.dump_traceback_later(100, exit=True)\n" + source
+    try:
+        result = subprocess.run([sys.executable, "-c", source], capture_output=True, text=True, timeout=120,
+                                env={**os.environ, "QT_QPA_PLATFORM": "offscreen"})
+    except subprocess.TimeoutExpired as exc:
+        err = exc.stderr.decode("utf-8", "replace") if isinstance(exc.stderr, bytes) else str(exc.stderr)
+        raise AssertionError("tempo esgotado:\n" + err[-6000:]) from None
+    assert result.returncode == 0, result.stdout + result.stderr[-6000:]

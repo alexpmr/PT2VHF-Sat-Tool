@@ -262,6 +262,16 @@ def request_windows_firewall_rule(port, runner=subprocess.run, platform=None):
     return False, "O Windows não criou a regra (permissão negada no UAC ou erro do netsh)."
 
 
+class _QuickHTTPServer(ThreadingHTTPServer):
+    """Sem `socket.getfqdn` no bind: a busca reversa do nome pode levar dezenas de segundos (ex.: macOS sem DNS)."""
+
+    def server_bind(self):
+        import socketserver
+        socketserver.TCPServer.server_bind(self)
+        host, port = self.server_address[:2]
+        self.server_name, self.server_port = str(host), port
+
+
 class LocalStatusServer:
     """Servidor HTTP do painel. Sem controles por padrão; nunca há rota de PTT/TX."""
 
@@ -523,7 +533,7 @@ class LocalStatusServer:
                 owner._event(f"{ip} pediu {action}" + ("" if value is None else f" = {value}"))
                 self.json(HTTPStatus.ACCEPTED, {"ok": True})
 
-        self._httpd = ThreadingHTTPServer(("0.0.0.0" if self.lan else "127.0.0.1", self.port), Handler)
+        self._httpd = _QuickHTTPServer(("0.0.0.0" if self.lan else "127.0.0.1", self.port), Handler)
         self._httpd.daemon_threads = True
         self._thread = threading.Thread(target=self._httpd.serve_forever, name="sat-web", daemon=True)
         self._thread.start()
