@@ -91,7 +91,7 @@ def test_display_settings_defaults_and_app_wiring():
     assert DEFAULTS["cat_details_visible"] is False and DEFAULTS["auto_update"] is True
     app = (ROOT / "sat_tool" / "app.py").read_text(encoding="utf-8")
     for page in ('settings_page("Apresentação")', 'settings_page("Estação")', 'settings_page("Rádio")',
-                 'settings_page("Rotor")'):
+                 'settings_page("Rotores")'):
         assert page in app
     assert "self.lcd.set_state(los_s=(event[\"los\"]-now).total_seconds(),aos_s=None)" in app
     assert "'radial_m_s':radial_kmh_text(pos['radial_m_s'])" in app
@@ -284,7 +284,7 @@ def test_window_settings_tabs_cat_details_and_pass_table():
             application=gui.QApplication([])
             w=gui.MainWindow()
             names=[w.settings_tabs.tabText(i) for i in range(w.settings_tabs.count())]
-            assert names==["Apresentação","Estação","Rádio","Rotor","Geral"],names
+            assert names==["Apresentação","Estação","Rádio","Rotores","Geral"],names
             assert not w.cat_details_box.isVisibleTo(w) and not w.cat_details_toggle.isChecked()
             w.cat_details_toggle.setChecked(True)
             assert w.cat_details_box.isVisibleTo(w) and w.config.values["cat_details_visible"] is True

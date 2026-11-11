@@ -705,6 +705,9 @@ class MainWindow(RotorUiMixin, QMainWindow):
         quick_cat.addWidget(self.connection)
         op.addLayout(quick_cat)
         self.build_rotor_bar(op)
+        # v1.7.1 (mockup aprovado): faixa ROTOR entre o display e o mapa
+        op.removeWidget(self.rotor_bar)
+        op.insertWidget(op.indexOf(operator_panel)+1,self.rotor_bar)
         self.cat_details_box=QWidget()
         cdl=QVBoxLayout(self.cat_details_box);cdl.setContentsMargins(0,0,0,0);cdl.setSpacing(3)
         self.cat_live_label=label("RÁDIO REAL (CAT) · aguardando FA (RX SAT) / FB (TX SAT) / FC (SUB) / MD")
@@ -829,7 +832,7 @@ class MainWindow(RotorUiMixin, QMainWindow):
         look_l=settings_page("Apresentação")
         station_l=settings_page("Estação")
         radio_l=settings_page("Rádio")
-        rotor_l=settings_page("Rotor")
+        rotor_l=settings_page("Rotores")
         cfg=settings_page("Geral")
         self.build_presentation_settings(look_l)
         station_group,sg=group("ESTAÇÃO TERRENA")
@@ -2462,7 +2465,8 @@ class MainWindow(RotorUiMixin, QMainWindow):
             self.open_settings("Rádio")
 
     def open_settings(self,page="Rádio"):
-        """Abre Configurações direto na aba pedida (Apresentação, Estação, Rádio, Rotor, Geral)."""
+        """Abre Configurações direto na aba pedida (Apresentação, Estação, Rádio, Rotores, Geral)."""
+        if page=="Rotor":page="Rotores"  # nome até a v1.7.0
         self.tabs.setCurrentIndex(2)
         widget=getattr(self,"settings_pages",{}).get(page)
         if widget is not None:
@@ -3495,7 +3499,8 @@ class MainWindow(RotorUiMixin, QMainWindow):
                      "track_future":self.track_cache["future"] if self.track_cache_key and self.track_cache_key[0]==str(self.sat_combo.currentData()) else [],
                      "footprint":circle,
                      "label":f"{self.sat.name} · elevação {pos['elevation']:.1f}° · alcance {pos['range_km']:.0f} km · órbita TLE/OMM",
-                     "info":self.satinfo_html(str(self.sat_combo.currentData() or ""),for_qt=False)}
+                     "info":self.satinfo_html(str(self.sat_combo.currentData() or ""),for_qt=False),
+                     "antenna":self.rotor_map_payload(station)}
             self.sat_combo.setToolTip(self.satinfo_html(str(self.sat_combo.currentData() or "")))
             self.map.page().runJavaScript('window.updateOrbit && window.updateOrbit('+json.dumps(payload)+');')
             # A past error banner must not survive a successful map render.
