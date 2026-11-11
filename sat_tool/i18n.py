@@ -1,3 +1,4 @@
+import os
 """GUI label catalog: translated static display texts, not hardware tokens."""
 LANGUAGES={"pt-BR":"Português (Brasil)","en":"English","es":"Español","fr":"Français","de":"Deutsch","it":"Italiano",
            "ja":"日本語","pl":"Polski","nl":"Nederlands","zh-Hans":"简体中文"}  # v1.7.1: 10 idiomas
@@ -484,6 +485,9 @@ def resolve_language(saved, system_name=None):
     if saved in LANGUAGES:
         return saved
     if system_name is None:
+        forced = os.environ.get("PT2VHF_LANG", "")   # força o idioma "do sistema" (testes, suporte)
+        if forced:
+            return resolve_language(forced, forced)
         try:
             from PySide6.QtCore import QLocale
         except ImportError:  # pragma: no cover

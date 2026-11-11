@@ -78,3 +78,12 @@ def test_top_menu_switches_language_live_and_every_visible_string_is_translated(
     result = subprocess.run([sys.executable, "-c", source], capture_output=True, text=True, timeout=120,
                             env={**os.environ, "QT_QPA_PLATFORM": "offscreen", "LANG": "pt_BR.UTF-8"})
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_env_override_for_system_language(monkeypatch):
+    from sat_tool.i18n import resolve_language
+    monkeypatch.setenv("PT2VHF_LANG", "de_DE")
+    assert resolve_language("") == "de"
+    assert resolve_language("ja") == "ja"            # escolha salva continua valendo
+    monkeypatch.setenv("PT2VHF_LANG", "xx")
+    assert resolve_language("") == "pt-BR"
