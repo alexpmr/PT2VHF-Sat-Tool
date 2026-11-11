@@ -2420,6 +2420,17 @@ class MainWindow(RotorUiMixin, QMainWindow):
         self.config.values["cat_details_visible"]=bool(shown)
         self.config.save()
 
+    def show_cat_port_error(self,message):
+        """v1.7.1: falha de porta CAT com causa clara, orientação e atalho para Configurações → Rádio."""
+        from .cat import port_error_text
+        title,advice=port_error_text(message,str(self.config.values.get("port","") or ""))
+        box=QMessageBox(QMessageBox.Warning,title,f"{title}.\n\n{advice}\n\nDetalhe técnico: {message[:300]}",parent=self)
+        settings=box.addButton("Abrir Configurações → Rádio",QMessageBox.AcceptRole)
+        box.addButton(QMessageBox.Close)
+        box.exec() if hasattr(box,"exec") else box.exec_()
+        if box.clickedButton() is settings:
+            self.open_settings("Rádio")
+
     def open_settings(self,page="Rádio"):
         """Abre Configurações direto na aba pedida (Apresentação, Estação, Rádio, Rotor, Geral)."""
         self.tabs.setCurrentIndex(2)
@@ -3878,10 +3889,9 @@ class MainWindow(RotorUiMixin, QMainWindow):
             self.cat_indicator.setText("CAT")
             self.cat_indicator.setToolTip("CAT indisponível · "+message[:160])
             self.cat_indicator.setStyleSheet("font-size:12px;font-weight:800;color:#ffe7e7;background:#783437;border:1px solid #db565e")
-            friendly=("Porta CAT indisponível. Confira COM, cabo, driver e Configurações."
-                      if any(marker in message.casefold() for marker in
-                             ("file not found","filenotfound","could not open port","cannot find","no such file","não foi possível encontrar"))
-                      else "Falha de conexão CAT. Confira a porta e veja LOGs / CAT.")
+            from .cat import port_error_text
+            friendly,advice=port_error_text(message,str(self.config.values.get("port","") or ""))
+            friendly+=". "+("Confira COM, cabo, driver e Configurações." if "indisponível" in friendly else "Veja LOGs / CAT.")
             self.cat_tune_status.setText(friendly)
             self.cat_tune_status.setToolTip(message)
             self.log("CAT: falha ao conectar: "+message)
@@ -3891,7 +3901,7 @@ class MainWindow(RotorUiMixin, QMainWindow):
                     self.cat_tune_status.setText("Porta salva não respondeu · procurando o rádio…")
                     QTimer.singleShot(0,self.start_cat_scan)
                 else:
-                    QMessageBox.warning(self,"Falha de conexão CAT",message)
+                    self.show_cat_port_error(message)
             self._cat_after_scan=False
             return
         if key=="cat-readback":

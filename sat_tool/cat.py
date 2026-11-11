@@ -492,3 +492,38 @@ class TS2000:
             raise RuntimeError("Ative SAT primeiro")
         self._exchange("MD" + MODES[mode] + ";")
         return self.poll()
+
+
+_PORT_MISSING_MARKERS = ("file not found", "filenotfound", "could not open port", "cannot find",
+                         "no such file", "não foi possível encontrar", "the system cannot find",
+                         "o sistema não pode encontrar", "errno 2")
+_PORT_BUSY_MARKERS = ("access is denied", "acesso negado", "permissionerror", "errno 13", "resource busy",
+                      "device or resource busy", "permission denied")
+
+
+def classify_port_error(message: str) -> str:
+    """'missing' (porta não existe), 'busy' (em uso/sem permissão) ou 'other'. v1.7.1."""
+    text = str(message or "").casefold()
+    if any(m in text for m in _PORT_BUSY_MARKERS):
+        return "busy"
+    if any(m in text for m in _PORT_MISSING_MARKERS):
+        return "missing"
+    return "other"
+
+
+def port_error_text(message: str, port: str = "") -> tuple:
+    """(resumo curto, orientação) para falha ao abrir a porta CAT, sem confundir com sintonia bloqueada."""
+    where = f" ({port})" if port else ""
+    kind = classify_port_error(message)
+    if kind == "missing":
+        return (f"Porta CAT indisponível{where}",
+                "A porta não existe neste computador agora. Confira se o cabo USB/serial está ligado, "
+                "se o driver da interface está instalado e qual COM o Windows atribuiu (Gerenciador de "
+                "Dispositivos), e escolha a porta certa em Configurações → Rádio.")
+    if kind == "busy":
+        return (f"Porta CAT em uso{where}",
+                "Outro programa (ex.: HRD, WSJT-X, Omni-Rig, Flrig) está com a porta aberta, ou falta "
+                "permissão. Feche o outro programa ou use um splitter de COM e tente de novo.")
+    return (f"Falha de conexão CAT{where}",
+            "A porta abriu, mas o rádio não respondeu como esperado. Confira velocidade, modelo e cabo em "
+            "Configurações → Rádio e veja LOGs / CAT.")
