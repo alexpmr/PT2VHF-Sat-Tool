@@ -37,6 +37,13 @@ except ImportError as qt6_error:
     QT_BINDING = "PySide2"
 
 
+try:
+    from PySide6.QtWidgets import QSizePolicy
+except ImportError:  # pragma: no cover - Qt5 legacy build
+    from PySide2.QtWidgets import QSizePolicy
+QSizePolicy_Maximum = QSizePolicy.Maximum if hasattr(QSizePolicy, "Maximum") else QSizePolicy.Policy.Maximum
+
+
 def qt_exec(app):
     """Qt5 exposes exec_ and Qt6 exposes exec."""
     return app.exec_() if QT_BINDING == "PySide2" else app.exec()

@@ -1048,6 +1048,9 @@ class MainWindow(RotorUiMixin, QMainWindow):
         cfg.addWidget(extra_controls)
         cfg.addStretch(1)
         self.build_rotor_settings(rotor_l)
+        # v1.7.1: menus e campos do tamanho do conteúdo, não esticados na largura toda
+        from .form_sizing import fit_settings
+        fit_settings(self,self.settings_tabs)
         root.addTab(config_page,"Configurações")
         logs=QWidget();ll=QVBoxLayout(logs)
         self.log_view=QPlainTextEdit();self.log_view.setReadOnly(True)
