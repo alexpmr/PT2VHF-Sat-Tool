@@ -349,5 +349,18 @@
 "Pokaż/ukryj panel SDR (nie włącza ani nie wyłącza odbiornika)",
 "Cel: —",
 "ROTOR · rozłączony",
-"Auto CAT wyłączony · włącz go w Ustawieniach, aby śledzić wybór"
+"Auto CAT wyłączony · włącz go w Ustawieniach, aby śledzić wybór",
+"DOSTĘP PRZEZ SIEĆ · INTERFEJS WWW",
+"Sesja wygasa po",
+"Adresy tego komputera",
+"Wszystkie adresy IPv4 tego komputera w sieci lokalnej. Użyj adresu z tej samej sieci co drugie urządzenie.",
+"Zezwól w Zaporze Windows",
+"Tworzy regułę przychodzącą tylko dla tego portu TCP, profil Prywatny, tylko podsieć lokalna (Windows poprosi o potwierdzenie).",
+"Odnów klucz",
+"Tworzy nowy klucz: wcześniej skopiowane linki i połączone przeglądarki tracą dostęp.",
+"Zezwól na sterowanie przez sieć (bez PTT)",
+"Z przeglądarki: satelita, Auto CAT, A/B, RX ONLY, śledzenie/parkowanie/STOP rotora. Nigdy PTT/TX. Każda akcja wymaga PIN-u i jest zapisywana z adresem IP.",
+"PIN stacji",
+"Zapisz PIN",
+"Dostęp lokalny: 127.0.0.1. LAN: wymaga klucza ze skopiowanego adresu; tylko urządzenia z sieci prywatnej (publiczne IP są odrzucane). Bez sterowania przez sieć przeglądarka tylko wyświetla. HTTP w sieci LAN nie jest szyfrowany; nigdy nie przekierowuj portu do Internetu."
 ]

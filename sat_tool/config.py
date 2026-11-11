@@ -39,6 +39,7 @@ DEFAULTS = {
     "aos_alarm_enabled": True, "aos_alarm_sound": True,
     "aos_alarm_lead_seconds": 10, "aos_alarm_fired": [],
     "web_enabled": False, "web_allow_lan": False, "web_port": 8094,
+    "web_controls": False, "web_pin_hash": "", "web_pin_salt": "", "web_session_hours": 8,
     "language": "", "frequency_style": "radio10",
     "gps_port": "", "gps_baud": 9600,
     "trail_period": "2 h", "trail_direction": "Ambos", "trail_ambos_v160_migrated": True, "trail_custom_hours": 3.0,

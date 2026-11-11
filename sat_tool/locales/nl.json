@@ -349,5 +349,18 @@
 "SDR-paneel tonen/verbergen (zet de ontvanger niet aan of uit)",
 "Doel: —",
 "ROTOR · niet verbonden",
-"Auto CAT uit · schakel het in bij Instellingen om de selectie te volgen"
+"Auto CAT uit · schakel het in bij Instellingen om de selectie te volgen",
+"TOEGANG VIA HET NETWERK · WEBINTERFACE",
+"Sessie verloopt na",
+"Adressen van deze computer",
+"Alle IPv4-adressen van deze computer in het lokale netwerk. Gebruik het adres in hetzelfde netwerk als het andere apparaat.",
+"Toestaan in Windows Firewall",
+"Maakt een inkomende regel voor alleen deze TCP-poort, profiel Privé, alleen lokaal subnet (Windows vraagt om bevestiging).",
+"Sleutel vernieuwen",
+"Maakt een nieuwe sleutel: eerder gekopieerde links en verbonden browsers verliezen toegang.",
+"Bediening via het netwerk toestaan (zonder PTT)",
+"Vanuit de browser: satelliet, Auto CAT, A/B, RX ONLY, rotor volgen/parkeren/STOP. Nooit PTT/TX. Elke actie vraagt de pincode en wordt met het IP gelogd.",
+"Stationspincode",
+"Pincode opslaan",
+"Lokale toegang: 127.0.0.1. LAN: vereist de sleutel uit het gekopieerde adres; alleen apparaten in het privénetwerk (publieke IP's worden geweigerd). Zonder netwerkbediening kan de browser alleen meekijken. HTTP op het LAN is niet versleuteld; stuur de poort nooit door naar internet."
 ]

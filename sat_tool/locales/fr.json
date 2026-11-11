@@ -349,5 +349,18 @@
 "Afficher/masquer le panneau SDR (n'allume ni n'éteint le récepteur)",
 "Cible : —",
 "ROTOR · déconnecté",
-"Auto CAT désactivé · activez-le dans Paramètres pour suivre la sélection"
+"Auto CAT désactivé · activez-le dans Paramètres pour suivre la sélection",
+"ACCÈS RÉSEAU · INTERFACE WEB",
+"La session expire dans",
+"Adresses de cet ordinateur",
+"Toutes les IPv4 du réseau local de cet ordinateur. Utilisez celle du même réseau que l'autre appareil.",
+"Autoriser dans le pare-feu Windows",
+"Crée une règle entrante pour ce seul port TCP, profil Privé, réseau local uniquement (Windows demande confirmation).",
+"Renouveler la clé",
+"Crée une nouvelle clé : les liens copiés et les navigateurs connectés perdent l'accès.",
+"Autoriser le contrôle par le réseau (sans PTT)",
+"Depuis le navigateur : satellite, Auto CAT, A/B, RX ONLY, suivi/parcage/ARRÊT du rotor. Jamais de PTT/TX. Chaque action demande le PIN et est journalisée avec l'IP.",
+"PIN de la station",
+"Enregistrer le PIN",
+"Accès local : 127.0.0.1. LAN : nécessite la clé de l'adresse copiée ; appareils du réseau privé uniquement (IP publiques refusées). Sans contrôle réseau, le navigateur est en lecture seule. HTTP sur le LAN n'est pas chiffré ; ne redirigez jamais le port vers Internet."
 ]

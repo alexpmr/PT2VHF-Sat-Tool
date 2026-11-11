@@ -349,5 +349,18 @@
 "Show/hide the SDR panel (does not turn the receiver on or off)",
 "Target: —",
 "ROTATOR · disconnected",
-"Auto CAT off · enable it in Settings to follow the selection"
+"Auto CAT off · enable it in Settings to follow the selection",
+"NETWORK ACCESS · WEB INTERFACE",
+"Session expires in",
+"Addresses of this computer",
+"All local-network IPv4 addresses of this computer. Use the one on the same network as the other device.",
+"Allow in Windows Firewall",
+"Creates an inbound rule for this TCP port only, Private profile, local subnet only (Windows asks for confirmation).",
+"Renew key",
+"Creates a new key: previously copied links and connected browsers lose access.",
+"Allow control over the network (no PTT)",
+"From the browser: satellite, Auto CAT, A/B, RX ONLY, rotor track/park/STOP. Never PTT/TX. Every action asks for the PIN and is logged with the IP.",
+"Station PIN",
+"Save PIN",
+"Local access: 127.0.0.1. LAN: requires the key in the copied address; private-network devices only (public IPs are refused). Without network control the browser is read-only. HTTP on the LAN is not encrypted; never forward the port to the Internet."
 ]

@@ -349,5 +349,18 @@
 "SDR-Panel ein-/ausblenden (schaltet den Empfänger nicht ein oder aus)",
 "Ziel: —",
 "ROTOR · getrennt",
-"Auto CAT aus · in den Einstellungen aktivieren, um der Auswahl zu folgen"
+"Auto CAT aus · in den Einstellungen aktivieren, um der Auswahl zu folgen",
+"NETZWERKZUGRIFF · WEB-OBERFLÄCHE",
+"Sitzung läuft ab nach",
+"Adressen dieses Computers",
+"Alle IPv4-Adressen dieses Computers im lokalen Netz. Nehmen Sie die aus dem Netz des anderen Geräts.",
+"In der Windows-Firewall freigeben",
+"Erstellt eine Eingangsregel nur für diesen TCP-Port, Profil Privat, nur lokales Subnetz (Windows fragt nach).",
+"Schlüssel erneuern",
+"Erzeugt einen neuen Schlüssel: früher kopierte Links und verbundene Browser verlieren den Zugriff.",
+"Steuerung über das Netzwerk erlauben (ohne PTT)",
+"Im Browser: Satellit, Auto CAT, A/B, RX ONLY, Rotor verfolgen/parken/STOPP. Nie PTT/TX. Jede Aktion verlangt die PIN und wird mit IP protokolliert.",
+"Stations-PIN",
+"PIN speichern",
+"Lokaler Zugriff: 127.0.0.1. LAN: erfordert den Schlüssel der kopierten Adresse; nur Geräte im privaten Netz (öffentliche IPs werden abgelehnt). Ohne Netzwerksteuerung ist der Browser nur lesend. HTTP im LAN ist unverschlüsselt; leiten Sie den Port nie ins Internet weiter."
 ]

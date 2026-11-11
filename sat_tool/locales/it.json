@@ -349,5 +349,18 @@
 "Mostra/nascondi il pannello SDR (non accende né spegne il ricevitore)",
 "Obiettivo: —",
 "ROTORE · disconnesso",
-"Auto CAT spento · attivalo in Impostazioni per seguire la selezione"
+"Auto CAT spento · attivalo in Impostazioni per seguire la selezione",
+"ACCESSO DALLA RETE · INTERFACCIA WEB",
+"La sessione scade tra",
+"Indirizzi di questo computer",
+"Tutti gli IPv4 della rete locale di questo computer. Usa quello della stessa rete dell'altro dispositivo.",
+"Consenti nel firewall di Windows",
+"Crea una regola in entrata solo per questa porta TCP, profilo Privato, solo rete locale (Windows chiede conferma).",
+"Rinnova chiave",
+"Genera una nuova chiave: i link copiati prima e i browser collegati perdono l'accesso.",
+"Consenti il controllo dalla rete (senza PTT)",
+"Dal browser: satellite, Auto CAT, A/B, RX ONLY, inseguimento/parcheggio/STOP del rotore. Mai PTT/TX. Ogni azione chiede il PIN ed è registrata con l'IP.",
+"PIN della stazione",
+"Salva PIN",
+"Accesso locale: 127.0.0.1. LAN: richiede la chiave dell'indirizzo copiato; solo dispositivi della rete privata (IP pubblici rifiutati). Senza controllo dalla rete il browser è in sola lettura. HTTP sulla LAN non è cifrato; non inoltrare mai la porta su Internet."
 ]

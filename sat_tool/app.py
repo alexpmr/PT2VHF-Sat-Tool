@@ -994,7 +994,7 @@ class MainWindow(RotorUiMixin, QMainWindow):
         alarm_test.clicked.connect(lambda:self.play_aos_sound(critical=True))
         alert_layout.addWidget(alarm_test)
         cfg.addWidget(alert_group)
-        web_group,wg=group("INTERFACE WEB · LOCAL E REDE LAN")
+        web_group,wg=group("ACESSO PELA REDE · INTERFACE WEB")
         self.web_enabled=QCheckBox("Habilitar painel Web ao abrir o Sat Tool")
         self.web_enabled.setChecked(bool(self.config.values.get("web_enabled",False)))
         self.web_enabled.toggled.connect(self.change_web_settings)
@@ -1011,22 +1011,64 @@ class MainWindow(RotorUiMixin, QMainWindow):
         self.web_port.setValue(int(self.config.values.get("web_port",8094)))
         self.web_port.valueChanged.connect(self.change_web_settings)
         webrow.addWidget(self.web_port)
+        webrow.addWidget(label("Sessão expira em"))
+        self.web_session_hours=QDoubleSpinBox()
+        self.web_session_hours.setDecimals(0)
+        self.web_session_hours.setRange(1,72)
+        self.web_session_hours.setSuffix(" h")
+        self.web_session_hours.setValue(int(self.config.values.get("web_session_hours",8)))
+        self.web_session_hours.valueChanged.connect(self.change_web_settings)
+        webrow.addWidget(self.web_session_hours)
         wg.addLayout(webrow)
+        addr=QHBoxLayout()
+        addr.addWidget(label("Endereços desta máquina"))
+        self.web_addresses=QComboBox()
+        self.web_addresses.setToolTip("Todos os IPv4 da rede local deste computador. Use o da mesma rede do outro aparelho.")
+        addr.addWidget(self.web_addresses)
+        web_copy=QPushButton("Copiar endereço")
+        web_copy.clicked.connect(self.copy_web_url)
+        addr.addWidget(web_copy)
+        wg.addLayout(addr)
         controls=QHBoxLayout()
         web_launch=QPushButton("Abrir interface Web")
         web_launch.clicked.connect(self.open_web_dashboard)
-        web_copy=QPushButton("Copiar endereço")
-        web_copy.clicked.connect(self.copy_web_url)
-        controls.addWidget(web_launch)
-        controls.addWidget(web_copy)
+        self.web_firewall_btn=QPushButton("Liberar no firewall do Windows")
+        self.web_firewall_btn.setToolTip("Cria uma regra de entrada só para esta porta TCP, perfil Privado, só da rede local (pede confirmação do Windows).")
+        self.web_firewall_btn.clicked.connect(self.web_request_firewall)
+        self.web_firewall_btn.setEnabled(sys.platform=="win32")
+        web_rotate=QPushButton("Renovar chave")
+        web_rotate.setToolTip("Gera uma nova chave: links copiados antes e navegadores conectados deixam de ter acesso.")
+        web_rotate.clicked.connect(self.web_rotate_key)
+        for b in (web_launch,self.web_firewall_btn,web_rotate):
+            controls.addWidget(b)
         wg.addLayout(controls)
+        ctl=QHBoxLayout()
+        self.web_controls=QCheckBox("Permitir controle pela rede (sem PTT)")
+        self.web_controls.setToolTip("Pelo navegador: satélite, Auto CAT, A/B, RX ONLY, rastrear/estacionar/PARAR do rotor. "
+                                     "PTT/TX nunca. Cada ação pede o PIN e fica registrada no log com o IP.")
+        self.web_controls.setChecked(bool(self.config.values.get("web_controls",False)))
+        self.web_controls.toggled.connect(self.change_web_settings)
+        ctl.addWidget(self.web_controls)
+        ctl.addWidget(label("PIN da estação"))
+        self.web_pin=QLineEdit()
+        self.web_pin.setEchoMode(QLineEdit.Password)
+        self.web_pin.setMaxLength(12)
+        self.web_pin.setPlaceholderText("definido" if self.config.values.get("web_pin_hash") else "4 a 12 dígitos")
+        ctl.addWidget(self.web_pin)
+        web_pin_save=QPushButton("Salvar PIN")
+        web_pin_save.clicked.connect(self.web_save_pin)
+        ctl.addWidget(web_pin_save)
+        wg.addLayout(ctl)
         self.web_status=label("Interface Web desativada")
         self.web_status.setTextInteractionFlags(Qt.TextSelectableByMouse)
         self.web_status.setStyleSheet("color:#98d8e7;font-size:11px")
         wg.addWidget(self.web_status)
-        wg.addWidget(label("Acesso local: 127.0.0.1. LAN: requer chave temporária do endereço copiado. "
-                           "Somente leitura: navegador não aciona CAT, PTT ou alterações no rádio. "
-                           "Libere a porta TCP apenas na rede privada do firewall, se necessário. "
+        self.web_diag=label("")
+        self.web_diag.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        self.web_diag.setStyleSheet("color:#c5dbe7;font-size:11px")
+        wg.addWidget(self.web_diag)
+        wg.addWidget(label("Acesso local: 127.0.0.1. LAN: requer a chave do endereço copiado; só aparelhos da rede privada "
+                           "(IP público é recusado). Sem controle pela rede, o navegador só consulta. "
                            "HTTP na LAN não tem criptografia; nunca encaminhe a porta à Internet."))
         cfg.addWidget(web_group)
         advanced,adv=group("DOPPLER E SEGURANÇA")
@@ -3886,6 +3928,17 @@ class MainWindow(RotorUiMixin, QMainWindow):
         self.pending_jobs.discard(key)
         if self.rotor_result(key,data):
             return
+        if key=="web-firewall":
+            self._web_firewall=data
+            self.web_refresh_diagnostics()
+            return
+        if key=="web-firewall-add":
+            ok,msg,present=data
+            self._web_firewall=present
+            self.web_status.setText(msg)
+            self.log('Web: '+msg)
+            self.web_refresh_diagnostics()
+            return
         if key=="rig":
             self.sdr_panel.rig_result(data)
             return
@@ -4420,38 +4473,194 @@ class MainWindow(RotorUiMixin, QMainWindow):
         self.config.values['web_enabled']=self.web_enabled.isChecked()
         self.config.values['web_allow_lan']=self.web_lan.isChecked()
         self.config.values['web_port']=int(self.web_port.value())
+        self.config.values['web_session_hours']=int(self.web_session_hours.value())
+        controls=self.web_controls.isChecked()
+        if controls and not self.config.values.get('web_pin_hash'):
+            self.web_controls.blockSignals(True);self.web_controls.setChecked(False);self.web_controls.blockSignals(False)
+            controls=False
+            self.web_status.setText('Defina o PIN da estação antes de permitir controle pela rede.')
+        self.config.values['web_controls']=controls
         self.config.save()
-        if self.web_server is not None:
-            self.web_server.stop()
-            self.web_server=None
+        self.stop_web_server()
         if self.web_enabled.isChecked():
             self.start_web_server()
         else:
             self.web_status.setText('Interface Web desativada')
+            self.web_refresh_diagnostics()
+
+    def web_save_pin(self):
+        from .web_ui import pin_hash, valid_pin
+        import secrets as _secrets
+        pin=self.web_pin.text().strip()
+        if not valid_pin(pin):
+            self.web_status.setText('PIN inválido: use de 4 a 12 dígitos.')
+            return
+        salt=_secrets.token_hex(16)
+        self.config.values['web_pin_salt']=salt
+        self.config.values['web_pin_hash']=pin_hash(pin,salt)
+        self.config.save()
+        self.web_pin.clear()
+        self.web_pin.setPlaceholderText('definido')
+        if self.web_server is not None:
+            self.web_server.pin_salt=salt
+            self.web_server.pin_hash_value=self.config.values['web_pin_hash']
+        self.web_status.setText('PIN da estação salvo.')
+        self.log('Web: PIN da estação alterado')
+
+    def stop_web_server(self):
+        if self.web_server is not None:
+            self.web_server.stop()
+            self.web_server=None
+        timer=getattr(self,'web_timer',None)
+        if timer is not None:
+            timer.stop()
 
     def start_web_server(self):
         if self.web_server is not None:
             return True
+        c=self.config.values
         try:
             server=LocalStatusServer(
-                lan=bool(self.config.values.get('web_allow_lan',False)),
-                port=int(self.config.values.get('web_port',8094)),
-                map_path=Path(__file__).with_name('map.html'))
+                lan=bool(c.get('web_allow_lan',False)),
+                port=int(c.get('web_port',8094)),
+                map_path=Path(__file__).with_name('map.html'),
+                controls=bool(c.get('web_controls',False)) and bool(c.get('web_pin_hash')),
+                pin_hash_value=c.get('web_pin_hash',''),pin_salt=c.get('web_pin_salt',''),
+                session_hours=int(c.get('web_session_hours',8)))
             server.start()
             self.web_server=server
+            self._web_events_seen=0
+            if getattr(self,'web_timer',None) is None:
+                self.web_timer=QTimer(self)
+                self.web_timer.timeout.connect(self.web_tick)
+            self.web_timer.start(500)
+            self._web_firewall=None
+            if server.lan and sys.platform=='win32':
+                from .web_ui import firewall_rule_present
+                self.background('web-firewall',lambda port=server.port:firewall_rule_present(port))
             self.publish_web_snapshot(force=True)
             access=server.url
             if not access:
                 access=f'http://IP-DA-REDE:{server.port}/?key={server.key}'
             self.web_status.setText('Interface Web ativa · '+access)
-            self.web_status.setToolTip('Link de acesso LAN com chave temporária; não compartilhe fora da rede.')
+            self.web_status.setToolTip('Link de acesso LAN com chave; não compartilhe fora da rede.')
             self.log('Painel Web iniciado · LAN habilitada' if server.lan else 'Painel Web local iniciado')
+            if server.controls:
+                self.log('Painel Web: controle pela rede habilitado (com PIN; PTT/TX nunca)')
+            self.web_refresh_diagnostics()
             return True
         except (OSError,ValueError) as exc:
             self.web_server=None
             self.web_status.setText('Falha ao iniciar Web: '+str(exc))
             self.log('Falha ao iniciar painel Web: '+str(exc))
             return False
+
+    def web_tick(self):
+        """Thread da janela: aplica pedidos do navegador, copia eventos para o log e atualiza o diagnóstico."""
+        server=self.web_server
+        if server is None:
+            return
+        events=list(server.events)
+        seen=min(getattr(self,'_web_events_seen',0),len(events))
+        if len(events)==server.events.maxlen and seen==len(events):
+            seen=len(events)
+        for line in events[seen:]:
+            self.log('Web: '+line)
+        self._web_events_seen=len(events)
+        for cmd in server.drain_commands():
+            self.apply_web_command(cmd)
+        self._web_diag_tick=getattr(self,'_web_diag_tick',0)+1
+        if self._web_diag_tick%4==0:
+            self.web_refresh_diagnostics()
+
+    def apply_web_command(self,cmd):
+        """Executa um pedido validado do navegador. Nunca há PTT/TX aqui."""
+        server=self.web_server
+        if server is None or not server.controls:
+            return False
+        action,value,ip=cmd.get('action'),cmd.get('value'),cmd.get('ip','?')
+        who=f'Web ({ip})'
+        if action=='select_satellite':
+            idx=self.sat_combo.findData(value)
+            if idx<0:
+                idx=self.sat_combo.findText(str(value))
+            if idx<0:
+                self.log(who+': satélite não encontrado na lista: '+str(value));return False
+            self.sat_combo.setCurrentIndex(idx)
+            self.log(who+': satélite '+self.sat_combo.currentText())
+        elif action=='auto_cat':
+            self.auto_cat.setChecked(bool(value))
+            self.log(who+': Auto CAT '+('ligado' if value else 'desligado'))
+        elif action=='ab':
+            self.log(who+': A/B')
+            self.toggle_main_sub()
+        elif action=='rx_only':
+            if bool(value)!=bool(self.config.values.get('rx_only',False)):
+                self.toggle_rx_only()
+            self.log(who+': RX ONLY '+('ligado' if value else 'desligado'))
+        elif action in ('rotor_track','rotor_park','rotor_stop'):
+            if not self.rotor_cfg('rotor_enabled'):
+                self.log(who+': rotor desativado nas Configurações');return False
+            if action=='rotor_track':
+                self.rotor_track_btn.setChecked(bool(value))
+                self.log(who+': rastreamento do rotor '+('pedido' if value else 'desligado'))
+            elif action=='rotor_park':
+                self.log(who+': estacionar rotor');self.rotor_park()
+            else:
+                self.rotor_stop('PARAR pela rede, '+str(ip))
+        else:
+            return False
+        self.publish_web_snapshot(force=True)
+        return True
+
+    def web_refresh_diagnostics(self):
+        label=getattr(self,'web_diag',None)
+        combo=getattr(self,'web_addresses',None)
+        server=self.web_server
+        if label is None:
+            return
+        if server is None:
+            label.setText('Servidor: parado')
+            if combo is not None:combo.clear()
+            return
+        d=server.diagnostics()
+        if combo is not None:
+            current=[combo.itemText(i) for i in range(combo.count())]
+            if current!=d['addresses']:
+                combo.clear();combo.addItems(d['addresses'])
+                fm=combo.fontMetrics()
+                widest=max([fm.horizontalAdvance(a) for a in d['addresses']]+[fm.horizontalAdvance('http://192.168.100.100:8094/')])
+                combo.setFixedWidth(widest+48)
+        parts=[f"Servidor: escutando na porta {d['port']}" if d['listening'] else 'Servidor: parado']
+        if d['lan']:
+            fw=getattr(self,'_web_firewall',None)
+            if sys.platform=='win32':
+                parts.append('Firewall: '+('regra presente' if fw else 'regra ausente' if fw is False else 'verificando…'))
+            if not d['addresses']:
+                parts.append('Nenhum IPv4 de rede local encontrado')
+        parts.append('Último acesso remoto: '+(d['last_remote'] or 'nenhum'))
+        active=d['remote_active']
+        parts.append('Navegador remoto ativo agora: '+(', '.join(active) if active else 'não'))
+        if d['controls']:
+            parts.append('Controle pela rede: LIGADO')
+        label.setText(' · '.join(parts))
+
+    def web_request_firewall(self):
+        from .web_ui import request_windows_firewall_rule, firewall_rule_present
+        port=int(self.web_port.value())
+        self.web_status.setText('Pedindo ao Windows para liberar a porta TCP '+str(port)+'…')
+        def task():
+            ok,msg=request_windows_firewall_rule(port)
+            return ok,msg,firewall_rule_present(port)
+        self.background('web-firewall-add',task)
+
+    def web_rotate_key(self):
+        if self.web_server is None:
+            self.web_status.setText('Interface Web desativada');return
+        self.web_server.rotate_key()
+        self.log('Web: chave de acesso renovada; links antigos e sessões abertas perderam o acesso')
+        self.web_status.setText('Nova chave · '+(self.web_server.url or 'IP da LAN não detectado'))
+        self.web_refresh_diagnostics()
 
     def open_web_dashboard(self):
         if not self.start_web_server():
@@ -4467,11 +4676,28 @@ class MainWindow(RotorUiMixin, QMainWindow):
     def copy_web_url(self):
         if not self.start_web_server():
             return
-        url=self.web_server.url
+        combo=getattr(self,'web_addresses',None)
+        url=combo.currentText() if combo is not None and combo.currentText() else self.web_server.url
         if not url:
             url=f'http://IP-DA-REDE:{self.web_server.port}/?key={self.web_server.key}'
         QApplication.clipboard().setText(url)
         self.web_status.setText('Endereço copiado: '+url)
+
+    def web_display_png(self):
+        """Imagem do display (mesmo modelo/tema da janela) em PNG, feita no thread da janela."""
+        from .qt_compat import QBuffer, QByteArray, QIODevice
+        lcd=getattr(self,'lcd',None)
+        if lcd is None:
+            return b''
+        w,h=max(lcd.width(),600),max(lcd.height(),90)
+        img,_=lcd.render_image(w,h,1.0)
+        data=QByteArray()
+        buf=QBuffer(data)
+        mode=getattr(QIODevice,'WriteOnly',None) or QIODevice.OpenModeFlag.WriteOnly
+        buf.open(mode)
+        img.save(buf,'PNG')
+        buf.close()
+        return bytes(data.data())
 
     def publish_web_snapshot(self,force=False):
         server=self.web_server
@@ -4529,7 +4755,42 @@ class MainWindow(RotorUiMixin, QMainWindow):
             'visibility':txt('visibility'),
             'passes':passes,
             'orbit':orbit,
+            **self.web_extra_snapshot(server),
         })
+
+    def web_extra_snapshot(self,server):
+        """Rotor, APRS, lista de satélites, Auto CAT/RX ONLY e a imagem do display para o painel Web."""
+        def txt(name):
+            item=getattr(self,name,None)
+            return item.text() if item is not None else ''
+        rotor={'enabled':bool(self.rotor_cfg('rotor_enabled'))}
+        if rotor['enabled']:
+            connected=bool(getattr(getattr(self,'rotor',None),'connected',False))
+            rotor.update(connected=connected,tracking=bool(getattr(self,'rotor_tracking',False)),
+                         state='rastreando' if getattr(self,'rotor_tracking',False) else ('conectado' if connected else 'desconectado'),
+                         position=txt('rotor_pos_label'),target=txt('rotor_target_label'),status=txt('rotor_label'))
+        aprs=[]
+        for rec in list(getattr(getattr(self,'sdr_panel',None),'records',[]) or [])[:15]:
+            aprs.append({'utc':str(rec.get('utc',''))[11:19],'source':str(rec.get('source','')),
+                         'text':str(rec.get('aprs') or rec.get('ax25') or rec.get('hex') or '')[:160]})
+        extra={'rotor':rotor,'aprs':aprs,'auto_cat':bool(self.auto_cat.isChecked()),
+               'rx_only':bool(self.config.values.get('rx_only',False)),'display':''}
+        if server.controls:
+            sats=[]
+            for i in range(min(self.sat_combo.count(),500)):
+                data=self.sat_combo.itemData(i)
+                sats.append({'id':str(data if data is not None else self.sat_combo.itemText(i)),'name':self.sat_combo.itemText(i)})
+            current=self.sat_combo.currentData()
+            extra.update(satellites=sats,satellite_id=str(current if current is not None else self.sat_combo.currentText()))
+        if server.browser_recent():
+            try:
+                png=self.web_display_png()
+                if png:
+                    server.publish_display(png)
+                    extra['display']=str(int(time.time()*1000))
+            except Exception as exc:
+                report_exception('Web display',exc)
+        return extra
     def closeEvent(self,event):
         self.rotor_shutdown()
         self._closing_app=True

@@ -349,5 +349,18 @@
 "Mostrar/ocultar el panel SDR (no enciende ni apaga el receptor)",
 "Objetivo: —",
 "ROTOR · desconectado",
-"Auto CAT apagado · actívelo en Configuración para seguir la selección"
+"Auto CAT apagado · actívelo en Configuración para seguir la selección",
+"ACCESO POR LA RED · INTERFAZ WEB",
+"La sesión caduca en",
+"Direcciones de este equipo",
+"Todas las IPv4 de la red local de este equipo. Use la de la misma red que el otro dispositivo.",
+"Permitir en el firewall de Windows",
+"Crea una regla de entrada solo para este puerto TCP, perfil Privado, solo red local (Windows pide confirmación).",
+"Renovar clave",
+"Genera una clave nueva: los enlaces copiados antes y los navegadores conectados pierden el acceso.",
+"Permitir control por la red (sin PTT)",
+"Desde el navegador: satélite, Auto CAT, A/B, RX ONLY, seguir/aparcar/PARAR del rotor. Nunca PTT/TX. Cada acción pide el PIN y queda registrada con la IP.",
+"PIN de la estación",
+"Guardar PIN",
+"Acceso local: 127.0.0.1. LAN: requiere la clave de la dirección copiada; solo dispositivos de la red privada (se rechazan IP públicas). Sin control por la red, el navegador solo consulta. HTTP en la LAN no está cifrado; nunca redirija el puerto a Internet."
 ]
