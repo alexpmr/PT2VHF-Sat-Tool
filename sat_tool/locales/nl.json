@@ -362,5 +362,11 @@
 "Vanuit de browser: satelliet, Auto CAT, A/B, RX ONLY, rotor volgen/parkeren/STOP. Nooit PTT/TX. Elke actie vraagt de pincode en wordt met het IP gelogd.",
 "Stationspincode",
 "Pincode opslaan",
-"Lokale toegang: 127.0.0.1. LAN: vereist de sleutel uit het gekopieerde adres; alleen apparaten in het privénetwerk (publieke IP's worden geweigerd). Zonder netwerkbediening kan de browser alleen meekijken. HTTP op het LAN is niet versleuteld; stuur de poort nooit door naar internet."
+"Lokale toegang: 127.0.0.1. LAN: vereist de sleutel uit het gekopieerde adres; alleen apparaten in het privénetwerk (publieke IP's worden geweigerd). Zonder netwerkbediening kan de browser alleen meekijken. HTTP op het LAN is niet versleuteld; stuur de poort nooit door naar internet.",
+"IC-706MKIIG-stijl (groen/amber lcd)",
+"IC-7100-stijl (witte puntmatrix)",
+"FT-897/857-stijl (gekleurde verlichting)",
+"IC-910H-stijl (MAIN boven, SUB onder)",
+"FT-991A-stijl (kleurenscherm met spectrum)",
+"IC-9700-stijl (kleurenscherm, spectrum en waterval)"
 ]

@@ -470,6 +470,7 @@ class MainWindow(RotorUiMixin, QMainWindow):
         self.lcd.light_clicked.connect(lambda:self.cycle_display("theme"))
         self.lcd.model_chosen.connect(lambda code:self.set_display_choice(model=code))
         self.lcd.theme_chosen.connect(lambda name:self.set_display_choice(theme=name))
+        self.lcd.scope_clicked.connect(self.display_scope_tune)
         self.lcd.detach_requested.connect(self.toggle_display_detached)
         self.lcd.set_state(rx_only=bool(self.config.values.get("rx_only",False)))
         for card in (self.pred_rx,self.pred_tx):
@@ -2775,14 +2776,23 @@ class MainWindow(RotorUiMixin, QMainWindow):
                 if index>=0:
                     combo.setCurrentIndex(index)
 
+    def display_scope_tune(self,frac):
+        """Clique no escopo do display: mesma regra do clique no waterfall do painel SDR."""
+        wf=getattr(getattr(self,"sdr_panel",None),"waterfall",None)
+        if wf is None or not self.lcd.state.scope:
+            return
+        wf.on_click((float(frac)-0.5)*2*wf.span_hz)
+
     def cycle_display(self,what):
         """Teclas TIPO (modelo) e LUZ (cor do backlight) do display: passam para o próximo item."""
-        from .lcd import MODELS, THEME_ORDER, next_in
+        from .lcd import MODELS, next_in
         if what=="model":
             self.set_display_choice(model=next_in(MODELS,self.display_model.currentData()))
             self.log("Display: "+self.display_model.currentText())
         else:
-            self.set_display_choice(theme=next_in(THEME_ORDER,self.display_theme.currentData()))
+            from .lcd import themes_for
+            model=self.display_model.currentData()
+            self.set_display_choice(theme=next_in(themes_for(model),self.display_theme.currentData()))
             self.log("Display: backlight "+self.display_theme.currentText())
 
     def toggle_rx_only(self):
@@ -3163,7 +3173,8 @@ class MainWindow(RotorUiMixin, QMainWindow):
                                tx_hz=int(calc['tx_hz']) if ul is not None else None,tx_mode=tx_mode,
                                doppler_hz=int(calc['rx_offset_hz']),elevation=float(p['elevation']),
                                visible=bool(p['visible']),auto=bool(self.cat_tracking_armed),
-                               rx_only=bool(self.config.values.get("rx_only",False)))
+                               rx_only=bool(self.config.values.get("rx_only",False)),
+                               sat_name=self.sat_combo.currentText())
             self.lcd.setToolTip(f"RX nominal {self.radio_freq(dl)}"
                                 +(f" · TX nominal {self.radio_freq(ul)}" if ul is not None else " · somente recepção")
                                 +" · A/B inverte MAIN↔SUB · RX ONLY opera só em recepção")

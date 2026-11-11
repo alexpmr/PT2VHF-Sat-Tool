@@ -362,5 +362,11 @@
 "Dal browser: satellite, Auto CAT, A/B, RX ONLY, inseguimento/parcheggio/STOP del rotore. Mai PTT/TX. Ogni azione chiede il PIN ed è registrata con l'IP.",
 "PIN della stazione",
 "Salva PIN",
-"Accesso locale: 127.0.0.1. LAN: richiede la chiave dell'indirizzo copiato; solo dispositivi della rete privata (IP pubblici rifiutati). Senza controllo dalla rete il browser è in sola lettura. HTTP sulla LAN non è cifrato; non inoltrare mai la porta su Internet."
+"Accesso locale: 127.0.0.1. LAN: richiede la chiave dell'indirizzo copiato; solo dispositivi della rete privata (IP pubblici rifiutati). Senza controllo dalla rete il browser è in sola lettura. HTTP sulla LAN non è cifrato; non inoltrare mai la porta su Internet.",
+"Stile IC-706MKIIG (LCD verde/ambra)",
+"Stile IC-7100 (matrice di punti bianca)",
+"Stile FT-897/857 (retroilluminazione colorata)",
+"Stile IC-910H (MAIN sopra, SUB sotto)",
+"Stile FT-991A (schermo a colori con spettro)",
+"Stile IC-9700 (schermo a colori, spettro e waterfall)"
 ]

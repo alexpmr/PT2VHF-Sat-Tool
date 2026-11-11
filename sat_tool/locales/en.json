@@ -362,5 +362,11 @@
 "From the browser: satellite, Auto CAT, A/B, RX ONLY, rotor track/park/STOP. Never PTT/TX. Every action asks for the PIN and is logged with the IP.",
 "Station PIN",
 "Save PIN",
-"Local access: 127.0.0.1. LAN: requires the key in the copied address; private-network devices only (public IPs are refused). Without network control the browser is read-only. HTTP on the LAN is not encrypted; never forward the port to the Internet."
+"Local access: 127.0.0.1. LAN: requires the key in the copied address; private-network devices only (public IPs are refused). Without network control the browser is read-only. HTTP on the LAN is not encrypted; never forward the port to the Internet.",
+"IC-706MKIIG style (green/amber LCD)",
+"IC-7100 style (white dot matrix)",
+"FT-897/857 style (colour backlight)",
+"IC-910H style (MAIN on top, SUB below)",
+"FT-991A style (colour screen with scope)",
+"IC-9700 style (colour screen, scope and waterfall)"
 ]

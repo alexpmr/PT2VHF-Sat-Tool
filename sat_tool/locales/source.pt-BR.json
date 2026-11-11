@@ -362,5 +362,11 @@
 "Pelo navegador: satélite, Auto CAT, A/B, RX ONLY, rastrear/estacionar/PARAR do rotor. PTT/TX nunca. Cada ação pede o PIN e fica registrada no log com o IP.",
 "PIN da estação",
 "Salvar PIN",
-"Acesso local: 127.0.0.1. LAN: requer a chave do endereço copiado; só aparelhos da rede privada (IP público é recusado). Sem controle pela rede, o navegador só consulta. HTTP na LAN não tem criptografia; nunca encaminhe a porta à Internet."
+"Acesso local: 127.0.0.1. LAN: requer a chave do endereço copiado; só aparelhos da rede privada (IP público é recusado). Sem controle pela rede, o navegador só consulta. HTTP na LAN não tem criptografia; nunca encaminhe a porta à Internet.",
+"Estilo IC-706MKIIG (LCD verde/âmbar)",
+"Estilo IC-7100 (matriz de pontos branca)",
+"Estilo FT-897/857 (backlight colorido)",
+"Estilo IC-910H (MAIN em cima, SUB embaixo)",
+"Estilo FT-991A (tela colorida com escopo)",
+"Estilo IC-9700 (tela colorida, escopo e waterfall)"
 ]

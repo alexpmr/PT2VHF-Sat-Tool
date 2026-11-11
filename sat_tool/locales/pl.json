@@ -362,5 +362,11 @@
 "Z przeglądarki: satelita, Auto CAT, A/B, RX ONLY, śledzenie/parkowanie/STOP rotora. Nigdy PTT/TX. Każda akcja wymaga PIN-u i jest zapisywana z adresem IP.",
 "PIN stacji",
 "Zapisz PIN",
-"Dostęp lokalny: 127.0.0.1. LAN: wymaga klucza ze skopiowanego adresu; tylko urządzenia z sieci prywatnej (publiczne IP są odrzucane). Bez sterowania przez sieć przeglądarka tylko wyświetla. HTTP w sieci LAN nie jest szyfrowany; nigdy nie przekierowuj portu do Internetu."
+"Dostęp lokalny: 127.0.0.1. LAN: wymaga klucza ze skopiowanego adresu; tylko urządzenia z sieci prywatnej (publiczne IP są odrzucane). Bez sterowania przez sieć przeglądarka tylko wyświetla. HTTP w sieci LAN nie jest szyfrowany; nigdy nie przekierowuj portu do Internetu.",
+"Styl IC-706MKIIG (LCD zielony/bursztynowy)",
+"Styl IC-7100 (biała matryca punktowa)",
+"Styl FT-897/857 (kolorowe podświetlenie)",
+"Styl IC-910H (MAIN u góry, SUB na dole)",
+"Styl FT-991A (kolorowy ekran z widmem)",
+"Styl IC-9700 (kolorowy ekran, widmo i wodospad)"
 ]

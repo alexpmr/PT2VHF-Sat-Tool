@@ -1069,6 +1069,22 @@ class SdrPanel(QWidget):
         self.tlm_status.setText(f"Exportado: {path}")
         self.w.log(f"Telemetria exportada em JSON: {path}")
 
+    def feed_display_scope(self, fed):
+        """v1.7.1: o escopo dos displays estilo rádio usa a mesma FFT do waterfall (sem segundo fluxo de IQ)."""
+        lcd = getattr(self.w, "lcd", None)
+        if lcd is None or not hasattr(lcd, "push_scope"):
+            return
+        wf = self.waterfall
+        now = time.monotonic()
+        if fed and wf._avg_row is not None:
+            self._scope_t = now
+            row = np.asarray(wf._avg_row, dtype=float)
+            idx = np.linspace(0, len(row) - 1, min(160, len(row)))
+            row = np.interp(idx, np.arange(len(row)), row)
+            lcd.push_scope(np.clip((row - wf.floor_db) / max(wf.range_db, 1.0), 0, 1).tolist(), wf.span_hz)
+        elif lcd.state.scope is not None and now - getattr(self, "_scope_t", 0.0) > 2.0:
+            lcd.push_scope(None)
+
     # -------------------------------------------------------- drenagem GUI
     def drain(self):
         rec = self.receiver
@@ -1086,12 +1102,15 @@ class SdrPanel(QWidget):
                 self.sdr_status.setText(st.error)
                 if not self._prep_offered:
                     self.check_preparation(interactive=True)
+        fed = False
         try:
             while True:
                 spec, center = self._spec_q.get_nowait()
                 self.waterfall.push(spec, center)
+                fed = True
         except queue.Empty:
             pass
+        self.feed_display_scope(fed)
         try:
             while True:
                 frame, source = self._frame_q.get_nowait()

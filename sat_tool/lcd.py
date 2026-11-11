@@ -90,6 +90,24 @@ MODELS = {
     "digital": "Digital (tela colorida)",
     "classico": "Clássico v1.6.0 (RX em cima, TX embaixo)",
 }
+# v1.7.1: estilos de rádios reais (desenho em lcd_radios.py; sem logotipos — o nome só identifica o estilo)
+RADIO_MODELS = {
+    "ic706": "Estilo IC-706MKIIG (LCD verde/âmbar)",
+    "ic7100": "Estilo IC-7100 (matriz de pontos branca)",
+    "ft897": "Estilo FT-897/857 (backlight colorido)",
+    "ic910": "Estilo IC-910H (MAIN em cima, SUB embaixo)",
+    "ft991": "Estilo FT-991A (tela colorida com escopo)",
+    "ic9700": "Estilo IC-9700 (tela colorida, escopo e waterfall)",
+}
+_classic = MODELS.pop("classico")
+MODELS.update(RADIO_MODELS)
+MODELS["classico"] = _classic          # TIPO: ... estilos de rádio → Clássico → volta à matriz
+# Cores de backlight que cada estilo aceita (a tecla LUZ circula só entre elas).
+MODEL_THEMES = {"ic706": ("verde", "âmbar"), "ic7100": ("branco",), "ic910": ("âmbar", "verde")}
+
+
+def themes_for(model: str) -> tuple:
+    return MODEL_THEMES.get(model, THEME_ORDER)
 FONTS = {"normal": "Normal", "negrito": "Negrito"}
 SEG = {"0": "abcdef", "1": "bc", "2": "abged", "3": "abgcd", "4": "fgbc", "5": "afgcd", "6": "afgedc",
        "7": "abc", "8": "abcdefg", "9": "abcdfg", "-": "g", " ": ""}
@@ -144,6 +162,10 @@ class LcdState:
     los_s: float | None = None       # v1.7.0: segundos até o LOS (só durante a passagem em curso)
     aos_s: float | None = None       # v1.7.0: segundos até o próximo AOS (só fora da passagem)
     rotor: str = ""                  # v1.7.0: "AZ 123 EL 45" quando houver rotor
+    sat_name: str = ""               # v1.7.1: área de memória dos estilos de rádio
+    scope: list | None = None        # v1.7.1: espectro do RTL-SDR normalizado 0..1 (None = SDR desligado)
+    scope_rows: list = field(default_factory=list)   # waterfall: linhas mais novas primeiro
+    scope_span_hz: int = 0
 
 
 def indicator_tags(st: LcdState) -> list[tuple[str, bool]]:
@@ -637,6 +659,7 @@ class LcdDisplay(QWidget):
     theme_chosen = Signal(str)       # menu de contexto → cor escolhida direto
     detach_requested = Signal()      # menu de contexto / duplo clique fora das teclas → destacar/voltar
     fullscreen_requested = Signal()  # duplo clique no display destacado → tela cheia
+    scope_clicked = Signal(float)    # v1.7.1: clique no escopo (0 = borda esquerda, 1 = direita)
 
     def __init__(self, parent=None, theme: str = "âmbar", model: str = "matriz", font: str = "normal"):
         super().__init__(parent)
@@ -663,6 +686,21 @@ class LcdDisplay(QWidget):
     def set_model(self, model: str):
         if model in MODELS:
             self.model = model
+            self.update()
+
+    def push_scope(self, values, span_hz: int = 0, max_rows: int = 48, fps: float = 15.0):
+        """Espectro do RTL-SDR (0..1). None = SDR desligado. Redesenho limitado à taxa da tela."""
+        st = self.state
+        if values is None:
+            st.scope, st.scope_rows = None, []
+            self.update()
+            return
+        row = [max(0.0, min(1.0, float(v))) for v in values]
+        st.scope, st.scope_span_hz = row, int(span_hz or 0)
+        st.scope_rows = [row] + st.scope_rows[:max_rows - 1]
+        now = time.monotonic()
+        if self.model in RADIO_MODELS and now - getattr(self, "_scope_paint", 0.0) >= 1.0 / fps:
+            self._scope_paint = now
             self.update()
 
     def set_dim(self, dim: float):
@@ -695,22 +733,30 @@ class LcdDisplay(QWidget):
         img = QImage(pw, ph, QImage.Format_ARGB32_Premultiplied)
         img.fill(QColor("#000000"))
         p = QPainter(img)
-        aa = self.model in ("led7", "lcd7", "digital")
+        aa = self.model in ("led7", "lcd7", "digital") or (self.model in RADIO_MODELS and self.model != "ic7100")
         p.setRenderHint(QPainter.Antialiasing, aa)
         p.setRenderHint(QPainter.TextAntialiasing, True)
         u = ph / 132.0
-        style = make_style("matriz" if self.model == "classico" else self.model, p, pw, ph, u, self.theme,
-                           "normal" if self.model == "classico" else self.font_style)
-        keys = paint_classic(style, self.state) if self.model == "classico" else paint_ts2000(style, self.state)
+        if self.model in RADIO_MODELS:
+            from .lcd_radios import make_radio_style, paint_radio
+            keys = paint_radio(self.model, make_radio_style(self.model, p, pw, ph, u, self.theme), self.state)
+        else:
+            style = make_style("matriz" if self.model == "classico" else self.model, p, pw, ph, u, self.theme,
+                               "normal" if self.model == "classico" else self.font_style)
+            keys = paint_classic(style, self.state) if self.model == "classico" else paint_ts2000(style, self.state)
         if self.dim < 0.999:
             p.fillRect(QRectF(0, 0, pw, ph), QColor(0, 0, 0, int(round((1.0 - self.dim) * 255))))
         p.end()
         img.setDevicePixelRatio(dpr)
+        scope = keys.pop("scope", None)
+        self._last_scope = None if scope is None else QRectF(scope.x() / dpr, scope.y() / dpr,
+                                                             scope.width() / dpr, scope.height() / dpr)
         return img, {k: QRectF(r.x() / dpr, r.y() / dpr, r.width() / dpr, r.height() / dpr) for k, r in keys.items()}
 
     def paintEvent(self, event):
         dpr = float(self.devicePixelRatioF()) if hasattr(self, "devicePixelRatioF") else 1.0
         img, self._keys = self.render_image(self.width(), self.height(), dpr)
+        self._scope_rect = getattr(self, "_last_scope", None)
         p = QPainter(self)
         p.drawImage(0, 0, img)
         p.end()
@@ -719,6 +765,9 @@ class LcdDisplay(QWidget):
         for key, rect in self._keys.items():
             if rect.adjusted(-4, -4, 4, 4).contains(pos):
                 return key
+        scope = getattr(self, "_scope_rect", None)
+        if scope is not None and self.state.scope and scope.contains(pos):
+            return "scope"
         return None
 
     def mouseMoveEvent(self, event):
@@ -729,6 +778,13 @@ class LcdDisplay(QWidget):
     def mousePressEvent(self, event):
         pos = event.position() if hasattr(event, "position") else event.pos()
         key = self.key_at(pos)
+        if key == "scope":
+            # clique/toque no escopo sintoniza, como no waterfall do painel SDR
+            r = self._scope_rect
+            frac = max(0.0, min(1.0, (pos.x() - r.x()) / max(1.0, r.width())))
+            self.scope_clicked.emit(frac)
+            event.accept()
+            return
         if key:
             {"swap": self.swap_clicked, "rxonly": self.rx_only_clicked,
              "type": self.type_clicked, "light": self.light_clicked}[key].emit()
@@ -754,7 +810,7 @@ class LcdDisplay(QWidget):
             act.setCheckable(True); act.setChecked(code == self.model)
             act.triggered.connect(lambda _=False, c=code: self.model_chosen.emit(c))
         colors = menu.addMenu("Cor do backlight (LUZ)")
-        for name in THEME_ORDER:
+        for name in themes_for(self.model):
             act = colors.addAction(name.capitalize())
             act.setCheckable(True); act.setChecked(name == self.theme)
             act.triggered.connect(lambda _=False, n=name: self.theme_chosen.emit(n))
