@@ -1121,11 +1121,20 @@ class MainWindow(RotorUiMixin, QMainWindow):
         self.sdr_dock.setFloating(bool(self.config.values.get("sdr_dock_floating",False)))
         self.sdr_dock.topLevelChanged.connect(lambda f:self.config.values.__setitem__("sdr_dock_floating",bool(f)))
         self.sdr_dock.visibilityChanged.connect(self._remember_sdr_dock)
-        self.sdr_toggle.clicked.connect(lambda:self.sdr_dock.setVisible(not self.sdr_dock.isVisible()))
+        self.sdr_toggle.clicked.connect(self.toggle_sdr_dock)
+
+    def toggle_sdr_dock(self):
+        """Botão Painel SDR: a escolha do operador vale até ele mudar (v1.7.1: o painel não reabre sozinho)."""
+        show=not self.sdr_dock.isVisible()
+        self.config.values["sdr_dock_user_hidden"]=not show
+        self.sdr_dock.setVisible(show)
+        self.config.save()
 
     def _remember_sdr_dock(self,visible):
-        if self.isVisible():
+        if self.isVisible() and not self.isMinimized():
             self.config.values["sdr_dock_visible"]=bool(visible)
+            # fechado pelo X do painel ou pelo botão: não reabrir automaticamente; aberto: volta ao normal
+            self.config.values["sdr_dock_user_hidden"]=not visible
 
     def doppler_snapshot(self):
         """Estado Doppler atual para SDR/equipamentos (chamado a 4 Hz; nunca escreve CAT)."""

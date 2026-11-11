@@ -515,6 +515,16 @@ class SdrPanel(QWidget):
         self.w.log("Configurações de SDR/equipamentos salvas")
 
     # ------------------------------------------------------------ detecção
+    def show_dock_automatically(self):
+        """Mostra o painel uma única vez por sessão, a menos que o operador o tenha ocultado."""
+        dock = self.parentWidget()
+        if dock is None or dock.isVisible() or getattr(self, "_auto_shown", False):
+            return
+        self._auto_shown = True
+        if self.cfg.get("sdr_dock_user_hidden", False):
+            return
+        dock.setVisible(True)
+
     def detect(self):
         if self.receiver and self.receiver.status.running:
             return
@@ -532,9 +542,9 @@ class SdrPanel(QWidget):
             self._led(False)
             return
         self.sdr_status.setText(f"RTL-SDR detectado: {', '.join(labels)}")
-        dock = self.parentWidget()
-        if dock is not None and not self._asked_devices and not dock.isVisible():
-            dock.setVisible(True)  # primeira detecção: mostra o painel
+        # v1.7.1: mostra o painel só na primeira detecção da sessão e nunca depois que o operador o
+        # fechou (antes, a detecção a cada 5 s reabria o painel sem parar).
+        self.show_dock_automatically()
         self._led(False, warn=True)
         key = devices[0].serial or devices[0].label
         keys = {d.serial or d.label for d in devices}
@@ -672,8 +682,7 @@ class SdrPanel(QWidget):
         self.dispatch.reset()
         self.fast_tick()
         self.receiver.start()
-        if self.parentWidget() is not None:
-            self.parentWidget().setVisible(True)
+        self.show_dock_automatically()
         self.w.log(f"SDR iniciado: {dev.label}")
 
     def stop_sdr(self):

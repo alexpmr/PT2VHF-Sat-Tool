@@ -112,6 +112,14 @@
 
 ## Pendentes
 
+- **BUG · Painel SDR volta a aparecer segundos depois de desligado** (registrado em 11/11/2026, v1.7.0)
+  - Relato do operador: "desligo o painel SDR e ele volta a aparecer uns segundos depois".
+  - Causa: a detecção do RTL-SDR roda a cada 5 s e, com o RTL-SDR escolhido para RX, reabria o painel
+    sempre que o encontrava oculto (a condição dependia só da lista de dongles já perguntados, vazia nesse caso).
+  - **Corrigido na v1.7.1:** o painel abre sozinho no máximo uma vez por sessão e nunca depois que o operador o
+    fecha (botão "Painel SDR" ou X); a escolha fica salva (`sdr_dock_user_hidden`) até ele abrir de novo.
+    Teste `tests/test_v171_sdr_dock_stays_hidden.py`. Falta confirmar no Windows com o RTL-SDR real.
+
 - **Configurações → "Rotores": tudo de configuração e ajustes de rotor** (registrado em 07/11/2026; definição final do
   operador no mesmo dia — **sem aba principal separada**)
   - A sub-aba atual Configurações → "Rotor" é renomeada para **"Rotores"** e reúne **toda a configuração e todos os
