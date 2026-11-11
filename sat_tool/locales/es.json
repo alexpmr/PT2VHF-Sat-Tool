@@ -262,7 +262,7 @@
 "Rosa",
 "Rotor activo:",
 "Rotor desconectado",
-"Rotor: posición real (verde) × objetivo del satélite (amarillo)",
+"Rotor en tiempo real: dirección (izquierda) y elevación (derecha)\nVerde: posición real · amarillo discontinuo: objetivo del satélite",
 "Rotores",
 "Morado",
 "RADIO / CAT · KENWOOD TS-2000",

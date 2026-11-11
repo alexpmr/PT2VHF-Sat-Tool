@@ -141,6 +141,18 @@
 
 ## Pendentes
 
+- **Rotor: indicação visual da direção e da inclinação em tempo real com 2 gauges** (registrado em 11/11/2026)
+  - Pedido do operador: "indicação visual da direção e inclinação do rotor em tempo real com 2 gauges, um de
+    direção e outro de elevação".
+  - **Implementado (após a v1.7.1, branch `claude/project-thread-ccwxdh`):** `RotorCompass` virou o conjunto de dois
+    gauges separados: **DIREÇÃO** (mostrador 0–360° com N/L/S/O, traços a cada 10°) e **ELEVAÇÃO** (quadrante
+    0–90° com escala a cada 5°, números 30/60). Cada um tem ponteiro verde da posição real, ponteiro amarelo
+    tracejado do alvo do satélite e o valor "AZ 215°" / "EL 32°" em caixa abaixo do mostrador (os ponteiros
+    nunca cobrem o número). Atualização a cada leitura C2 (1 s). Aparecem na faixa ROTOR (tamanho 76) e em
+    Configurações → Rotores → Ajuste manual (tamanho 110). Tooltip traduzido nos 10 idiomas.
+    Imagem: `docs/backlog/rotor-gauges-direcao-elevacao.png`. Teste `tests/test_v172_rotor_gauges.py`.
+  - [ ] Conferir com o G-5400B real (aguardando cabo) que os ponteiros acompanham o movimento.
+
 - **BUG · Painel SDR volta a aparecer segundos depois de desligado** (registrado em 11/11/2026, v1.7.0)
   - Relato do operador: "desligo o painel SDR e ele volta a aparecer uns segundos depois".
   - Causa: a detecção do RTL-SDR roda a cada 5 s e, com o RTL-SDR escolhido para RX, reabria o painel

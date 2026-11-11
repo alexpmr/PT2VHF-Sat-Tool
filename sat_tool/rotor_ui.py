@@ -158,7 +158,7 @@ class RotorUiMixin:
         # --- ajuste manual / teste
         man, mv = group("AJUSTE MANUAL E TESTE")
         row = QHBoxLayout()
-        self.rotor_settings_compass = RotorCompass(size=96)
+        self.rotor_settings_compass = RotorCompass(size=110)
         row.addWidget(self.rotor_settings_compass)
         col = QVBoxLayout()
         goto = QHBoxLayout()
@@ -354,7 +354,7 @@ class RotorUiMixin:
         self.rotor_title.setStyleSheet("font-size:11px;font-weight:800;color:#6cc7ff")
         outer.addWidget(self.rotor_title)
         row = QHBoxLayout(); row.setSpacing(10)
-        self.rotor_compass = RotorCompass(size=64)
+        self.rotor_compass = RotorCompass(size=76)
         row.addWidget(self.rotor_compass)
         pos_col = QVBoxLayout(); pos_col.setSpacing(0)
         self.rotor_pos_label = label("AZ —°  EL —°")
