@@ -110,6 +110,19 @@
   - registrar no app o motivo exato (código de saída, última etapa do log) e oferecer o link de download manual;
   - teste de atualização real 1.7.0→1.7.x com e sem RTL-SDR conectado e com a tarefa do driver marcada antes.
 
+## v1.7.2 — rotor automático, contagens no display e nova abertura (12/11/2026)
+
+- [x] Gauges de direção (0–360°) e elevação (0–90°) do rotor em tempo real, real × alvo.
+- [x] Botão ROTOR no topo (liga/desliga o controlador); "Painel SDR" → "SDR".
+- [x] Rastreamento automático com o rotor conectado e o satélite acima do horizonte; botão RASTREANDO/PARADO.
+- [x] Contagem LOS/AOS em segmentos no display; ícone <> troca MAIN e SUB.
+- [x] Janela de AOS só com contagem regressiva, fechando sozinha.
+- [x] Abertura com o banner "Powered by www.PT2VHF.com" (7 ferramentas), 10 s com contagem e fechamento automático.
+- [x] Binários com a versão no nome (EXE instalado, portátil, Linux e macOS); instalador remove EXEs antigos.
+- [x] Correções: rotor aparecia DESCONECTADO conectado; tecla RX ONLY não indicava o estado.
+- [ ] Pendente de confirmação do operador: leitura AZ 140° EL 175° do controlador (interpretada como flip → 320°/5°).
+- Detalhes de cada item em "Pendentes" (marcados **Feito (1.7.2)**).
+
 ## v1.7.1 — estilos de rádio, rotores, aparência, idiomas e acesso pela rede (11/11/2026)
 
 - [x] **OTA:** `apply-update.ps1` roda o Setup com `/MERGETASKS="!rtlsdr"` e `/OTA` (o driver RTL-SDR nunca roda em
