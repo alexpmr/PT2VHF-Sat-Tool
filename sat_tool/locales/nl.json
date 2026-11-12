@@ -374,5 +374,6 @@
 "GESTOPT",
 "Volgt de gekozen satelliet · klik (of Esc/F12) om de rotor te stoppen",
 "Rotor gestopt · volgt zelf als de gekozen satelliet boven de horizon staat",
-"Automatisch volgen gepauzeerd door de operator · klik om te hervatten"
+"Automatisch volgen gepauzeerd door de operator · klik om te hervatten",
+"TLE's worden op de achtergrond bijgewerkt…"
 ]

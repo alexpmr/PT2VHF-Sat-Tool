@@ -155,6 +155,15 @@
 
 ## Pendentes
 
+- **TLE atualizado em segundo plano ao abrir** (registrado em 12/11/2026)
+  - Pedido do operador: "ao abrir, atualizar o tle em background, enquanto o usuário usa o app".
+  - Antes: na abertura, se o cache tivesse mais que o intervalo configurado (4 h), abria a janela modal "Atualização
+    TLE / OMM", que travava o uso até terminar.
+  - **Feito (1.7.3):** 1,5 s depois de abrir, o app baixa os TLE/OMM em segundo plano, sem janela; o progresso aparece
+    na linha de resumo ("Atualizando TLE em segundo plano… 3/7") e o catálogo é recarregado ao final, mantendo o satélite
+    selecionado. Cache com menos de 2 h é reaproveitado (limite de download do CelesTrak). O botão manual nas
+    Configurações continua com a janela de progresso. Teste `tests/test_v172_tle_background.py`.
+
 - **Abertura com o banner "Powered by www.PT2VHF.com"** (registrado em 12/11/2026)
   - Pedido do operador: usar o banner da rede PT2VHF na abertura, no lugar da janela "Feito por radioamadores, para
     radioamadores".

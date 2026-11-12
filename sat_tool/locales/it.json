@@ -374,5 +374,6 @@
 "FERMO",
 "Inseguimento del satellite selezionato · clic (o Esc/F12) per fermare il rotore",
 "Rotore fermo · insegue da solo quando il satellite selezionato è sopra l'orizzonte",
-"Inseguimento automatico sospeso dall'operatore · clic per riprendere"
+"Inseguimento automatico sospeso dall'operatore · clic per riprendere",
+"Aggiornamento TLE in background…"
 ]

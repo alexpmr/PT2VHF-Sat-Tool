@@ -374,5 +374,6 @@
 "STOPPED",
 "Tracking the selected satellite · click (or Esc/F12) to stop the rotator",
 "Rotator stopped · tracks by itself when the selected satellite is above the horizon",
-"Automatic tracking paused by the operator · click to resume"
+"Automatic tracking paused by the operator · click to resume",
+"Updating TLEs in the background…"
 ]

@@ -374,5 +374,6 @@
 "PARADO",
 "Rastreando o satélite selecionado · clique (ou Esc/F12) para parar o rotor",
 "Rotor parado · rastreia sozinho quando o satélite selecionado estiver acima do horizonte",
-"Rastreamento automático pausado pelo operador · clique para retomar"
+"Rastreamento automático pausado pelo operador · clique para retomar",
+"Atualizando TLE em segundo plano…"
 ]

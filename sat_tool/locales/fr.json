@@ -374,5 +374,6 @@
 "ARRÊTÉ",
 "Suivi du satellite sélectionné · cliquez (ou Échap/F12) pour arrêter le rotor",
 "Rotor arrêté · suit seul quand le satellite sélectionné est au-dessus de l'horizon",
-"Suivi automatique mis en pause par l'opérateur · cliquez pour reprendre"
+"Suivi automatique mis en pause par l'opérateur · cliquez pour reprendre",
+"Mise à jour des TLE en arrière-plan…"
 ]

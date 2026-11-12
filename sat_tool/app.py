@@ -204,8 +204,9 @@ class MainWindow(RotorUiMixin, QMainWindow):
         self.populate_catalog(load_orbits(self.config.dir))
         self.update_ports()
         self.init_sdr_dock()
-        if age_hours(self.config.dir,"amateur_omm.json") is None or age_hours(self.config.dir,"amateur_omm.json")>self.config.values.get("tle_update_hours",4):
-            self.refresh_catalog()
+        # v1.7.2: ao abrir, atualiza os TLE/OMM em segundo plano (sem janela modal) enquanto o app é usado.
+        # O cache só é reaproveitado se tiver menos de 2 h (limite de download do CelesTrak).
+        QTimer.singleShot(1500, self.startup_refresh_catalog)
         self.tick_timer = QTimer(self)
         self.tick_timer.timeout.connect(self.tick)
         self.tick_timer.start(1000)
@@ -2129,7 +2130,14 @@ class MainWindow(RotorUiMixin, QMainWindow):
             self.cat_operating_detail.setText(
                 "Estado operacional SA/MD: aguardando leitura válida do rádio")
 
-    def refresh_catalog(self,force=False):
+    def tle_bg_text(self):
+        from .i18n import translated
+        return translated("Atualizando TLE em segundo plano…", self.ui_language() if hasattr(self, "ui_language") else "pt-BR")
+
+    def startup_refresh_catalog(self):
+        self.refresh_catalog(quiet=True)
+
+    def refresh_catalog(self,force=False,quiet=False):
         groups=self.config.values.get("orbit_groups",list(DEFAULT_GROUPS))
         age=age_hours(self.config.dir,"amateur_omm.json")
         missing=any(age_hours(self.config.dir,"group_"+g+".json") is None for g in groups)
@@ -2138,6 +2146,14 @@ class MainWindow(RotorUiMixin, QMainWindow):
             return
         if "omm" in self.pending_jobs:return
         self.orbit_started_at=time.monotonic()
+        def notify(index,total,group,count,errors):
+            self.events.result.emit("omm-stage",(index,total,group,count,errors))
+        if quiet:   # v1.7.2: segundo plano, progresso só na linha de resumo
+            self.orbit_progress_dialog=None
+            self.summary.setText(self.tle_bg_text())
+            self.log("TLE/OMM: atualização em segundo plano iniciada")
+            self.background("omm",lambda:refresh_orbits(self.config.dir,groups=groups,progress=notify))
+            return
         dlg=QProgressDialog("Baixando catálogo orbital por categorias…","",0,len(groups),self)
         dlg.setWindowTitle("Atualização TLE / OMM")
         dlg.setMinimumDuration(0)
@@ -2149,8 +2165,6 @@ class MainWindow(RotorUiMixin, QMainWindow):
         dlg.show()
         self.orbit_progress_dialog=dlg
         self.summary.setText("Atualizando elementos orbitais…")
-        def notify(index,total,group,count,errors):
-            self.events.result.emit("omm-stage",(index,total,group,count,errors))
         self.background("omm",lambda:refresh_orbits(self.config.dir,groups=groups,progress=notify))
 
     def populate_catalog(self, objects):
@@ -4058,6 +4072,8 @@ class MainWindow(RotorUiMixin, QMainWindow):
                     f"{round(index*100/max(total,1))}% · Tempo restante estimado: {eta}\n"
                     f"Tempo decorrido: {format_duration(elapsed)} · falhas {errors}")
                 dlg.setValue(index)
+            else:
+                self.summary.setText(f"{self.tle_bg_text()} {index}/{total}")
             return
         if key=="tx-batch-item":
             ident,rows,index,total=data
