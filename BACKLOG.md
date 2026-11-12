@@ -142,6 +142,44 @@
 
 ## Pendentes
 
+- **Display: contagem da passagem em segmentos** (registrado em 12/11/2026)
+  - Pedido do operador: "no display, coloque um contador de quanto tempo ainda resta disponível de passagem,
+    usando o mesmo layout em segmentos de LCD".
+  - **Implementado (1.7.2):** nos modelos matriz, LED 7 seg., LCD 7 seg. e Digital (layout TS-2000), contagem
+    grande nos mesmos dígitos do display, à direita da frequência MAIN, com etiqueta **LOS** durante a passagem
+    (pisca nos últimos 30 s) e **AOS** antes dela; a etiqueta pequena "LOS m:ss" da linha de baixo sai. Os dígitos
+    de frequência encolhem o necessário. 7 segmentos ganharam ":" e "H" (acima de 1 h: 1H05).
+    Estilos de rádio (IC-706 etc.) e Clássico mantêm a contagem em texto. Teste `tests/test_v172_display_countdown.py`;
+    imagem `docs/backlog/display-contagem-passagem.png`.
+
+- **Rotor rastreia sozinho; botão RASTREANDO/PARADO** (registrado em 12/11/2026)
+  - Pedido do operador: "tire o botão rastrear passagem. Ele deverá rastrear assim que o sat selecionado estiver
+    acima do horizonte com o rotor conectado. Troque o botão Parar, indicando verde Rastreando e vermelho Parado".
+  - **Implementado (1.7.2):** sem "Rastrear passagem". Com o rotor conectado, segue o satélite selecionado acima do
+    horizonte (mantém o pré-posicionamento antes do AOS configurado em Rotores e estaciona uma vez no LOS).
+    O antigo PARAR virou o estado: verde **RASTREANDO** / vermelho **PARADO**. Clique, Esc/F12, Estacionar ou
+    controlador sem resposta param o rotor e pausam o automático; clicar em PARADO (pausado) retoma; conectar
+    arma de novo. Controle pela rede: "Rastreamento automático". Textos nos 10 idiomas.
+  - [ ] Homologar com o G-5400B/ERC-M real.
+
+- **BUG · Rotor conectado aparece DESCONECTADO e os gauges não mexem** (registrado em 12/11/2026, v1.7.1)
+  - Relato (captura: "Yaesu G-5400B via COM17", AZ 140° EL 175°, chip DESCONECTADO, gauges AZ 320° EL 5°).
+  - Causa: conectar com "Habilitar controle de rotor" desmarcado salvava o rotor como desabilitado, o que agendava o
+    fechamento da porta logo depois de abrir; a leitura a cada segundo também exige rotor habilitado. Ficava só a
+    primeira leitura.
+  - **Corrigido (1.7.2):** conectar habilita o rotor; ao conectar a faixa mostra PARADO e a posição na hora.
+    O número grande agora mostra a mesma direção dos gauges (para onde a antena aponta); a leitura do controlador
+    (até 450°/180°) fica no tooltip e em Configurações → Rotores. EL 175° é lida como flip (antena virada por cima:
+    AZ 140+180 = 320°, EL 180−175 = 5°). Teste em `tests/test_v172_top_buttons.py`.
+  - [ ] Confirmar com o operador para onde a antena apontava fisicamente com a leitura AZ 140° EL 175°.
+
+- **Janela do AOS só com contagem regressiva** (registrado em 12/11/2026)
+  - Pedido do operador: "quando um sat entrou em visada, apareceu uma janela perguntando se queria fazer. Troque
+    para uma contagem regressiva do início e feche quando terminar".
+  - **Implementado (1.7.2):** a janela do alarme AOS não tem mais botões (Ir para Operação/Silenciar/Fechar); só o
+    satélite, a contagem grande m:ss até o AOS e o horário. Fecha sozinha no AOS (com o som do início) e não abre
+    se o AOS já passou (aviso agendado atrasado). Teste `tests/test_v172_aos_countdown.py`.
+
 - **Botão ROTOR no topo (liga/desliga o controlador) e "Painel SDR" → "SDR"** (registrado em 12/11/2026)
   - Pedido do operador (com captura do topo): "adicione um botão que liga e desliga o controlador de rotor, como
     no CAT e SDR. Troque Painel SDR por apenas SDR".

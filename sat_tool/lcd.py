@@ -110,7 +110,7 @@ def themes_for(model: str) -> tuple:
     return MODEL_THEMES.get(model, THEME_ORDER)
 FONTS = {"normal": "Normal", "negrito": "Negrito"}
 SEG = {"0": "abcdef", "1": "bc", "2": "abged", "3": "abgcd", "4": "fgbc", "5": "afgcd", "6": "afgedc",
-       "7": "abc", "8": "abcdefg", "9": "abcdfg", "-": "g", " ": ""}
+       "7": "abc", "8": "abcdefg", "9": "abcdfg", "-": "g", " ": "", "H": "bcefg"}
 
 
 # Teclas do display, da direita para a esquerda (v1.7.1: TIPO e LUZ).
@@ -435,8 +435,8 @@ class _Seven(_Style):
 
     def digits_w(self, s, h):
         w, t, gap = self._metrics(h)
-        n = sum(1 for ch in s if ch != ".")
-        return n * (w + gap) - gap
+        n = sum(1 for ch in s if ch not in ".:")
+        return n * (w + gap) - gap + s.count(":") * (2 * t + gap)
 
     def _seven(self, x, y, s, h, on, off, glow):
         w, t, gap = self._metrics(h)
@@ -450,6 +450,12 @@ class _Seven(_Style):
                 r = QRectF(cx - gap / 2 - t / 2, y + h - t, t, t)
                 p.setBrush(on)
                 p.drawRect(r)
+                continue
+            if ch == ":":   # v1.7.2: dois pontos da contagem m:ss
+                for fy in (0.3, 0.7):
+                    p.setBrush(on)
+                    p.drawRect(QRectF(cx + t * 0.5, y + h * fy - t / 2, t, t))
+                cx += 2 * t + gap
                 continue
             lit = SEG.get(ch, "")
             for name, poly in _seg_polys(cx, y, w, h, t).items():
@@ -542,6 +548,25 @@ def paint_ts2000(style: _Style, st: LcdState) -> dict:
             size -= 1 * u
         small_size = size * 0.68
         dig_h = size
+    # v1.7.2: contagem da passagem em segmentos, à direita da frequência MAIN (LOS na passagem, AOS fora dela)
+    cd_s = st.los_s if st.los_s is not None else st.aos_s
+    cd_lab = "LOS" if st.los_s is not None else "AOS"
+    cd_txt = countdown_text(cd_s) if cd_s is not None else ""
+    if cd_txt:
+        def cd_dims(sz):
+            cs = max(2, sz - 2) if matrix else sz * 0.62
+            return cs, style.digits_w("88:88" if len(cd_txt) <= 5 else cd_txt, cs)
+        if matrix:
+            while size > 2 and style.digits_w("436.795.1", size) + 6 * size + cd_dims(size)[1] + 6 * size > avail:
+                size -= 1
+            small_size = max(2, size - 1)
+            dig_h = 7 * size
+        else:
+            while size > 14 * u and (style.digits_w("436.795.1", size) + style.digits_w("2", size * 0.68)
+                                     + 0.4 * size + cd_dims(size)[1] + 0.9 * size) > avail:
+                size -= 1 * u
+            small_size = size * 0.68
+            dig_h = size
     for side, x0 in zip(sides(st), (margin, half + margin)):
         y = 8 * u
         rc = QColor("#2fbf4a") if digital and side["role"] == "RX" else None
@@ -566,6 +591,14 @@ def paint_ts2000(style: _Style, st: LcdState) -> dict:
             if digital and xs + style.text_w("MHz", 11 * u) + 8 * u < x0 + avail:
                 style.label(xs + 6 * u, dy2 + dig_h - 12 * u, "MHz",
                             11 * u, QColor(255, 255, 255, 110))
+        if cd_txt and x0 == margin:
+            cs, cw = cd_dims(size)
+            ch = 7 * cs if matrix else cs
+            bottom = (dy + 7 * size) if matrix else (dy + (44 * u - dig_h) + dig_h)
+            cx = x0 + avail - style.digits_w(cd_txt, cs)   # alinhada à direita da metade MAIN
+            style.tag(cx, y, cd_lab, blink=(st.los_s is not None and st.los_s <= 30))
+            style.digits(int(round(cx)) if matrix else cx, int(round(bottom - ch)) if matrix else bottom - ch,
+                         cd_txt, cs)
         y = dy + max(dig_h, 44 * u) + 8 * u
         seg = 9 * u if avail > 300 * u else 7 * u
         n = 22 if avail > 300 * u else 14
@@ -595,6 +628,8 @@ def paint_ts2000(style: _Style, st: LcdState) -> dict:
         kx -= 8 * u
     x = margin
     for text, blink in indicator_tags(st):
+        if cd_txt and text.startswith(("LOS ", "AOS ")):
+            continue   # a contagem já está grande, em segmentos, ao lado da frequência
         if x + style.tag_w(text) > kx:
             break
         x = style.tag(x, y, text, blink=blink)
