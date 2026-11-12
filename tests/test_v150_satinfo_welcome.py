@@ -27,5 +27,5 @@ def test_map_has_hover_popup_and_welcome_text():
     html = (ROOT / "sat_tool" / "map.html").read_text(encoding="utf-8")
     assert 'id="satinfo"' in html and "mouseenter" in html and "pinned" in html
     app = (ROOT / "sat_tool" / "app.py").read_text(encoding="utf-8")
-    assert "Feito por radioamadores, para radioamadores" in app
+    assert "welcome-banner.jpg" in app  # v1.7.2: banner Powered by PT2VHF
     assert "https://www.pt2vhf.com" in app and "'Fechar'" in app and "'Entendi'" not in app

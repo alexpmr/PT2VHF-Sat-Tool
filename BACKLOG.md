@@ -142,6 +142,13 @@
 
 ## Pendentes
 
+- **Abertura com o banner "Powered by www.PT2VHF.com"** (registrado em 12/11/2026)
+  - Pedido do operador: usar o banner da rede PT2VHF na abertura, no lugar da janela "Feito por radioamadores, para
+    radioamadores".
+  - **Feito (1.7.2):** a janela de boas-vindas mostra o banner (`assets/branding/welcome-banner.jpg`, incluído nos
+    builds Windows/Linux/macOS), clicável para www.PT2VHF.com, com o link e o botão Fechar embaixo. Se o arquivo faltar,
+    volta ao título antigo. Teste `tests/test_v172_welcome_banner.py`.
+
 - **Display: ícone <> para trocar MAIN e SUB** (registrado em 12/11/2026)
   - Pedido do operador: "algum ícone tipo <> para trocar o main pelo sub e vice-versa".
   - **Feito (1.7.2):** ícone "<>" no topo do display, centralizado entre MAIN e SUB (modelos matriz, LED/LCD 7 seg.

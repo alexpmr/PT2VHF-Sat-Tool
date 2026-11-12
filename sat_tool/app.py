@@ -238,26 +238,45 @@ class MainWindow(RotorUiMixin, QMainWindow):
             self.display_shortcuts.append(sc)
 
     def show_official_site_notice(self):
-        """Boas-vindas (v1.5.0): convite às demais aplicações PT2VHF, com link e botão Fechar."""
+        """Boas-vindas: banner "Powered by www.PT2VHF.com" (v1.7.2), clicável, com link e botão Fechar."""
         from .qt_compat import QDialog, QDialogButtonBox
+        try:
+            from PySide6.QtGui import QDesktopServices
+        except ImportError:  # PySide2
+            from PySide2.QtGui import QDesktopServices
+        url = 'https://www.pt2vhf.com'
         dialog = QDialog(self)
         dialog.setWindowTitle('PT2VHF Sat Tool')
         layout = QVBoxLayout(dialog)
-        title = QLabel('Feito por radioamadores, para radioamadores')
-        title.setStyleSheet('font-size:18px;font-weight:700')
-        text = QLabel('Obrigado por usar o PT2VHF Sat Tool! Conheça também as outras aplicações gratuitas '
-                      'desenvolvidas para a comunidade: APRS Client, Prop Tool, Mesh Analyzer, Prog Tool e mais.')
-        text.setWordWrap(True)
-        link = QLabel('<a href="https://www.pt2vhf.com" style="color:#6cc7ff;font-weight:700">www.PT2VHF.com</a>')
+        pix = QPixmap(str(branding_asset('welcome-banner.jpg')))
+        if not pix.isNull():
+            screen = QApplication.primaryScreen().availableGeometry() if QApplication.primaryScreen() else None
+            width = min(760, int(screen.width() * 0.8)) if screen else 760
+            dpr = dialog.devicePixelRatioF()
+            pix = pix.scaledToWidth(int(width * dpr), Qt.SmoothTransformation)
+            pix.setDevicePixelRatio(dpr)
+            banner = QLabel()
+            banner.setPixmap(pix)
+            banner.setCursor(Qt.PointingHandCursor)
+            banner.setToolTip('www.PT2VHF.com')
+            banner.setAccessibleName('Powered by www.PT2VHF.com')
+            banner.mousePressEvent = lambda event: QDesktopServices.openUrl(QUrl(url))
+            layout.addWidget(banner)
+        else:  # sem o arquivo do banner: texto de antes
+            title = QLabel('Feito por radioamadores, para radioamadores')
+            title.setStyleSheet('font-size:18px;font-weight:700')
+            layout.addWidget(title)
+        link = QLabel(f'<a href="{url}" style="color:#6cc7ff;font-weight:700">www.PT2VHF.com</a>')
         link.setOpenExternalLinks(True)
         buttons = QDialogButtonBox()
         close = buttons.addButton('Fechar', QDialogButtonBox.RejectRole)
         close.setDefault(True)
         buttons.rejected.connect(dialog.reject)
-        for widget in (title, text, link):
-            layout.addWidget(widget)
-        layout.addWidget(buttons)
-        dialog.setMinimumWidth(520)
+        row = QHBoxLayout()
+        row.addWidget(link)
+        row.addStretch(1)
+        row.addWidget(buttons)
+        layout.addLayout(row)
         qt_exec(dialog)
 
     def log(self,message):
