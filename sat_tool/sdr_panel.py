@@ -495,8 +495,8 @@ class SdrPanel(QWidget):
         self.sdr_led.setStyleSheet(style)
         self.sdr_led.setText("Receptor: LIGADO" if ok else "Receptor: DESLIGADO")
         top = getattr(self.w, "sdr_toggle", None)
-        if top is not None:  # botão "Painel SDR" do topo indica pela cor se o receptor está ligado
-            top.setStyleSheet("font-size:12px;font-weight:800;" + style)
+        if top is not None:  # botão "SDR" do topo indica pela cor se o receptor está ligado
+            top.setStyleSheet("font-size:12px;font-weight:800;padding:4px;border-radius:5px;" + style)
             top.setToolTip("Mostrar/ocultar o painel SDR (não liga nem desliga o receptor) · receptor "
                            + ("LIGADO" if ok else "DESLIGADO"))
 

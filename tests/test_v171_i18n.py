@@ -68,12 +68,12 @@ def test_top_menu_switches_language_live_and_every_visible_string_is_translated(
             [a for a in w.language_actions if a.data()=="de"][0].trigger(); app.processEvents()
             assert w.tabs.tabText(0)=="Betrieb" and w.config.values["language"]=="de"
             assert w.settings_tabs.tabText(0)=="Darstellung"
-            assert w.rotor_stop_btn.text()=="STOPP" and w.language_combo.currentData()=="de"
+            assert w.rotor_stop_btn.text()=="GESTOPPT" and w.language_combo.currentData()=="de"
             assert w.theme_preset.itemText(0)=="Dunkel (Standard)" and w.theme_preset.currentData()=="escuro"
             w.language_combo.setCurrentIndex(w.language_combo.findData("zh-Hans")); app.processEvents()
             assert w.tabs.tabText(0)=="操作" and w.language_menu_button.text()=="简体中文"
             w.set_language("pt-BR"); app.processEvents()
-            assert w.tabs.tabText(0)=="Operação" and w.rotor_stop_btn.toolTip().startswith("Interrompe")
+            assert w.tabs.tabText(0)=="Operação" and w.rotor_stop_btn.toolTip().startswith("Rotor parado")
     ''')
     result = subprocess.run([sys.executable, "-c", source], capture_output=True, text=True, timeout=120,
                             env={**os.environ, "QT_QPA_PLATFORM": "offscreen", "LANG": "pt_BR.UTF-8"})

@@ -54,7 +54,7 @@ def test_every_model_renders_with_clickable_keys():
                             los_s=342)
                 img, keys = d.render_image(w, h, dpr)
                 assert img.width() == round(w * dpr) and img.height() == round(h * dpr), model
-                assert set(keys) == {"swap", "rxonly", "type", "light"}  # v1.7.1: TIPO e LUZ, model
+                assert set(keys) - {"swap2"} == {"swap", "rxonly", "type", "light"}, model  # v1.7.1: TIPO e LUZ; v1.7.2: <>
                 for rect in keys.values():
                     assert 0 <= rect.left() and rect.right() <= w and 0 <= rect.top() and rect.bottom() <= h, (model, rect)
                 d._keys = keys
@@ -219,9 +219,10 @@ def test_rotor_pass_plan_overlap_flip_and_fallback():
 def test_rotor_never_moves_on_selection_and_stops_on_close():
     ui = (ROOT / "sat_tool" / "rotor_ui.py").read_text(encoding="utf-8")
     app = (ROOT / "sat_tool" / "app.py").read_text(encoding="utf-8")
-    assert "if not self.rotor_tracking or self.sat is None:" in ui
+    # v1.7.2 (pedido do operador): rastreia sozinho o satélite selecionado acima do horizonte; pausado pelo PARADO
+    assert "if not self.rotor_auto or self.sat is None:" in ui
     assert "self.rotor_shutdown()" in app.split("    def closeEvent(self,event):", 1)[1][:200]
-    assert "self.rotor_stop(\"sem resposta do controlador\")" in ui
+    assert "self.rotor_set_auto(False, \"sem resposta do controlador\")" in ui
 
 
 # ----------------------------------------------------------------- OTA automático

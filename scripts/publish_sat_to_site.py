@@ -28,7 +28,7 @@ EDITIONS = (
     ("windows-portable", "win-portable-x64", "portable", "Win11-x64-Portable.exe", "windows-x64", "x64",
      "Windows — Portátil", "Windows 10 1809+ / 11 64 bits, EXE único sem instalar", b"MZ"),
     ("linux-targz", "linux-tar-x64", "tar.gz", "Linux-x64.tar.gz", "linux-x64", "x64",
-     "Linux — .tar.gz", "Linux x64 (glibc 2.35+, ex.: Ubuntu 22.04+); extraia e execute PT2VHF-Sat-Tool", b"\x1f\x8b"),
+     "Linux — .tar.gz", "Linux x64 (glibc 2.35+, ex.: Ubuntu 22.04+); extraia e execute o arquivo PT2VHF-Sat-Tool-v<versão> da pasta", b"\x1f\x8b"),
     ("macos", "mac-dmg-arm64", "dmg", "macOS-arm64.dmg", "macos-arm64", "Apple Silicon",
      "macOS — .dmg", "macOS 14+ Apple Silicon (M1 ou superior); arraste para Aplicativos", b""),
 )

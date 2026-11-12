@@ -29,6 +29,7 @@ except ImportError:  # PySide2
 
 # 5×7: cada caractere = 7 linhas de 5 bits (bit 4 = coluna esquerda).
 FONT = {
+    "<": (0x02, 0x04, 0x08, 0x10, 0x08, 0x04, 0x02), ">": (0x08, 0x04, 0x02, 0x01, 0x02, 0x04, 0x08),
     "0": (0x0E, 0x11, 0x13, 0x15, 0x19, 0x11, 0x0E), "1": (0x04, 0x0C, 0x04, 0x04, 0x04, 0x04, 0x0E),
     "2": (0x0E, 0x11, 0x01, 0x02, 0x04, 0x08, 0x1F), "3": (0x1F, 0x02, 0x04, 0x02, 0x01, 0x11, 0x0E),
     "4": (0x02, 0x06, 0x0A, 0x12, 0x1F, 0x02, 0x02), "5": (0x1F, 0x10, 0x1E, 0x01, 0x01, 0x11, 0x0E),
@@ -110,7 +111,7 @@ def themes_for(model: str) -> tuple:
     return MODEL_THEMES.get(model, THEME_ORDER)
 FONTS = {"normal": "Normal", "negrito": "Negrito"}
 SEG = {"0": "abcdef", "1": "bc", "2": "abged", "3": "abgcd", "4": "fgbc", "5": "afgcd", "6": "afgedc",
-       "7": "abc", "8": "abcdefg", "9": "abcdfg", "-": "g", " ": ""}
+       "7": "abc", "8": "abcdefg", "9": "abcdfg", "-": "g", " ": "", "H": "bcefg"}
 
 
 # Teclas do display, da direita para a esquerda (v1.7.1: TIPO e LUZ).
@@ -263,13 +264,33 @@ class _Style:
     def key_w(self, s):
         return self.text_w(s, 12 * self.u) + 18 * self.u
 
-    def key(self, x, y, s):
-        w = self.key_w(s)
-        r = QRectF(x, y - 2 * self.u, w, 21 * self.u)
-        self.p.setPen(QPen(self.ink, max(1.0, 1.2 * self.u)))
+    active_keys: set = set()
+
+    def swap_icon(self, cx, y, max_w):
+        """Ícone <> compacto centrado em cx (cabe no vão entre MAIN e SUB); retorna o retângulo clicável."""
+        px = 12 * self.u
+        while px > 7 * self.u and self.text_w("<>", px) + 6 * self.u > max_w:
+            px -= 1 * self.u
+        w = self.text_w("<>", px) + 6 * self.u
+        r = QRectF(cx - w / 2, y, w, 20 * self.u)
+        self.p.setPen(QPen(self.ink, max(1.0, 1.1 * self.u)))
         self.p.setBrush(QColor(0, 0, 0, 0))
         self.p.drawRoundedRect(r, 3 * self.u, 3 * self.u)
-        self.label(x + 9 * self.u, y + 1.5 * self.u, s, 12 * self.u)
+        self.label(r.x() + 3 * self.u, y + 2 * self.u, "<>", px)
+        return r
+
+    def key(self, x, y, s):
+        """Tecla com contorno; ligada (ex.: RX ONLY ativo) fica preenchida com o texto invertido."""
+        w = self.key_w(s)
+        r = QRectF(x, y - 2 * self.u, w, 21 * self.u)
+        on = s in self.active_keys
+        self.p.setPen(QPen(self.ink, max(1.0, 1.2 * self.u)))
+        self.p.setBrush(self.ink if on else QColor(0, 0, 0, 0))
+        self.p.drawRoundedRect(r, 3 * self.u, 3 * self.u)
+        fg = None
+        if on:
+            fg = QColor("#101010") if self.ink.lightnessF() > 0.5 else QColor("#f4f4f4")
+        self.label(x + 9 * self.u, y + 1.5 * self.u, s, 12 * self.u, fg)
         return r
 
     def bar(self, x, y, frac, n, seg, hh):
@@ -283,8 +304,9 @@ class _Style:
     def bar_color(self, i, n):
         return self.ink
 
-    def separator(self, x):
-        self.p.fillRect(QRectF(x, 10 * self.u, max(1.0, 1.5 * self.u), self.h - 50 * self.u), self.off)
+    def separator(self, x, top=None):
+        y0 = 10 * self.u if top is None else top
+        self.p.fillRect(QRectF(x, y0, max(1.0, 1.5 * self.u), self.h - 40 * self.u - y0), self.off)
 
     # números grandes: implementados por cada estilo
     def digits_w(self, s, size):
@@ -354,12 +376,27 @@ class _Matrix(_Style):
     def key_w(self, s):
         return (len(s) * 6 - 1 + 8) * self.small
 
+    def swap_icon(self, cx, y, max_w):
+        sp = self.small
+        w = (2 * 6 - 1 + 4) * sp
+        x, y = int(round(cx - w / 2)), int(round(y))
+        self.p.fillRect(x, y, w, 11 * sp, self.ink)
+        self.mtext(x + 2 * sp, y + 2 * sp, "<>", sp, self.light)
+        return QRectF(x, y, w, 11 * sp)
+
     def key(self, x, y, s):
+        """Tecla cheia; RX ONLY (tecla de estado) só fica cheia quando ligada, senão só o contorno."""
         sp = self.small
         w = self.key_w(s)
         x, y = int(round(x)), int(round(y))
-        self.p.fillRect(x, y - sp, w, 11 * sp + 2 * sp, self.ink)
-        self.mtext(x + 4 * sp, y + sp, s, sp, self.light)
+        if s == "RX ONLY" and s not in self.active_keys:
+            for rx, ry, rw, rh in ((x, y - sp, w, sp), (x, y + 11 * sp, w, sp),
+                                   (x, y - sp, sp, 13 * sp), (x + w - sp, y - sp, sp, 13 * sp)):
+                self.p.fillRect(rx, ry, rw, rh, self.ink)
+            self.mtext(x + 4 * sp, y + sp, s, sp, self.ink)
+        else:
+            self.p.fillRect(x, y - sp, w, 11 * sp + 2 * sp, self.ink)
+            self.mtext(x + 4 * sp, y + sp, s, sp, self.light)
         return QRectF(x, y - sp, w, 13 * sp)
 
     def bar(self, x, y, frac, n, seg, hh):
@@ -435,8 +472,8 @@ class _Seven(_Style):
 
     def digits_w(self, s, h):
         w, t, gap = self._metrics(h)
-        n = sum(1 for ch in s if ch != ".")
-        return n * (w + gap) - gap
+        n = sum(1 for ch in s if ch not in ".:")
+        return n * (w + gap) - gap + s.count(":") * (2 * t + gap)
 
     def _seven(self, x, y, s, h, on, off, glow):
         w, t, gap = self._metrics(h)
@@ -450,6 +487,12 @@ class _Seven(_Style):
                 r = QRectF(cx - gap / 2 - t / 2, y + h - t, t, t)
                 p.setBrush(on)
                 p.drawRect(r)
+                continue
+            if ch == ":":   # v1.7.2: dois pontos da contagem m:ss
+                for fy in (0.3, 0.7):
+                    p.setBrush(on)
+                    p.drawRect(QRectF(cx + t * 0.5, y + h * fy - t / 2, t, t))
+                cx += 2 * t + gap
                 continue
             lit = SEG.get(ch, "")
             for name, poly in _seg_polys(cx, y, w, h, t).items():
@@ -542,12 +585,34 @@ def paint_ts2000(style: _Style, st: LcdState) -> dict:
             size -= 1 * u
         small_size = size * 0.68
         dig_h = size
+    # v1.7.2: contagem da passagem em segmentos, à direita da frequência MAIN (LOS na passagem, AOS fora dela)
+    cd_s = st.los_s if st.los_s is not None else st.aos_s
+    cd_lab = "LOS" if st.los_s is not None else "AOS"
+    cd_txt = countdown_text(cd_s) if cd_s is not None else ""
+    if cd_txt:
+        def cd_dims(sz):
+            cs = max(2, sz - 2) if matrix else sz * 0.62
+            return cs, style.digits_w("88:88" if len(cd_txt) <= 5 else cd_txt, cs)
+        if matrix:
+            while size > 2 and style.digits_w("436.795.1", size) + 6 * size + cd_dims(size)[1] + 6 * size > avail:
+                size -= 1
+            small_size = max(2, size - 1)
+            dig_h = 7 * size
+        else:
+            while size > 14 * u and (style.digits_w("436.795.1", size) + style.digits_w("2", size * 0.68)
+                                     + 0.4 * size + cd_dims(size)[1] + 0.9 * size) > avail:
+                size -= 1 * u
+            small_size = size * 0.68
+            dig_h = size
+    # v1.7.2: ícone <> no topo, entre MAIN e SUB: troca as bandas (mesma ação da tecla A/B)
+    swap_r = style.swap_icon(half, 8 * u, 2 * margin)
     for side, x0 in zip(sides(st), (margin, half + margin)):
         y = 8 * u
         rc = QColor("#2fbf4a") if digital and side["role"] == "RX" else None
         tc = QColor("#d8443a") if digital and side["role"] == "TX" else None
-        x = style.tag(x0, y, side["name"])
-        x = style.tag(x, y, "TX OFF" if side["off"] else side["role"], bg=rc or tc)
+        tx0 = max(x0, swap_r.right() + 4 * u) if x0 > half else x0   # etiquetas do SUB depois do ícone
+        x = style.tag(tx0, y, side["name"])
+        x = style.tag(x, y, (("TX OFF" if st.rx_only else "SEM TX") if side["off"] else side["role"]), bg=rc or tc)
         if side["mode"]:
             style.label(x, y + 2 * u, side["mode"][:4].upper())
         if side["role"] == "TX" and st.transmitting and not side["off"]:
@@ -566,6 +631,14 @@ def paint_ts2000(style: _Style, st: LcdState) -> dict:
             if digital and xs + style.text_w("MHz", 11 * u) + 8 * u < x0 + avail:
                 style.label(xs + 6 * u, dy2 + dig_h - 12 * u, "MHz",
                             11 * u, QColor(255, 255, 255, 110))
+        if cd_txt and x0 == margin:
+            cs, cw = cd_dims(size)
+            ch = 7 * cs if matrix else cs
+            bottom = (dy + 7 * size) if matrix else (dy + (44 * u - dig_h) + dig_h)
+            cx = x0 + avail - style.digits_w(cd_txt, cs)   # alinhada à direita da metade MAIN
+            style.tag(cx, y, cd_lab, blink=(st.los_s is not None and st.los_s <= 30))
+            style.digits(int(round(cx)) if matrix else cx, int(round(bottom - ch)) if matrix else bottom - ch,
+                         cd_txt, cs)
         y = dy + max(dig_h, 44 * u) + 8 * u
         seg = 9 * u if avail > 300 * u else 7 * u
         n = 22 if avail > 300 * u else 14
@@ -584,10 +657,11 @@ def paint_ts2000(style: _Style, st: LcdState) -> dict:
             ex = style.bar(lx, y, pw / 100, n, seg, 9 * u)
             txt = (f"{pw}W" if st.power_w is not None else "") + (f"  SWR {st.swr:.1f}" if st.swr is not None else "")
             style.label(ex + 6 * u, y - 3 * u, txt.strip())
-    style.separator(half - 1)
+    # v1.7.2: ícone <> no meio, entre MAIN e SUB: troca as bandas (mesma ação da tecla A/B)
+    keys = {"swap2": swap_r}
+    style.separator(half - 1, top=swap_r.bottom() + 4 * u)
     # indicadores + teclas
     y = H - 27 * u
-    keys = {}
     kx = W - margin
     for key, lab in DISPLAY_KEYS:
         kx -= style.key_w(lab)
@@ -595,6 +669,8 @@ def paint_ts2000(style: _Style, st: LcdState) -> dict:
         kx -= 8 * u
     x = margin
     for text, blink in indicator_tags(st):
+        if cd_txt and text.startswith(("LOS ", "AOS ")):
+            continue   # a contagem já está grande, em segmentos, ao lado da frequência
         if x + style.tag_w(text) > kx:
             break
         x = style.tag(x, y, text, blink=blink)
@@ -739,10 +815,13 @@ class LcdDisplay(QWidget):
         u = ph / 132.0
         if self.model in RADIO_MODELS:
             from .lcd_radios import make_radio_style, paint_radio
-            keys = paint_radio(self.model, make_radio_style(self.model, p, pw, ph, u, self.theme), self.state)
+            rstyle = make_radio_style(self.model, p, pw, ph, u, self.theme)
+            rstyle.active_keys = {"RX ONLY"} if self.state.rx_only else set()   # v1.7.2: tecla mostra o estado
+            keys = paint_radio(self.model, rstyle, self.state)
         else:
             style = make_style("matriz" if self.model == "classico" else self.model, p, pw, ph, u, self.theme,
                                "normal" if self.model == "classico" else self.font_style)
+            style.active_keys = {"RX ONLY"} if self.state.rx_only else set()   # v1.7.2: tecla mostra o estado
             keys = paint_classic(style, self.state) if self.model == "classico" else paint_ts2000(style, self.state)
         if self.dim < 0.999:
             p.fillRect(QRectF(0, 0, pw, ph), QColor(0, 0, 0, int(round((1.0 - self.dim) * 255))))
@@ -786,7 +865,7 @@ class LcdDisplay(QWidget):
             event.accept()
             return
         if key:
-            {"swap": self.swap_clicked, "rxonly": self.rx_only_clicked,
+            {"swap": self.swap_clicked, "swap2": self.swap_clicked, "rxonly": self.rx_only_clicked,
              "type": self.type_clicked, "light": self.light_clicked}[key].emit()
             event.accept()
             return

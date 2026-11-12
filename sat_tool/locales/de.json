@@ -212,7 +212,7 @@
 "Normal",
 "Rot für die Nacht (schont die Nachtsicht)",
 "Pegel",
-"Sat Tool bewegt die Antenne nie nur, weil ein Satellit gewählt wurde: die Nachführung beginnt mit der Schaltfläche „Überflug verfolgen“ im Tab Betrieb; STOPP ist immer sichtbar (Esc/F12). Der ERC-M emuliert GS-232: stellen Sie dort den Yaesu-Rotortyp ein. Elevation bis 180° ermöglicht Flip.",
+"Bei verbundenem Rotor verfolgt Sat Tool den gewählten Satelliten selbstständig, solange er über dem Horizont steht (Vorpositionierung vor AOS, Parken bei LOS). Die Taste VERFOLGT/GESTOPPT im Reiter Betrieb stoppt den Rotor und pausiert die automatische Verfolgung (Esc/F12). Das ERC-M emuliert GS-232: dort den Rotortyp Yaesu einstellen. Elevation bis 180° ermöglicht Flip.",
 "Die Karte folgt den gespeicherten Einstellungen. Zum Markieren der Station Bodenstation verwenden.",
 "Das Programm kann beim Start verbinden, folgt aber erst nach ausdrücklicher Satellitenwahl. Es aktiviert weder SAT noch sendet es.",
 "Betrieb",
@@ -368,5 +368,11 @@
 "FT-897/857-Stil (farbige Beleuchtung)",
 "IC-910H-Stil (MAIN oben, SUB unten)",
 "FT-991A-Stil (Farbdisplay mit Spektrum)",
-"IC-9700-Stil (Farbdisplay, Spektrum und Wasserfall)"
+"IC-9700-Stil (Farbdisplay, Spektrum und Wasserfall)",
+"Rotor aus · klicken, um das Steuergerät zu verbinden",
+"VERFOLGT",
+"GESTOPPT",
+"Verfolgt den gewählten Satelliten · klicken (oder Esc/F12) stoppt den Rotor",
+"Rotor gestoppt · verfolgt selbstständig, wenn der gewählte Satellit über dem Horizont steht",
+"Automatische Verfolgung vom Operator pausiert · klicken zum Fortsetzen"
 ]

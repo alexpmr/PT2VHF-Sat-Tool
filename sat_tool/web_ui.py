@@ -82,7 +82,7 @@ button.on{background:#125743;border-color:#5af08a}select{max-width:100%}#pin{wid
 <div class="row"><label>PIN da estação <input id="pin" type="password" inputmode="numeric" autocomplete="off" maxlength="12"></label><span class="muted">O PIN fica só nesta aba do navegador.</span></div>
 <div class="row"><select id="satsel" aria-label="Satélite"></select><button data-act="select_satellite">Selecionar satélite</button></div>
 <div class="row"><button id="autocat" data-act="auto_cat">Auto CAT</button><button data-act="ab">A/B</button><button id="rxonly" data-act="rx_only">RX ONLY</button></div>
-<div class="row"><button id="rtrack" data-act="rotor_track">Rastrear passagem</button><button data-act="rotor_park">Estacionar</button><button class="stop" data-act="rotor_stop">PARAR ROTOR</button></div>
+<div class="row"><button id="rtrack" data-act="rotor_track">Rastreamento automático</button><button data-act="rotor_park">Estacionar</button><button class="stop" data-act="rotor_stop">PARAR ROTOR</button></div>
 <div class="muted" id="ctlmsg"></div></section>
 <div class="content"><section class="card"><h2>Mapa orbital · trajetória e estação</h2><iframe id="map" src="/map" title="Mapa vetorial offline"></iframe></section>
 <section class="card"><h2>Telemetria orbital</h2><div id="metrics"></div><p id="visibility" class="muted">—</p><p id="catdetail" class="muted"></p></section></div>
@@ -114,7 +114,7 @@ el("map").addEventListener("load",()=>{if(previous)render(previous)});
 try{el("pin").value=sessionStorage.getItem("pt2vhf-pin")||""}catch(e){}
 el("pin").addEventListener("change",()=>{try{sessionStorage.setItem("pt2vhf-pin",el("pin").value)}catch(e){}});
 async function act(action){const s=previous||{};let v=null;
-if(action==="select_satellite")v=el("satsel").value;else if(action==="auto_cat")v=!s.auto_cat;else if(action==="rx_only")v=!s.rx_only;else if(action==="rotor_track")v=!((s.rotor||{}).tracking);
+if(action==="select_satellite")v=el("satsel").value;else if(action==="auto_cat")v=!s.auto_cat;else if(action==="rx_only")v=!s.rx_only;else if(action==="rotor_track")v=!((s.rotor||{}).auto!==false);
 try{const r=await fetch("/api/control",{method:"POST",cache:"no-store",headers:{"Content-Type":"application/json","X-PT2VHF":"1"},body:JSON.stringify({action:action,value:v,pin:el("pin").value})});
 const j=await r.json().catch(()=>({}));value("ctlmsg",r.ok?"Pedido enviado: "+action:(j.error||("HTTP "+r.status)));setTimeout(refresh,400)}catch(e){value("ctlmsg","Sem acesso: "+e.message)}}
 document.querySelectorAll("button[data-act]").forEach(b=>b.addEventListener("click",()=>act(b.dataset.act)));

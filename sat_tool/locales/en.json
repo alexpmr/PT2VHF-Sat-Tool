@@ -212,7 +212,7 @@
 "Normal",
 "Red night mode (preserves night vision)",
 "Level",
-"Sat Tool never moves the antenna just because a satellite is selected: tracking starts with the 'Track pass' button on the Operation tab; STOP is always visible (Esc/F12). The ERC-M emulates GS-232: set the Yaesu rotator type in it. Elevation up to 180° allows flip.",
+"With the rotator connected, Sat Tool tracks the selected satellite by itself while it is above the horizon (pre-positions before AOS and parks at LOS). The TRACKING/STOPPED button on the Operation tab stops the rotator and pauses automatic tracking (Esc/F12). The ERC-M emulates GS-232: set the Yaesu rotator type in it. Elevation up to 180° allows flip.",
 "The map follows the saved preferences. To mark the station, use Ground Station.",
 "The program can connect on startup, but only tracks after an explicit satellite choice. It never enables SAT nor transmits.",
 "Operation",
@@ -368,5 +368,11 @@
 "FT-897/857 style (colour backlight)",
 "IC-910H style (MAIN on top, SUB below)",
 "FT-991A style (colour screen with scope)",
-"IC-9700 style (colour screen, scope and waterfall)"
+"IC-9700 style (colour screen, scope and waterfall)",
+"Rotator off · click to connect the controller",
+"TRACKING",
+"STOPPED",
+"Tracking the selected satellite · click (or Esc/F12) to stop the rotator",
+"Rotator stopped · tracks by itself when the selected satellite is above the horizon",
+"Automatic tracking paused by the operator · click to resume"
 ]

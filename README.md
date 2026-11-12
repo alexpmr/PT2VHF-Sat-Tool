@@ -4,16 +4,16 @@
 
 ## Downloads — Windows, Linux e macOS
 
-**PT2VHF Sat Tool v1.7.0 — Windows 10/11 x64, Linux x64 e macOS Apple Silicon**.
+**PT2VHF Sat Tool v1.7.2 — Windows 10/11 x64, Linux x64 e macOS Apple Silicon**.
 
 **Novo site oficial: [www.PT2VHF.com](https://www.pt2vhf.com/sat)** — downloads (Setup e Portátil), novas versões e somas SHA-256 ficam no site. A partir da v1.3.14 o atualizador consulta exclusivamente `https://www.pt2vhf.com/update.php?product=sat`.
 
 | Edição | Download direto |
 | --- | --- |
-| **Instalável x64** | [Setup (.exe)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.7.0-Win11-x64-Setup.exe) |
-| **Portátil x64** | [Portable (.exe)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.7.0-Win11-x64-Portable.exe) |
-| **Linux x64** | [Pacote (.tar.gz)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.7.0-Linux-x64.tar.gz) |
-| **macOS ARM64** | [Imagem (.dmg)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.7.0-macOS-arm64.dmg) |
+| **Instalável x64** | [Setup (.exe)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.7.2-Win11-x64-Setup.exe) |
+| **Portátil x64** | [Portable (.exe)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.7.2-Win11-x64-Portable.exe) |
+| **Linux x64** | [Pacote (.tar.gz)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.7.2-Linux-x64.tar.gz) |
+| **macOS ARM64** | [Imagem (.dmg)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.7.2-macOS-arm64.dmg) |
 
 O sufixo `Win11-x64` é mantido para compatibilidade com o atualizador e também atende ao Windows 10 1809+.
 
@@ -29,7 +29,20 @@ O sufixo `Win11-x64` é mantido para compatibilidade com o atualizador e também
 4. Se outro computador/celular não alcançar a página, use **Liberar no firewall do Windows** (regra só para a porta, perfil Privado, só a rede local; o Windows pede confirmação) e confira na lista **Endereços desta máquina** o IPv4 da mesma rede do outro aparelho. Não configure redirecionamento de porta no roteador.
 5. Opcional: **Permitir controle pela rede (sem PTT)** com **PIN da estação** (4 a 12 dígitos). O navegador passa a poder escolher satélite, ligar/desligar Auto CAT, A/B, RX ONLY e rastrear/estacionar/PARAR o rotor. Cada ação pede o PIN e vai para o log com o IP; PTT/TX nunca é acionado pela rede.
 
-**Escopo do painel Web v1.7.1:** satélite, frequências, display do rádio (mesmo modelo da janela), rotor, CAT, telemetria orbital e APRS decodificado, mapa vetorial offline e passagens, atualizados a cada 1,5 s. Só aparelhos da rede privada (IP público é recusado); **Renovar chave** derruba links e sessões antigos; diagnóstico mostra último acesso remoto e navegador remoto ativo. O desktop deve permanecer aberto. O HTTP na LAN não é criptografado; não divulgue a URL fora da rede.
+**Escopo do painel Web v1.7.2:** satélite, frequências, display do rádio (mesmo modelo da janela), rotor, CAT, telemetria orbital e APRS decodificado, mapa vetorial offline e passagens, atualizados a cada 1,5 s. Só aparelhos da rede privada (IP público é recusado); **Renovar chave** derruba links e sessões antigos; diagnóstico mostra último acesso remoto e navegador remoto ativo. O desktop deve permanecer aberto. O HTTP na LAN não é criptografado; não divulgue a URL fora da rede.
+
+## Novidades v1.7.2 — rotor automático, contagens no display e nova abertura
+
+- **Rotor em tempo real:** dois gauges, direção (0–360°) e elevação (0–90°), com a posição real (verde) e o alvo (amarelo).
+- **Botão ROTOR no topo** liga e desliga o controlador, como CAT e SDR (o botão "Painel SDR" agora se chama **SDR**).
+- **Rastreamento automático:** com o rotor conectado, a antena segue o satélite selecionado assim que ele sobe no horizonte;
+  o botão de estado mostra **RASTREANDO** (verde) ou **PARADO** (vermelho). Esc/F12 continuam parando na hora.
+- **Display:** contagem regressiva de LOS/AOS em segmentos, ícone **<>** no topo para trocar MAIN e SUB e tecla RX ONLY
+  que mostra o estado (preenchida só com o modo ligado).
+- **AOS:** a janela de aviso mostra só a contagem regressiva e fecha sozinha.
+- **Abertura:** banner "Powered by www.PT2VHF.com" por 10 s, com contagem e link para o site.
+- **Binários com a versão no nome** (ex.: `PT2VHF-Sat-Tool-v1.7.2.exe`); o instalador remove os executáveis antigos.
+- **Correções:** rotor aparecia DESCONECTADO mesmo conectado; tecla RX ONLY parecia sempre ligada.
 
 ## Novidades v1.7.1 — estilos de rádio, rotores, aparência, idiomas e acesso pela rede
 
@@ -441,7 +454,9 @@ O build anterior apenas verificava a existência do EXE. Agora o GitHub Actions 
 Se persistir erro ao abrir, na pasta do aplicativo execute:
 
 ```powershell
-.\PT2VHF-Sat-Tool.exe --self-test "$env:TEMP\PT2VHF-Sat-Tool-diagnostics.json"
+# a partir da v1.7.2 o EXE leva a versão no nome (ex.: PT2VHF-Sat-Tool-v1.7.2.exe)
+$exe = Get-ChildItem .\PT2VHF-Sat-Tool*.exe | Select-Object -First 1
+& $exe.FullName --self-test "$env:TEMP\PT2VHF-Sat-Tool-diagnostics.json"
 Get-Content "$env:TEMP\PT2VHF-Sat-Tool-diagnostics.json"
 ```
 

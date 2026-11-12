@@ -110,6 +110,19 @@
   - registrar no app o motivo exato (código de saída, última etapa do log) e oferecer o link de download manual;
   - teste de atualização real 1.7.0→1.7.x com e sem RTL-SDR conectado e com a tarefa do driver marcada antes.
 
+## v1.7.2 — rotor automático, contagens no display e nova abertura (12/11/2026)
+
+- [x] Gauges de direção (0–360°) e elevação (0–90°) do rotor em tempo real, real × alvo.
+- [x] Botão ROTOR no topo (liga/desliga o controlador); "Painel SDR" → "SDR".
+- [x] Rastreamento automático com o rotor conectado e o satélite acima do horizonte; botão RASTREANDO/PARADO.
+- [x] Contagem LOS/AOS em segmentos no display; ícone <> troca MAIN e SUB.
+- [x] Janela de AOS só com contagem regressiva, fechando sozinha.
+- [x] Abertura com o banner "Powered by www.PT2VHF.com" (7 ferramentas), 10 s com contagem e fechamento automático.
+- [x] Binários com a versão no nome (EXE instalado, portátil, Linux e macOS); instalador remove EXEs antigos.
+- [x] Correções: rotor aparecia DESCONECTADO conectado; tecla RX ONLY não indicava o estado.
+- [ ] Pendente de confirmação do operador: leitura AZ 140° EL 175° do controlador (interpretada como flip → 320°/5°).
+- Detalhes de cada item em "Pendentes" (marcados **Feito (1.7.2)**).
+
 ## v1.7.1 — estilos de rádio, rotores, aparência, idiomas e acesso pela rede (11/11/2026)
 
 - [x] **OTA:** `apply-update.ps1` roda o Setup com `/MERGETASKS="!rtlsdr"` e `/OTA` (o driver RTL-SDR nunca roda em
@@ -141,6 +154,98 @@
   firewall no Windows, fontes CJK no Windows/macOS.
 
 ## Pendentes
+
+- **Abertura com o banner "Powered by www.PT2VHF.com"** (registrado em 12/11/2026)
+  - Pedido do operador: usar o banner da rede PT2VHF na abertura, no lugar da janela "Feito por radioamadores, para
+    radioamadores".
+  - **Feito (1.7.2):** a janela de boas-vindas mostra o banner (`assets/branding/welcome-banner.jpg`, incluído nos
+    builds Windows/Linux/macOS), clicável para www.PT2VHF.com, com o link e o botão Fechar embaixo. Se o arquivo faltar,
+    volta ao título antigo. Banner trocado em 12/11 pela versão com sete ferramentas (inclui Prop Tool). Fica 10 s
+    na tela, com contagem regressiva discreta (⏱ 10 s e barra laranja) ao lado do Fechar, e fecha sozinha ao final.
+    Teste `tests/test_v172_welcome_banner.py`.
+
+- **Display: ícone <> para trocar MAIN e SUB** (registrado em 12/11/2026)
+  - Pedido do operador: "algum ícone tipo <> para trocar o main pelo sub e vice-versa".
+  - **Feito (1.7.2):** ícone "<>" no topo do display, centralizado entre MAIN e SUB (modelos matriz, LED/LCD 7 seg.
+    e Digital). O clique faz a mesma troca da tecla A/B, que continua disponível; o divisor central começa abaixo
+    do ícone e as etiquetas do lado SUB recuam para não encostar nele. Teste `tests/test_v172_swap_icon.py`.
+
+- **BUG · Tecla RX ONLY do display parecia sempre ligada** (registrado em 12/11/2026, v1.7.1)
+  - Relato: "o botão rx only no display não altera quando eu clico. Fica como se estivesse sempre em rx only".
+  - Causa: o clique alternava o modo, mas a tecla era desenhada igual nos dois estados (no modelo matriz, sempre
+    cheia, com aparência de indicador aceso); só o lado SUB mudava para "TX OFF", que também aparecia quando o
+    satélite não tem uplink.
+  - **Corrigido (1.7.2):** a tecla RX ONLY fica preenchida só com o modo ligado e com contorno quando desligado, em
+    todos os modelos (matriz, 7 seg., Digital, Clássico e estilos de rádio). O lado SUB mostra "TX OFF" com RX ONLY
+    ligado e "SEM TX" quando o satélite não tem uplink. Teste `tests/test_v172_rx_only_key.py`.
+
+- **Display: contagem da passagem em segmentos** (registrado em 12/11/2026)
+  - Pedido do operador: "no display, coloque um contador de quanto tempo ainda resta disponível de passagem,
+    usando o mesmo layout em segmentos de LCD".
+  - **Implementado (1.7.2):** nos modelos matriz, LED 7 seg., LCD 7 seg. e Digital (layout TS-2000), contagem
+    grande nos mesmos dígitos do display, à direita da frequência MAIN, com etiqueta **LOS** durante a passagem
+    (pisca nos últimos 30 s) e **AOS** antes dela; a etiqueta pequena "LOS m:ss" da linha de baixo sai. Os dígitos
+    de frequência encolhem o necessário. 7 segmentos ganharam ":" e "H" (acima de 1 h: 1H05).
+    Estilos de rádio (IC-706 etc.) e Clássico mantêm a contagem em texto. Teste `tests/test_v172_display_countdown.py`;
+    imagem `docs/backlog/display-contagem-passagem.png`.
+
+- **Rotor rastreia sozinho; botão RASTREANDO/PARADO** (registrado em 12/11/2026)
+  - Pedido do operador: "tire o botão rastrear passagem. Ele deverá rastrear assim que o sat selecionado estiver
+    acima do horizonte com o rotor conectado. Troque o botão Parar, indicando verde Rastreando e vermelho Parado".
+  - **Implementado (1.7.2):** sem "Rastrear passagem". Com o rotor conectado, segue o satélite selecionado acima do
+    horizonte (mantém o pré-posicionamento antes do AOS configurado em Rotores e estaciona uma vez no LOS).
+    O antigo PARAR virou o estado: verde **RASTREANDO** / vermelho **PARADO**. Clique, Esc/F12, Estacionar ou
+    controlador sem resposta param o rotor e pausam o automático; clicar em PARADO (pausado) retoma; conectar
+    arma de novo. Controle pela rede: "Rastreamento automático". Textos nos 10 idiomas.
+  - [ ] Homologar com o G-5400B/ERC-M real.
+
+- **BUG · Rotor conectado aparece DESCONECTADO e os gauges não mexem** (registrado em 12/11/2026, v1.7.1)
+  - Relato (captura: "Yaesu G-5400B via COM17", AZ 140° EL 175°, chip DESCONECTADO, gauges AZ 320° EL 5°).
+  - Causa: conectar com "Habilitar controle de rotor" desmarcado salvava o rotor como desabilitado, o que agendava o
+    fechamento da porta logo depois de abrir; a leitura a cada segundo também exige rotor habilitado. Ficava só a
+    primeira leitura.
+  - **Corrigido (1.7.2):** conectar habilita o rotor; ao conectar a faixa mostra PARADO e a posição na hora.
+    O número grande agora mostra a mesma direção dos gauges (para onde a antena aponta); a leitura do controlador
+    (até 450°/180°) fica no tooltip e em Configurações → Rotores. EL 175° é lida como flip (antena virada por cima:
+    AZ 140+180 = 320°, EL 180−175 = 5°). Teste em `tests/test_v172_top_buttons.py`.
+  - [ ] Confirmar com o operador para onde a antena apontava fisicamente com a leitura AZ 140° EL 175°.
+
+- **Janela do AOS só com contagem regressiva** (registrado em 12/11/2026)
+  - Pedido do operador: "quando um sat entrou em visada, apareceu uma janela perguntando se queria fazer. Troque
+    para uma contagem regressiva do início e feche quando terminar".
+  - **Implementado (1.7.2):** a janela do alarme AOS não tem mais botões (Ir para Operação/Silenciar/Fechar); só o
+    satélite, a contagem grande m:ss até o AOS e o horário. Fecha sozinha no AOS (com o som do início) e não abre
+    se o AOS já passou (aviso agendado atrasado). Teste `tests/test_v172_aos_countdown.py`.
+
+- **Botão ROTOR no topo (liga/desliga o controlador) e "Painel SDR" → "SDR"** (registrado em 12/11/2026)
+  - Pedido do operador (com captura do topo): "adicione um botão que liga e desliga o controlador de rotor, como
+    no CAT e SDR. Troque Painel SDR por apenas SDR".
+  - **Implementado (próxima versão, 1.7.2):** botão **ROTOR** à direita de CAT e SDR, mesma largura e cores
+    (vermelho desligado, âmbar conectando, verde conectado), tooltip com a porta; clique conecta/desconecta o
+    controlador na porta de Configurações → Rotores (sem porta, pede para escolher/Detectar). Ligar pelo topo
+    também ativa o rotor (faixa ROTOR aparece). Desligar para o rastreamento antes de fechar a porta.
+    Botão "Painel SDR" agora se chama **SDR** (mesma função: mostra/oculta o painel; cor = receptor ligado).
+    Teste `tests/test_v172_top_buttons.py`; capturas em `docs/backlog/topo-cat-sdr-rotor.png`.
+  - [ ] Conferir com o G-5400B/ERC-M real (aguardando cabo).
+
+- **Nomes dos binários com a versão** (registrado em 12/11/2026)
+  - Pedido do operador: "nomes dos binários devem conter a versão para não serem iguais em todas as versões".
+  - Antes: os pacotes da Release/site já tinham a versão, mas o EXE instalado era sempre `PT2VHF-Sat-Tool.exe`,
+    o OTA do portátil copiava a versão nova por cima do nome antigo (ex.: arquivo `...-v1.7.0-...-Portable.exe`
+    com a 1.7.1 dentro) e o executável do Linux/macOS também tinha nome fixo.
+  - **Implementado (próxima versão, 1.7.2):**
+    - Setup: EXE instalado `PT2VHF-Sat-Tool-v<versão>.exe` (`DestName`), `[InstallDelete]` remove o nome antigo
+      e os de versões anteriores, atalhos/ícone de desinstalação apontam para o novo; no OTA (`/OTA`) o próprio
+      Setup abre o EXE novo, porque o atualizador da versão anterior reabriria o caminho antigo.
+    - `apply-update.ps1`: depois de Setup bem-sucedido não reabre (o instalador já abriu); em falha reabre o EXE
+      antigo ou o `PT2VHF-Sat-Tool*.exe` mais recente da pasta.
+    - Portátil: ao iniciar, o EXE se renomeia para `PT2VHF-Sat-Tool-v<versão>-<variante>-Portable.exe` quando o
+      nome tem outra versão (Windows permite renomear EXE em execução); `data/` ao lado não muda.
+    - Linux: pasta e executável `PT2VHF-Sat-Tool-v<versão>`; macOS: `PT2VHF-Sat-Tool-v<versão>.app` no .dmg.
+    - CI instala o Setup em pasta temporária com EXEs antigos simulados e exige só o EXE com a versão.
+    - Teste `tests/test_v172_versioned_binaries.py`.
+  - Atalhos criados à mão para o EXE portátil precisam ser refeitos a cada versão (o nome muda).
+  - [ ] Homologar OTA real 1.7.1→1.7.2 (Setup e Portátil) no Windows: programa reabre sozinho com o nome novo.
 
 - **Rotor: indicação visual da direção e da inclinação em tempo real com 2 gauges** (registrado em 11/11/2026)
   - Pedido do operador: "indicação visual da direção e inclinação do rotor em tempo real com 2 gauges, um de

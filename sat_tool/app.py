@@ -53,6 +53,9 @@ from .core import (Station, now_utc, make_satellite, position, ground_track, foo
                    predict_passes, transponder_options, doppler_frequencies, paired_linear_uplink,
                    ground_track_between, track_period_bounds)
 
+WELCOME_SECONDS = 10   # v1.7.2: tempo do banner de abertura na tela
+
+
 def branding_asset(name):
     root=Path(getattr(sys,'_MEIPASS',Path(__file__).resolve().parents[1]))
     return root/'assets'/'branding'/name
@@ -156,6 +159,7 @@ class MainWindow(RotorUiMixin, QMainWindow):
         self.aos_alarm_dialog = None
         self.aos_alarm_target = None
         self.aos_alarm_title = None
+        self.aos_alarm_count = None
         self.aos_alarm_detail = None
         self.aos_alarm_silenced = False
         self.aos_alarm_last_second = None
@@ -237,26 +241,72 @@ class MainWindow(RotorUiMixin, QMainWindow):
             self.display_shortcuts.append(sc)
 
     def show_official_site_notice(self):
-        """Boas-vindas (v1.5.0): convite às demais aplicações PT2VHF, com link e botão Fechar."""
+        """Boas-vindas: banner "Powered by www.PT2VHF.com" (v1.7.2), clicável, com link e botão Fechar."""
         from .qt_compat import QDialog, QDialogButtonBox
+        try:
+            from PySide6.QtGui import QDesktopServices
+        except ImportError:  # PySide2
+            from PySide2.QtGui import QDesktopServices
+        url = 'https://www.pt2vhf.com'
         dialog = QDialog(self)
         dialog.setWindowTitle('PT2VHF Sat Tool')
         layout = QVBoxLayout(dialog)
-        title = QLabel('Feito por radioamadores, para radioamadores')
-        title.setStyleSheet('font-size:18px;font-weight:700')
-        text = QLabel('Obrigado por usar o PT2VHF Sat Tool! Conheça também as outras aplicações gratuitas '
-                      'desenvolvidas para a comunidade: APRS Client, Prop Tool, Mesh Analyzer, Prog Tool e mais.')
-        text.setWordWrap(True)
-        link = QLabel('<a href="https://www.pt2vhf.com" style="color:#6cc7ff;font-weight:700">www.PT2VHF.com</a>')
+        pix = QPixmap(str(branding_asset('welcome-banner.jpg')))
+        if not pix.isNull():
+            screen = QApplication.primaryScreen().availableGeometry() if QApplication.primaryScreen() else None
+            width = min(760, int(screen.width() * 0.8)) if screen else 760
+            dpr = dialog.devicePixelRatioF()
+            pix = pix.scaledToWidth(int(width * dpr), Qt.SmoothTransformation)
+            pix.setDevicePixelRatio(dpr)
+            banner = QLabel()
+            banner.setPixmap(pix)
+            banner.setCursor(Qt.PointingHandCursor)
+            banner.setToolTip('www.PT2VHF.com')
+            banner.setAccessibleName('Powered by www.PT2VHF.com')
+            banner.mousePressEvent = lambda event: QDesktopServices.openUrl(QUrl(url))
+            layout.addWidget(banner)
+        else:  # sem o arquivo do banner: texto de antes
+            title = QLabel('Feito por radioamadores, para radioamadores')
+            title.setStyleSheet('font-size:18px;font-weight:700')
+            layout.addWidget(title)
+        link = QLabel(f'<a href="{url}" style="color:#6cc7ff;font-weight:700">www.PT2VHF.com</a>')
         link.setOpenExternalLinks(True)
         buttons = QDialogButtonBox()
         close = buttons.addButton('Fechar', QDialogButtonBox.RejectRole)
         close.setDefault(True)
         buttons.rejected.connect(dialog.reject)
-        for widget in (title, text, link):
-            layout.addWidget(widget)
-        layout.addWidget(buttons)
-        dialog.setMinimumWidth(520)
+        # v1.7.2: fica 10 s na tela, com contagem regressiva discreta embaixo, e fecha sozinha
+        countdown = QLabel()
+        countdown.setObjectName('welcomeCountdown')
+        countdown.setStyleSheet('color:#8fa9c4;font-size:11px')
+        bar = QProgressBar()
+        bar.setRange(0, WELCOME_SECONDS)
+        bar.setTextVisible(False)
+        bar.setFixedSize(90, 4)
+        bar.setStyleSheet('QProgressBar{background:#1c3049;border:0;border-radius:2px}'
+                          'QProgressBar::chunk{background:#f08a24;border-radius:2px}')
+        left = {'s': WELCOME_SECONDS}
+
+        def tick():
+            countdown.setText(f"\u23f1 {left['s']} s")
+            bar.setValue(left['s'])
+            if left['s'] <= 0:
+                timer.stop()
+                dialog.accept()
+            left['s'] -= 1
+
+        timer = QTimer(dialog)
+        timer.timeout.connect(tick)
+        tick()
+        timer.start(1000)
+        dialog.finished.connect(lambda *_: timer.stop())
+        row = QHBoxLayout()
+        row.addWidget(link)
+        row.addStretch(1)
+        row.addWidget(bar)
+        row.addWidget(countdown)
+        row.addWidget(buttons)
+        layout.addLayout(row)
         qt_exec(dialog)
 
     def log(self,message):
@@ -329,10 +379,12 @@ class MainWindow(RotorUiMixin, QMainWindow):
         self.cat_indicator.setFixedWidth(66)
         self.cat_indicator.setStyleSheet("font-size:12px;font-weight:800;color:#ef9a9a;padding:4px;background:#243143;border-radius:5px")
         header.addWidget(self.cat_indicator)
-        self.sdr_toggle=QPushButton("Painel SDR")
+        self.sdr_toggle=QPushButton("SDR")
         self.sdr_toggle.setToolTip("Mostrar/ocultar o painel SDR (não liga nem desliga o receptor)")
+        self.sdr_toggle.setFixedWidth(66)
         self.sdr_toggle.setStyleSheet("font-size:12px;font-weight:800")
         header.addWidget(self.sdr_toggle)
+        self.build_rotor_top_button(header)  # v1.7.2: liga/desliga o controlador do rotor, como CAT e SDR
         self.build_language_menu(header)
         self.utc = QLabel("DATA/HORA UTC —")
         self.utc.setStyleSheet("font-size:12px;font-weight:700;color:#dff9ff;padding:4px;background:#153751;border:1px solid #34758c;border-radius:5px")
@@ -1168,7 +1220,7 @@ class MainWindow(RotorUiMixin, QMainWindow):
         self.sdr_toggle.clicked.connect(self.toggle_sdr_dock)
 
     def toggle_sdr_dock(self):
-        """Botão Painel SDR: a escolha do operador vale até ele mudar (v1.7.1: o painel não reabre sozinho)."""
+        """Botão SDR: a escolha do operador vale até ele mudar (v1.7.1: o painel não reabre sozinho)."""
         show=not self.sdr_dock.isVisible()
         self.config.values["sdr_dock_user_hidden"]=not show
         self.sdr_dock.setVisible(show)
@@ -1296,6 +1348,8 @@ class MainWindow(RotorUiMixin, QMainWindow):
     def apply_language(self):
         locale=self.ui_language()
         old=getattr(self,"_language_active","pt-BR")
+        if hasattr(self,"rotor_set_state_button"):  # botão RASTREANDO/PARADO muda em tempo de execução
+            self.rotor_set_state_button(bool(getattr(self,"rotor_tracking",False) and getattr(self,"rotor_auto",True)))
         for widget,kind,original in self._language_texts:
             if kind=="items":
                 for i,text in enumerate(original):
@@ -3786,65 +3840,68 @@ class MainWindow(RotorUiMixin, QMainWindow):
         self.aos_alarm_dialog=None
         self.aos_alarm_target=None
         self.aos_alarm_title=None
+        self.aos_alarm_count=None
         self.aos_alarm_detail=None
 
     def _update_aos_countdown(self,now):
+        """v1.7.2: só a contagem regressiva até o AOS; a janela fecha sozinha quando chega a zero."""
         if self.aos_alarm_dialog is None or self.aos_alarm_target is None:
             return
         _,row,_=self.aos_alarm_target
         remaining=math.ceil((row['aos']-now).total_seconds())
-        if remaining < -4:
-            self.aos_alarm_dialog.close()
-            self._clear_aos_dialog()
-            return
-        if self.aos_alarm_title is not None:
-            self.aos_alarm_title.setText(
-                f"{row.get('name','Satélite')} · NORAD {row.get('id','')}\n"
-                + (f'AOS em {remaining} s' if remaining>0 else 'AOS · PASSAGEM INICIADA'))
-        if self.aos_alarm_detail is not None:
-            self.aos_alarm_detail.setText(
-                f"AOS {row['aos'].astimezone():%d/%m/%Y %H:%M:%S} local · "
-                f"UTC {row['aos']:%H:%M:%S} · Máx {row.get('max_el',0):.0f}°")
         if remaining != self.aos_alarm_last_second:
             if not self.aos_alarm_silenced and remaining>=0:
-                self.play_aos_sound(critical=(remaining==0))
-            elif (not self.aos_alarm_silenced and remaining<0
-                    and self.aos_alarm_last_second is not None
-                    and self.aos_alarm_last_second>0):
-                self.play_aos_sound(critical=True)
+                self.play_aos_sound(critical=(remaining<=0))
             self.aos_alarm_last_second=remaining
+        if remaining <= 0:
+            self.log(f"AOS {row.get('name','Satélite')}: contagem encerrada, janela fechada")
+            dialog=self.aos_alarm_dialog
+            self._clear_aos_dialog()
+            dialog.close()
+            return
+        if self.aos_alarm_title is not None:
+            self.aos_alarm_title.setText(f"{row.get('name','Satélite')} · AOS em")
+        if self.aos_alarm_count is not None:
+            m,sec=divmod(remaining,60)
+            self.aos_alarm_count.setText(f"{m}:{sec:02d}")
+        if self.aos_alarm_detail is not None:
+            self.aos_alarm_detail.setText(
+                f"AOS {row['aos'].astimezone():%H:%M:%S} local · UTC {row['aos']:%H:%M:%S} · "
+                f"Máx {row.get('max_el',0):.0f}°")
 
     def _open_aos_countdown(self,row,remaining,key=None):
-        """Popup não modal com contagem regressiva e som (alarme do selecionado ou aviso agendado)."""
+        """Janela não modal só com a contagem regressiva até o AOS (sem perguntas nem botões); fecha no AOS.
+        Depois do AOS não abre (a passagem já começou)."""
+        if remaining<=0 or row['aos']<=now_utc():
+            return
         found=(key or f"{row.get('id')}@{row['aos'].isoformat()}",row,remaining)
         self.aos_alarm_target=found
         self.aos_alarm_silenced=False
         self.aos_alarm_last_second=None
         dialog=QDialog(self)
-        dialog.setWindowTitle('Alerta AOS · contagem regressiva')
+        dialog.setWindowTitle('Contagem regressiva para o AOS')
         dialog.setWindowModality(Qt.NonModal)
         dialog.setAttribute(Qt.WA_ShowWithoutActivating,True)
         layout=QVBoxLayout(dialog)
         self.aos_alarm_title=QLabel()
-        self.aos_alarm_title.setStyleSheet('font-size:21px;font-weight:800;color:#73eac9')
+        self.aos_alarm_title.setAlignment(Qt.AlignCenter)
+        self.aos_alarm_title.setStyleSheet('font-size:17px;font-weight:800;color:#73eac9')
+        self.aos_alarm_count=QLabel()
+        self.aos_alarm_count.setAlignment(Qt.AlignCenter)
+        self.aos_alarm_count.setStyleSheet('font-size:54px;font-weight:900;color:#f5c542;'
+                                           'font-family:Consolas,"DejaVu Sans Mono",monospace')
         self.aos_alarm_detail=QLabel()
+        self.aos_alarm_detail.setAlignment(Qt.AlignCenter)
         self.aos_alarm_detail.setWordWrap(True)
-        layout.addWidget(self.aos_alarm_title)
-        layout.addWidget(self.aos_alarm_detail)
-        actions=QHBoxLayout()
-        jump=QPushButton('Ir para Operação')
-        mute=QPushButton('Silenciar')
-        dismiss=QPushButton('Fechar')
-        jump.clicked.connect(lambda:self.tabs.setCurrentIndex(0))
-        mute.clicked.connect(lambda:setattr(self,'aos_alarm_silenced',True))
-        dismiss.clicked.connect(dialog.close)
-        for button in (jump,mute,dismiss):
-            actions.addWidget(button)
-        layout.addLayout(actions)
+        self.aos_alarm_detail.setStyleSheet('color:#9fc3d6')
+        for w in (self.aos_alarm_title,self.aos_alarm_count,self.aos_alarm_detail):
+            layout.addWidget(w)
+        dialog.setMinimumWidth(300)
         dialog.finished.connect(lambda *_:self._clear_aos_dialog())
         self.aos_alarm_dialog=dialog
         self._update_aos_countdown(now_utc())
-        dialog.show()
+        if self.aos_alarm_dialog is dialog:
+            dialog.show()
 
     def check_selected_aos_alarm(self,now):
         '''Read-only audible AOS countdown; never commands radio or CAT.'''
@@ -4613,12 +4670,12 @@ class MainWindow(RotorUiMixin, QMainWindow):
             if not self.rotor_cfg('rotor_enabled'):
                 self.log(who+': rotor desativado nas Configurações');return False
             if action=='rotor_track':
-                self.rotor_track_btn.setChecked(bool(value))
+                self.rotor_set_auto(bool(value),'rastreamento pausado pela rede, '+str(ip))
                 self.log(who+': rastreamento do rotor '+('pedido' if value else 'desligado'))
             elif action=='rotor_park':
-                self.log(who+': estacionar rotor');self.rotor_park()
+                self.log(who+': estacionar rotor');self.rotor_park_manual()
             else:
-                self.rotor_stop('PARAR pela rede, '+str(ip))
+                self.rotor_set_auto(False,'PARAR pela rede, '+str(ip))
         else:
             return False
         self.publish_web_snapshot(force=True)
@@ -4777,7 +4834,7 @@ class MainWindow(RotorUiMixin, QMainWindow):
         rotor={'enabled':bool(self.rotor_cfg('rotor_enabled'))}
         if rotor['enabled']:
             connected=bool(getattr(getattr(self,'rotor',None),'connected',False))
-            rotor.update(connected=connected,tracking=bool(getattr(self,'rotor_tracking',False)),
+            rotor.update(connected=connected,tracking=bool(getattr(self,'rotor_tracking',False)),auto=bool(getattr(self,'rotor_auto',True)),
                          state='rastreando' if getattr(self,'rotor_tracking',False) else ('conectado' if connected else 'desconectado'),
                          position=txt('rotor_pos_label'),target=txt('rotor_target_label'),status=txt('rotor_label'))
         aprs=[]
@@ -4850,6 +4907,12 @@ def main():
     app.setStyleSheet(STYLE)
     app.setQuitOnLastWindowClosed(True)
     mutex=_single_instance_mutex()
+    try:  # v1.7.2: EXE portátil com a versão no nome, também depois de um OTA
+        from .updater import rename_portable_to_version
+        from . import __version__ as _ver
+        rename_portable_to_version(_ver)
+    except Exception:
+        pass
     window=MainWindow()
     window.show()
     QTimer.singleShot(2500,window.show_last_update_result)

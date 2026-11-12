@@ -58,6 +58,33 @@ def install_flavor(qt_binding: str, *, frozen: Optional[bool] = None, exe_path: 
     return variant, ('Portable' if portable else 'Setup')
 
 
+_PORTABLE_RE = re.compile(r'^PT2VHF-Sat-Tool-v(\d+(?:\.\d+)*)-(.+)-Portable$', re.IGNORECASE)
+
+
+def versioned_portable_target(exe: Path, version: str) -> Optional[Path]:
+    """v1.7.2: o EXE portátil leva a versão no nome. Depois de um OTA que copiou a versão nova por cima do
+    arquivo antigo (ex.: ...-v1.7.1-...-Portable.exe com a 1.7.2 dentro), devolve o nome correto; senão None."""
+    m = _PORTABLE_RE.match(exe.stem)
+    if not m or m.group(1) == version:
+        return None
+    return exe.with_name(f'PT2VHF-Sat-Tool-v{version}-{m.group(2)}-Portable{exe.suffix}')
+
+
+def rename_portable_to_version(version: str, exe_path: Optional[Path] = None) -> Optional[Path]:
+    """Renomeia o próprio EXE portátil (Windows permite renomear um EXE em execução). Falhas são ignoradas."""
+    if not (exe_path or (sys.platform == 'win32' and getattr(sys, 'frozen', False))):
+        return None
+    exe = (exe_path or Path(sys.executable)).resolve()
+    target = versioned_portable_target(exe, version)
+    if target is None or target.exists():
+        return None
+    try:
+        exe.rename(target)
+    except OSError:
+        return None
+    return target
+
+
 @dataclass(frozen=True)
 class AvailableUpdate:
     version: str
