@@ -263,13 +263,20 @@ class _Style:
     def key_w(self, s):
         return self.text_w(s, 12 * self.u) + 18 * self.u
 
+    active_keys: set = set()
+
     def key(self, x, y, s):
+        """Tecla com contorno; ligada (ex.: RX ONLY ativo) fica preenchida com o texto invertido."""
         w = self.key_w(s)
         r = QRectF(x, y - 2 * self.u, w, 21 * self.u)
+        on = s in self.active_keys
         self.p.setPen(QPen(self.ink, max(1.0, 1.2 * self.u)))
-        self.p.setBrush(QColor(0, 0, 0, 0))
+        self.p.setBrush(self.ink if on else QColor(0, 0, 0, 0))
         self.p.drawRoundedRect(r, 3 * self.u, 3 * self.u)
-        self.label(x + 9 * self.u, y + 1.5 * self.u, s, 12 * self.u)
+        fg = None
+        if on:
+            fg = QColor("#101010") if self.ink.lightnessF() > 0.5 else QColor("#f4f4f4")
+        self.label(x + 9 * self.u, y + 1.5 * self.u, s, 12 * self.u, fg)
         return r
 
     def bar(self, x, y, frac, n, seg, hh):
@@ -355,11 +362,18 @@ class _Matrix(_Style):
         return (len(s) * 6 - 1 + 8) * self.small
 
     def key(self, x, y, s):
+        """Tecla cheia; RX ONLY (tecla de estado) só fica cheia quando ligada, senão só o contorno."""
         sp = self.small
         w = self.key_w(s)
         x, y = int(round(x)), int(round(y))
-        self.p.fillRect(x, y - sp, w, 11 * sp + 2 * sp, self.ink)
-        self.mtext(x + 4 * sp, y + sp, s, sp, self.light)
+        if s == "RX ONLY" and s not in self.active_keys:
+            for rx, ry, rw, rh in ((x, y - sp, w, sp), (x, y + 11 * sp, w, sp),
+                                   (x, y - sp, sp, 13 * sp), (x + w - sp, y - sp, sp, 13 * sp)):
+                self.p.fillRect(rx, ry, rw, rh, self.ink)
+            self.mtext(x + 4 * sp, y + sp, s, sp, self.ink)
+        else:
+            self.p.fillRect(x, y - sp, w, 11 * sp + 2 * sp, self.ink)
+            self.mtext(x + 4 * sp, y + sp, s, sp, self.light)
         return QRectF(x, y - sp, w, 13 * sp)
 
     def bar(self, x, y, frac, n, seg, hh):
@@ -572,7 +586,7 @@ def paint_ts2000(style: _Style, st: LcdState) -> dict:
         rc = QColor("#2fbf4a") if digital and side["role"] == "RX" else None
         tc = QColor("#d8443a") if digital and side["role"] == "TX" else None
         x = style.tag(x0, y, side["name"])
-        x = style.tag(x, y, "TX OFF" if side["off"] else side["role"], bg=rc or tc)
+        x = style.tag(x, y, (("TX OFF" if st.rx_only else "SEM TX") if side["off"] else side["role"]), bg=rc or tc)
         if side["mode"]:
             style.label(x, y + 2 * u, side["mode"][:4].upper())
         if side["role"] == "TX" and st.transmitting and not side["off"]:
@@ -774,10 +788,13 @@ class LcdDisplay(QWidget):
         u = ph / 132.0
         if self.model in RADIO_MODELS:
             from .lcd_radios import make_radio_style, paint_radio
-            keys = paint_radio(self.model, make_radio_style(self.model, p, pw, ph, u, self.theme), self.state)
+            rstyle = make_radio_style(self.model, p, pw, ph, u, self.theme)
+            rstyle.active_keys = {"RX ONLY"} if self.state.rx_only else set()   # v1.7.2: tecla mostra o estado
+            keys = paint_radio(self.model, rstyle, self.state)
         else:
             style = make_style("matriz" if self.model == "classico" else self.model, p, pw, ph, u, self.theme,
                                "normal" if self.model == "classico" else self.font_style)
+            style.active_keys = {"RX ONLY"} if self.state.rx_only else set()   # v1.7.2: tecla mostra o estado
             keys = paint_classic(style, self.state) if self.model == "classico" else paint_ts2000(style, self.state)
         if self.dim < 0.999:
             p.fillRect(QRectF(0, 0, pw, ph), QColor(0, 0, 0, int(round((1.0 - self.dim) * 255))))

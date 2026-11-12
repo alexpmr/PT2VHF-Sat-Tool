@@ -142,6 +142,15 @@
 
 ## Pendentes
 
+- **BUG · Tecla RX ONLY do display parecia sempre ligada** (registrado em 12/11/2026, v1.7.1)
+  - Relato: "o botão rx only no display não altera quando eu clico. Fica como se estivesse sempre em rx only".
+  - Causa: o clique alternava o modo, mas a tecla era desenhada igual nos dois estados (no modelo matriz, sempre
+    cheia, com aparência de indicador aceso); só o lado SUB mudava para "TX OFF", que também aparecia quando o
+    satélite não tem uplink.
+  - **Corrigido (1.7.2):** a tecla RX ONLY fica preenchida só com o modo ligado e com contorno quando desligado, em
+    todos os modelos (matriz, 7 seg., Digital, Clássico e estilos de rádio). O lado SUB mostra "TX OFF" com RX ONLY
+    ligado e "SEM TX" quando o satélite não tem uplink. Teste `tests/test_v172_rx_only_key.py`.
+
 - **Display: contagem da passagem em segmentos** (registrado em 12/11/2026)
   - Pedido do operador: "no display, coloque um contador de quanto tempo ainda resta disponível de passagem,
     usando o mesmo layout em segmentos de LCD".
