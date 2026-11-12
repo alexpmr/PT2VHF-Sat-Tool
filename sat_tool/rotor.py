@@ -61,13 +61,14 @@ def _unwrap(seq):
     return out
 
 
-def plan_pass(track: list[tuple[float, float, float]], profile: RotorProfile) -> dict:
+def plan_pass(track: list[tuple[float, float, float]], profile: RotorProfile, prefer: str = "auto") -> dict:
     """Escolhe como seguir a passagem sem bater no batente.
 
     track: [(t, azimute 0–360, elevação)] em ordem temporal (t em segundos, qualquer origem).
     Retorna {"mode": "normal"|"flip"|"reposiciona", "times": [...], "track": [(az_rotor, el_rotor)]}.
     No modo flip (elevação até 180°) a antena passa "por cima": az+180 e 180−el, evitando a volta
-    completa no meio da passagem.
+    completa no meio da passagem. prefer (v1.7.1): "auto" (normal se couber), "flip" (flip sempre que
+    o rotor permitir) ou "normal" (nunca flip).
     """
     if not track:
         return {"mode": "normal", "times": [], "track": []}
@@ -81,15 +82,23 @@ def plan_pass(track: list[tuple[float, float, float]], profile: RotorProfile) ->
                 return shift
         return None
 
+    def flip():
+        if profile.el_max < 180 or prefer == "normal":
+            return None
+        faz = _unwrap([(a + 180.0) % 360.0 for _, a, _ in track])
+        fshift = fits(faz)
+        if fshift is None:
+            return None
+        return {"mode": "flip", "times": times, "track": [(a + fshift, 180.0 - e) for a, e in zip(faz, els)]}
+
+    if prefer == "flip" and flip() is not None:
+        return flip()
     az = _unwrap([a for _, a, _ in track])
     shift = fits(az)
     if shift is not None:
         return {"mode": "normal", "times": times, "track": [(a + shift, e) for a, e in zip(az, els)]}
-    if profile.el_max >= 180:
-        faz = _unwrap([(a + 180.0) % 360.0 for _, a, _ in track])
-        fshift = fits(faz)
-        if fshift is not None:
-            return {"mode": "flip", "times": times, "track": [(a + fshift, 180.0 - e) for a, e in zip(faz, els)]}
+    if flip() is not None:
+        return flip()
     # sem solução contínua: segue normalmente e reposiciona uma vez ao cruzar o batente
     return {"mode": "reposiciona", "times": times, "track": [(a % 360.0, e) for (_, a, _), e in zip(track, els)]}
 
@@ -216,3 +225,32 @@ def probe_port(port: str, baud: int = 9600, opener=None) -> Optional[tuple[float
         return None
     finally:
         rotor.close()
+
+
+def calibrated_north_offset(read_az: float, true_az: float, current_offset: float = 0.0) -> float:
+    """Calibração guiada do norte: a antena aponta de fato para `true_az` (ex.: referência visual), mas o
+    controlador lê `read_az`. Retorna a nova correção do norte (somada aos comandos), em −180…180."""
+    raw = current_offset + (read_az - true_az)
+    return (raw + 180.0) % 360.0 - 180.0
+
+
+def jog_target(position: Optional[tuple[float, float]], d_az: float, d_el: float,
+               profile: RotorProfile) -> Optional[tuple[float, float]]:
+    """Ajuste manual por setas: posição atual + passo, dentro dos limites do rotor."""
+    if position is None:
+        return None
+    return (min(profile.az_max, max(0.0, position[0] + d_az)), min(profile.el_max, max(0.0, position[1] + d_el)))
+
+
+def antenna_line(lat: float, lon: float, az: float, km: float = 2500.0, steps: int = 24) -> list:
+    """Linha no mapa (lat, lon) saindo da estação na direção `az` (grande círculo), para a seta do rotor."""
+    import math
+    r = 6371.0
+    la1, lo1, b = math.radians(lat), math.radians(lon), math.radians(az % 360.0)
+    out = []
+    for i in range(steps + 1):
+        d = km * i / steps / r
+        la2 = math.asin(math.sin(la1) * math.cos(d) + math.cos(la1) * math.sin(d) * math.cos(b))
+        lo2 = lo1 + math.atan2(math.sin(b) * math.sin(d) * math.cos(la1), math.cos(d) - math.sin(la1) * math.sin(la2))
+        out.append([round(math.degrees(la2), 4), round((math.degrees(lo2) + 540.0) % 360.0 - 180.0, 4)])
+    return out

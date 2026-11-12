@@ -32,7 +32,7 @@ def test_dashboard_http_is_read_only_and_no_cat_routes(tmp_path):
     map_file = tmp_path / "map.html"
     map_file.write_text("<!doctype html><title>offline map</title>", encoding="utf-8")
     server = LocalStatusServer(lan=False, port=free_port(), map_path=map_file)
-    server.publish({"version": "1.7.0", "satellite": "SO-50",
+    server.publish({"version": "1.7.1", "satellite": "SO-50",
                     "cat_state": "desconectado", "passes": [],
                     "metrics": {"Elevação": "12°"}})
     try:

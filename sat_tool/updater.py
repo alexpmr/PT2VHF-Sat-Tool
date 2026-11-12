@@ -235,6 +235,18 @@ def read_update_result(temp_dir: Optional[Path] = None) -> Optional[tuple]:
     return lines[0].strip(), lines[1].strip(), lines[2].strip()
 
 
+MANUAL_DOWNLOAD_URL = 'https://www.pt2vhf.com/sat'
+
+
+def update_failure_message(detail: str) -> str:
+    """Texto (rich text) da falha de OTA: motivo exato (código do Inno + última etapa do log) e link manual."""
+    from html import escape
+    return (f"A atualização automática não terminou.<br><br><b>Motivo:</b> {escape(detail or 'desconhecido')}"
+            f"<br><br>O programa continua na versão anterior. Baixe e instale a versão nova manualmente em "
+            f"<a href='{MANUAL_DOWNLOAD_URL}'>{MANUAL_DOWNLOAD_URL.split('//')[1]}</a> "
+            f"ou tente de novo pelo botão de versão.<br>Log do instalador: %TEMP%\\PT2VHF-Sat-Tool-setup.log")
+
+
 def launch_staged_update(package: Path, *, portable: bool, script_path: Path,
                          exe_path: Optional[Path] = None, version: str = ''):
     """Launch an external PowerShell helper. App must exit immediately afterward."""

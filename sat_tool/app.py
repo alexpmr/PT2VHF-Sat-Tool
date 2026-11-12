@@ -29,6 +29,7 @@ from .qt_compat import QWebEngineView, QGeoPositionInfoSource, qt_exec, QT_BINDI
 from skyfield.api import load
 from . import __version__
 from .passfmt import radial_kmh_text
+from .appearance import DEFAULTS as THEME_DEFAULTS
 from .rotor_ui import RotorUiMixin
 from .cat import TS2000, available_ports, decode_satellite_status
 from .catalog import refresh_orbits, load_orbits, refresh_transmitters, load_transmitters, age_hours, satellite_search_text, normalized_satellite_search, DEFAULT_GROUPS
@@ -38,7 +39,7 @@ from .maidenhead import maidenhead_to_latlon
 from .location_map import parse_coordinate_fields, sanitize_map_pick, valid_coordinates
 from .frequency import format_frequency,parse_mhz_input,frequency_label
 from .transponder import prioritized_transponders,cat_pair_diagnostic
-from .i18n import LANGUAGES,translated
+from .i18n import LANGUAGES,translated,resolve_language,flag_icon
 from .satellite_info import orbital_characteristics, operational_characteristics, characteristics_text
 from .updater import check_for_update, download_update, install_flavor, launch_staged_update
 from .profile import choose_satellites, capability, render_service, CANDIDATES
@@ -218,6 +219,22 @@ class MainWindow(RotorUiMixin, QMainWindow):
             QTimer.singleShot(1200, self.startup_cat_connect)
         if self.config.values.get("web_enabled",False):
             QTimer.singleShot(700,self.start_web_server)
+        if self.config.values.get("display_detached",False):
+            QTimer.singleShot(400,self.toggle_display_detached)
+        self.install_display_shortcuts()
+        if self.theme_options()!=THEME_DEFAULTS:
+            QTimer.singleShot(0,self.apply_appearance)
+
+    def install_display_shortcuts(self):
+        """Atalhos do display: F6 = TIPO, F7 = LUZ, F8 = destacar/voltar."""
+        from .qt_compat import QShortcut, QKeySequence
+        self.display_shortcuts=[]
+        for key,func in (("F6",lambda:self.cycle_display("model")),("F7",lambda:self.cycle_display("theme")),
+                         ("F8",self.toggle_display_detached)):
+            sc=QShortcut(QKeySequence(key),self)
+            sc.setContext(Qt.ApplicationShortcut)
+            sc.activated.connect(func)
+            self.display_shortcuts.append(sc)
 
     def show_official_site_notice(self):
         """Boas-vindas (v1.5.0): convite às demais aplicações PT2VHF, com link e botão Fechar."""
@@ -316,6 +333,7 @@ class MainWindow(RotorUiMixin, QMainWindow):
         self.sdr_toggle.setToolTip("Mostrar/ocultar o painel SDR (não liga nem desliga o receptor)")
         self.sdr_toggle.setStyleSheet("font-size:12px;font-weight:800")
         header.addWidget(self.sdr_toggle)
+        self.build_language_menu(header)
         self.utc = QLabel("DATA/HORA UTC —")
         self.utc.setStyleSheet("font-size:12px;font-weight:700;color:#dff9ff;padding:4px;background:#153751;border:1px solid #34758c;border-radius:5px")
         self.utc.setWordWrap(False)
@@ -447,10 +465,24 @@ class MainWindow(RotorUiMixin, QMainWindow):
                             font=str(self.config.values.get("display_font","normal")))
         self.lcd.swap_clicked.connect(self.toggle_main_sub)
         self.lcd.rx_only_clicked.connect(self.toggle_rx_only)
+        # v1.7.1: teclas TIPO/LUZ, menu de contexto e destacar o display
+        self.lcd.type_clicked.connect(lambda:self.cycle_display("model"))
+        self.lcd.light_clicked.connect(lambda:self.cycle_display("theme"))
+        self.lcd.model_chosen.connect(lambda code:self.set_display_choice(model=code))
+        self.lcd.theme_chosen.connect(lambda name:self.set_display_choice(theme=name))
+        self.lcd.scope_clicked.connect(self.display_scope_tune)
+        self.lcd.detach_requested.connect(self.toggle_display_detached)
         self.lcd.set_state(rx_only=bool(self.config.values.get("rx_only",False)))
         for card in (self.pred_rx,self.pred_tx):
             card.setVisible(False)
         frequency_cards.addWidget(self.lcd,1)
+        self.display_cards=frequency_cards
+        self.display_window=None
+        self.display_placeholder=label("Display destacado em outra janela · clique para trazer de volta")
+        self.display_placeholder.setStyleSheet("color:#9fb8c4;font-size:11px;padding:4px")
+        self.display_placeholder.setVisible(False)
+        self.display_placeholder.mousePressEvent=lambda _e:self.toggle_display_detached()
+        frequency_cards.addWidget(self.display_placeholder,1)
         ov.addLayout(frequency_cards)
         self.corrected_label=label("Previsão orbital sem CAT e sem transmissão")
         self.corrected_label.setStyleSheet("color:#a4d5df;font-size:11px")
@@ -678,6 +710,9 @@ class MainWindow(RotorUiMixin, QMainWindow):
         quick_cat.addWidget(self.connection)
         op.addLayout(quick_cat)
         self.build_rotor_bar(op)
+        # v1.7.1 (mockup aprovado): faixa ROTOR entre o display e o mapa
+        op.removeWidget(self.rotor_bar)
+        op.insertWidget(op.indexOf(operator_panel)+1,self.rotor_bar)
         self.cat_details_box=QWidget()
         cdl=QVBoxLayout(self.cat_details_box);cdl.setContentsMargins(0,0,0,0);cdl.setSpacing(3)
         self.cat_live_label=label("RÁDIO REAL (CAT) · aguardando FA (RX SAT) / FB (TX SAT) / FC (SUB) / MD")
@@ -799,10 +834,10 @@ class MainWindow(RotorUiMixin, QMainWindow):
             scroll.setWidget(frame);self.settings_tabs.addTab(scroll,title)
             self.settings_pages[title]=scroll
             return lay
-        look_l=settings_page("Apresentação")
+        look_l=settings_page("Aparência")
         station_l=settings_page("Estação")
         radio_l=settings_page("Rádio")
-        rotor_l=settings_page("Rotor")
+        rotor_l=settings_page("Rotores")
         cfg=settings_page("Geral")
         self.build_presentation_settings(look_l)
         station_group,sg=group("ESTAÇÃO TERRENA")
@@ -960,7 +995,7 @@ class MainWindow(RotorUiMixin, QMainWindow):
         alarm_test.clicked.connect(lambda:self.play_aos_sound(critical=True))
         alert_layout.addWidget(alarm_test)
         cfg.addWidget(alert_group)
-        web_group,wg=group("INTERFACE WEB · LOCAL E REDE LAN")
+        web_group,wg=group("ACESSO PELA REDE · INTERFACE WEB")
         self.web_enabled=QCheckBox("Habilitar painel Web ao abrir o Sat Tool")
         self.web_enabled.setChecked(bool(self.config.values.get("web_enabled",False)))
         self.web_enabled.toggled.connect(self.change_web_settings)
@@ -977,22 +1012,64 @@ class MainWindow(RotorUiMixin, QMainWindow):
         self.web_port.setValue(int(self.config.values.get("web_port",8094)))
         self.web_port.valueChanged.connect(self.change_web_settings)
         webrow.addWidget(self.web_port)
+        webrow.addWidget(label("Sessão expira em"))
+        self.web_session_hours=QDoubleSpinBox()
+        self.web_session_hours.setDecimals(0)
+        self.web_session_hours.setRange(1,72)
+        self.web_session_hours.setSuffix(" h")
+        self.web_session_hours.setValue(int(self.config.values.get("web_session_hours",8)))
+        self.web_session_hours.valueChanged.connect(self.change_web_settings)
+        webrow.addWidget(self.web_session_hours)
         wg.addLayout(webrow)
+        addr=QHBoxLayout()
+        addr.addWidget(label("Endereços desta máquina"))
+        self.web_addresses=QComboBox()
+        self.web_addresses.setToolTip("Todos os IPv4 da rede local deste computador. Use o da mesma rede do outro aparelho.")
+        addr.addWidget(self.web_addresses)
+        web_copy=QPushButton("Copiar endereço")
+        web_copy.clicked.connect(self.copy_web_url)
+        addr.addWidget(web_copy)
+        wg.addLayout(addr)
         controls=QHBoxLayout()
         web_launch=QPushButton("Abrir interface Web")
         web_launch.clicked.connect(self.open_web_dashboard)
-        web_copy=QPushButton("Copiar endereço")
-        web_copy.clicked.connect(self.copy_web_url)
-        controls.addWidget(web_launch)
-        controls.addWidget(web_copy)
+        self.web_firewall_btn=QPushButton("Liberar no firewall do Windows")
+        self.web_firewall_btn.setToolTip("Cria uma regra de entrada só para esta porta TCP, perfil Privado, só da rede local (pede confirmação do Windows).")
+        self.web_firewall_btn.clicked.connect(self.web_request_firewall)
+        self.web_firewall_btn.setEnabled(sys.platform=="win32")
+        web_rotate=QPushButton("Renovar chave")
+        web_rotate.setToolTip("Gera uma nova chave: links copiados antes e navegadores conectados deixam de ter acesso.")
+        web_rotate.clicked.connect(self.web_rotate_key)
+        for b in (web_launch,self.web_firewall_btn,web_rotate):
+            controls.addWidget(b)
         wg.addLayout(controls)
+        ctl=QHBoxLayout()
+        self.web_controls=QCheckBox("Permitir controle pela rede (sem PTT)")
+        self.web_controls.setToolTip("Pelo navegador: satélite, Auto CAT, A/B, RX ONLY, rastrear/estacionar/PARAR do rotor. "
+                                     "PTT/TX nunca. Cada ação pede o PIN e fica registrada no log com o IP.")
+        self.web_controls.setChecked(bool(self.config.values.get("web_controls",False)))
+        self.web_controls.toggled.connect(self.change_web_settings)
+        ctl.addWidget(self.web_controls)
+        ctl.addWidget(label("PIN da estação"))
+        self.web_pin=QLineEdit()
+        self.web_pin.setEchoMode(QLineEdit.Password)
+        self.web_pin.setMaxLength(12)
+        self.web_pin.setPlaceholderText("definido" if self.config.values.get("web_pin_hash") else "4 a 12 dígitos")
+        ctl.addWidget(self.web_pin)
+        web_pin_save=QPushButton("Salvar PIN")
+        web_pin_save.clicked.connect(self.web_save_pin)
+        ctl.addWidget(web_pin_save)
+        wg.addLayout(ctl)
         self.web_status=label("Interface Web desativada")
         self.web_status.setTextInteractionFlags(Qt.TextSelectableByMouse)
         self.web_status.setStyleSheet("color:#98d8e7;font-size:11px")
         wg.addWidget(self.web_status)
-        wg.addWidget(label("Acesso local: 127.0.0.1. LAN: requer chave temporária do endereço copiado. "
-                           "Somente leitura: navegador não aciona CAT, PTT ou alterações no rádio. "
-                           "Libere a porta TCP apenas na rede privada do firewall, se necessário. "
+        self.web_diag=label("")
+        self.web_diag.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        self.web_diag.setStyleSheet("color:#c5dbe7;font-size:11px")
+        wg.addWidget(self.web_diag)
+        wg.addWidget(label("Acesso local: 127.0.0.1. LAN: requer a chave do endereço copiado; só aparelhos da rede privada "
+                           "(IP público é recusado). Sem controle pela rede, o navegador só consulta. "
                            "HTTP na LAN não tem criptografia; nunca encaminhe a porta à Internet."))
         cfg.addWidget(web_group)
         advanced,adv=group("DOPPLER E SEGURANÇA")
@@ -1048,6 +1125,9 @@ class MainWindow(RotorUiMixin, QMainWindow):
         cfg.addWidget(extra_controls)
         cfg.addStretch(1)
         self.build_rotor_settings(rotor_l)
+        # v1.7.1: menus e campos do tamanho do conteúdo, não esticados na largura toda
+        from .form_sizing import fit_settings
+        fit_settings(self,self.settings_tabs)
         root.addTab(config_page,"Configurações")
         logs=QWidget();ll=QVBoxLayout(logs)
         self.log_view=QPlainTextEdit();self.log_view.setReadOnly(True)
@@ -1085,11 +1165,20 @@ class MainWindow(RotorUiMixin, QMainWindow):
         self.sdr_dock.setFloating(bool(self.config.values.get("sdr_dock_floating",False)))
         self.sdr_dock.topLevelChanged.connect(lambda f:self.config.values.__setitem__("sdr_dock_floating",bool(f)))
         self.sdr_dock.visibilityChanged.connect(self._remember_sdr_dock)
-        self.sdr_toggle.clicked.connect(lambda:self.sdr_dock.setVisible(not self.sdr_dock.isVisible()))
+        self.sdr_toggle.clicked.connect(self.toggle_sdr_dock)
+
+    def toggle_sdr_dock(self):
+        """Botão Painel SDR: a escolha do operador vale até ele mudar (v1.7.1: o painel não reabre sozinho)."""
+        show=not self.sdr_dock.isVisible()
+        self.config.values["sdr_dock_user_hidden"]=not show
+        self.sdr_dock.setVisible(show)
+        self.config.save()
 
     def _remember_sdr_dock(self,visible):
-        if self.isVisible():
+        if self.isVisible() and not self.isMinimized():
             self.config.values["sdr_dock_visible"]=bool(visible)
+            # fechado pelo X do painel ou pelo botão: não reabrir automaticamente; aberto: volta ao normal
+            self.config.values["sdr_dock_user_hidden"]=not visible
 
     def doppler_snapshot(self):
         """Estado Doppler atual para SDR/equipamentos (chamado a 4 Hz; nunca escreve CAT)."""
@@ -1153,7 +1242,7 @@ class MainWindow(RotorUiMixin, QMainWindow):
         self.update_minutes.setValue(float(c.get('version_check_minutes',15)))
         self.include_prerelease.setChecked(bool(c.get('include_prereleases', True)))
         self.language_combo.blockSignals(True)
-        self.language_combo.setCurrentIndex(max(0,self.language_combo.findData(c.get("language","pt-BR"))))
+        self.language_combo.setCurrentIndex(max(0,self.language_combo.findData(self.ui_language())))
         self.language_combo.blockSignals(False)
         self.freq_style_combo.blockSignals(True)
         self.freq_style_combo.setCurrentIndex(max(0,self.freq_style_combo.findData(c.get("frequency_style","radio10"))))
@@ -1172,8 +1261,13 @@ class MainWindow(RotorUiMixin, QMainWindow):
         # Always require an explicit enable on each launch to avoid surprise CAT writes.
         self.doppler_checkbox.setChecked(False)
 
+    def ui_language(self):
+        """Idioma da interface: o salvo, ou o do sistema quando suportado (padrão pt-BR)."""
+        return resolve_language(self.config.values.get("language",""))
+
     def capture_static_language(self):
-        """Snapshot only creation-time UI strings; do not translate live CAT telemetry."""
+        """Snapshot only creation-time UI strings; do not translate live CAT telemetry.
+        v1.7.1: inclui tooltips, textos de exemplo, sub-abas das Configurações e itens de menus com dados."""
         self._language_texts=[]
         for widget in self.findChildren(QWidget):
             if isinstance(widget,QGroupBox):
@@ -1182,7 +1276,15 @@ class MainWindow(RotorUiMixin, QMainWindow):
             elif isinstance(widget,(QPushButton,QCheckBox,QLabel)):
                 original=widget.text()
                 if original:self._language_texts.append((widget,"text",original))
-        self._language_tabs=[self.tabs.tabText(i) for i in range(self.tabs.count())]
+            if widget.toolTip() and "<" not in widget.toolTip():
+                self._language_texts.append((widget,"tooltip",widget.toolTip()))
+            if isinstance(widget,QLineEdit) and widget.placeholderText():
+                self._language_texts.append((widget,"placeholder",widget.placeholderText()))
+            if isinstance(widget,QComboBox) and not widget.isEditable() and widget is not getattr(self,"language_combo",None):
+                # só menus cujo código vem do itemData: traduzir o texto não muda o comportamento
+                if widget.count() and all(widget.itemData(i) is not None for i in range(widget.count())):
+                    self._language_texts.append((widget,"items",[widget.itemText(i) for i in range(widget.count())]))
+        self._language_tabs=[(tabs,[tabs.tabText(i) for i in range(tabs.count())]) for tabs in self.findChildren(QTabWidget)]
         self._language_tables=[]
         for widget in self.findChildren(QTableWidget):
             labels=[]
@@ -1192,32 +1294,70 @@ class MainWindow(RotorUiMixin, QMainWindow):
             self._language_tables.append((widget,labels))
 
     def apply_language(self):
-        locale=self.config.values.get("language","pt-BR")
+        locale=self.ui_language()
         old=getattr(self,"_language_active","pt-BR")
         for widget,kind,original in self._language_texts:
+            if kind=="items":
+                for i,text in enumerate(original):
+                    if i<widget.count():widget.setItemText(i,translated(text,locale))
+                continue
+            names={"group":("title","setTitle"),"text":("text","setText"),"tooltip":("toolTip","setToolTip"),
+                   "placeholder":("placeholderText","setPlaceholderText")}[kind]
+            getter,setter=getattr(widget,names[0]),getattr(widget,names[1])
             old_value=translated(original,old)
-            new_value=translated(original,locale)
-            current=widget.title() if kind=="group" else widget.text()
-            if current in (old_value,original):
-                if kind=="group":widget.setTitle(new_value)
-                else:widget.setText(new_value)
-        for i,original in enumerate(self._language_tabs):
-            self.tabs.setTabText(i,translated(original,locale))
+            current=getter()
+            if current in (old_value,original):  # não sobrescreve textos que mudaram em tempo de execução
+                setter(translated(original,locale))
+        for tabs,originals in self._language_tabs:
+            for i,original in enumerate(originals):
+                if i<tabs.count():tabs.setTabText(i,translated(original,locale))
         for widget,originals in self._language_tables:
             for i,original in enumerate(originals):
                 item=widget.horizontalHeaderItem(i)
                 if item:item.setText(translated(original,locale))
-        if hasattr(self,"tracked_search"):
-            self.tracked_search.setPlaceholderText(translated("Pesquisar por nome ou NORAD…",locale))
+        if hasattr(self,"language_menu_button"):
+            self.language_menu_button.setIcon(flag_icon(locale))
+            self.language_menu_button.setText(LANGUAGES[locale])
+            self.language_menu_button.setToolTip(translated("Idioma",locale))
+            for action in self.language_actions:
+                action.setChecked(action.data()==locale)
+        if hasattr(self,"language_combo"):
+            self.language_combo.blockSignals(True)
+            self.language_combo.setCurrentIndex(max(0,self.language_combo.findData(locale)))
+            self.language_combo.blockSignals(False)
         self._language_active=locale
 
-    def change_language(self,*args):
-        locale=self.language_combo.currentData()
+    def build_language_menu(self,header):
+        """v1.7.1: seletor de idioma no topo (bandeira + nome nativo), sincronizado com Configurações."""
+        from .qt_compat import QMenu
+        try:
+            from PySide6.QtWidgets import QToolButton
+        except ImportError:  # pragma: no cover
+            from PySide2.QtWidgets import QToolButton
+        self.language_menu_button=QToolButton()
+        self.language_menu_button.setPopupMode(QToolButton.InstantPopup)
+        self.language_menu_button.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+        self.language_menu_button.setStyleSheet("font-size:12px;font-weight:700;padding:3px 6px")
+        menu=QMenu(self.language_menu_button)
+        self.language_actions=[]
+        for code,native in LANGUAGES.items():
+            action=menu.addAction(flag_icon(code),native)
+            action.setData(code);action.setCheckable(True)
+            action.triggered.connect(lambda _=False,c=code:self.set_language(c))
+            self.language_actions.append(action)
+        self.language_menu_button.setMenu(menu)
+        header.addWidget(self.language_menu_button)
+
+    def set_language(self,locale):
+        """Troca o idioma na hora, sem reiniciar, e salva em settings.json."""
         if locale not in LANGUAGES:return
         self.config.values["language"]=locale
         self.config.save()
         self.apply_language()
         self.log(f"Idioma da interface: {LANGUAGES[locale]}")
+
+    def change_language(self,*args):
+        self.set_language(self.language_combo.currentData())
 
     def change_frequency_style(self,*args):
         style=self.freq_style_combo.currentData()
@@ -1429,8 +1569,11 @@ class MainWindow(RotorUiMixin, QMainWindow):
         if status=="ok":
             QMessageBox.information(self,"Atualização concluída",f"PT2VHF Sat Tool atualizado para a versão {version or __version__}.")
         else:
-            QMessageBox.warning(self,"Atualização não concluída",
-                f"A atualização não terminou: {detail}\n\nBaixe a versão nova em www.pt2vhf.com/sat ou tente de novo pelo botão de versão.")
+            from .updater import update_failure_message
+            box=QMessageBox(QMessageBox.Warning,"Atualização não concluída",update_failure_message(detail),parent=self)
+            box.setTextFormat(Qt.RichText)
+            box.setTextInteractionFlags(Qt.TextBrowserInteraction)
+            box.exec() if hasattr(box,"exec") else box.exec_()
 
     def station(self):
         if not self.lat.text().strip() or not self.lon.text().strip():
@@ -2417,16 +2560,29 @@ class MainWindow(RotorUiMixin, QMainWindow):
         self.config.values["cat_details_visible"]=bool(shown)
         self.config.save()
 
+    def show_cat_port_error(self,message):
+        """v1.7.1: falha de porta CAT com causa clara, orientação e atalho para Configurações → Rádio."""
+        from .cat import port_error_text
+        title,advice=port_error_text(message,str(self.config.values.get("port","") or ""))
+        box=QMessageBox(QMessageBox.Warning,title,f"{title}.\n\n{advice}\n\nDetalhe técnico: {message[:300]}",parent=self)
+        settings=box.addButton("Abrir Configurações → Rádio",QMessageBox.AcceptRole)
+        box.addButton(QMessageBox.Close)
+        box.exec() if hasattr(box,"exec") else box.exec_()
+        if box.clickedButton() is settings:
+            self.open_settings("Rádio")
+
     def open_settings(self,page="Rádio"):
-        """Abre Configurações direto na aba pedida (Apresentação, Estação, Rádio, Rotor, Geral)."""
+        """Abre Configurações direto na aba pedida (Apresentação, Estação, Rádio, Rotores, Geral)."""
+        page={"Rotor":"Rotores","Apresentação":"Aparência"}.get(page,page)  # nomes até a v1.7.0
         self.tabs.setCurrentIndex(2)
         widget=getattr(self,"settings_pages",{}).get(page)
         if widget is not None:
             self.settings_tabs.setCurrentWidget(widget)
 
     def build_presentation_settings(self,layout):
-        """v1.7.0: aba Apresentação — tipo de display, fonte, cores e prévia ao vivo."""
+        """v1.7.1: aba Aparência — tema do programa + display (tipo, fonte, cores e prévia ao vivo)."""
         from .lcd import LcdDisplay, MODELS, FONTS, THEMES
+        self.build_theme_settings(layout)
         box,bv=group("DISPLAY DE RÁDIO")
         grid=QGridLayout();grid.setColumnStretch(1,1)
         self.display_model=QComboBox()
@@ -2436,7 +2592,8 @@ class MainWindow(RotorUiMixin, QMainWindow):
         for code,name in FONTS.items():
             self.display_font.addItem(name,code)
         self.display_theme=QComboBox()
-        for name in THEMES:
+        from .lcd import THEME_ORDER
+        for name in THEME_ORDER:
             self.display_theme.addItem(name.capitalize(),name)
         for row,(txt,widget) in enumerate((("Tipo de display",self.display_model),
                                            ("Fonte (matriz de pontos)",self.display_font),
@@ -2460,18 +2617,183 @@ class MainWindow(RotorUiMixin, QMainWindow):
         layout.addWidget(box)
         self.change_display_settings(save=False)
 
+    def build_theme_settings(self,layout):
+        """Tema do programa: pronto + ajustes finos, prévia ao vivo (aplica na hora) e Restaurar padrão."""
+        from .appearance import PRESETS, ACCENT_HUES, DEFAULTS
+        box,bv=group("TEMA DO PROGRAMA")
+        grid=QGridLayout()
+        c=self.config.values
+        self.theme_preset=QComboBox()
+        for code,name in PRESETS.items():
+            self.theme_preset.addItem(name,code)
+        self.theme_accent=QComboBox()
+        for name,hue in ACCENT_HUES.items():
+            self.theme_accent.addItem(name,hue)
+        def spin(lo,hi,suffix):
+            w=QDoubleSpinBox();w.setRange(lo,hi);w.setDecimals(0);w.setSingleStep(5 if hi>50 else 1);w.setSuffix(suffix);return w
+        self.theme_brightness=spin(50,150," %");self.theme_contrast=spin(50,160," %")
+        self.theme_saturation=spin(0,150," %");self.theme_font=spin(9,18," px")
+        self.theme_follow_display=QCheckBox("Display acompanha o brilho")
+        self.theme_follow_map=QCheckBox("Mapa acompanha o brilho")
+        rows=(("Tema",self.theme_preset),("Cor de destaque",self.theme_accent),("Brilho",self.theme_brightness),
+              ("Contraste",self.theme_contrast),("Saturação",self.theme_saturation),("Tamanho da fonte",self.theme_font))
+        for i,(txt,w) in enumerate(rows):
+            grid.addWidget(label(txt),i,0);grid.addWidget(w,i,1)
+        bv.addLayout(grid)
+        follow=QHBoxLayout();follow.addWidget(self.theme_follow_display);follow.addWidget(self.theme_follow_map)
+        self.theme_reset=QPushButton("Restaurar padrão")
+        follow.addWidget(self.theme_reset)
+        bv.addLayout(follow)
+        self.theme_status=label("")
+        self.theme_status.setStyleSheet("font-size:11px")
+        bv.addWidget(self.theme_status)
+        layout.addWidget(box)
+        self.load_theme_controls()
+        for w in (self.theme_preset,self.theme_accent):
+            w.currentIndexChanged.connect(self.change_theme)
+        for w in (self.theme_brightness,self.theme_contrast,self.theme_saturation,self.theme_font):
+            w.valueChanged.connect(self.change_theme)
+        for w in (self.theme_follow_display,self.theme_follow_map):
+            w.toggled.connect(self.change_theme)
+        self.theme_reset.clicked.connect(self.reset_theme)
+
+    def theme_options(self):
+        from .appearance import DEFAULTS
+        return {k:self.config.values.get(k,v) for k,v in DEFAULTS.items()}
+
+    def load_theme_controls(self):
+        o=self.theme_options()
+        widgets=(self.theme_preset,self.theme_accent,self.theme_brightness,self.theme_contrast,self.theme_saturation,
+                 self.theme_font,self.theme_follow_display,self.theme_follow_map)
+        for w in widgets:w.blockSignals(True)
+        self.theme_preset.setCurrentIndex(max(0,self.theme_preset.findData(o["theme_preset"])))
+        self.theme_accent.setCurrentIndex(max(0,self.theme_accent.findData(int(o["theme_accent_hue"]))))
+        self.theme_brightness.setValue(o["theme_brightness"]);self.theme_contrast.setValue(o["theme_contrast"])
+        self.theme_saturation.setValue(o["theme_saturation"]);self.theme_font.setValue(o["theme_font_px"])
+        self.theme_follow_display.setChecked(bool(o["theme_follow_display"]))
+        self.theme_follow_map.setChecked(bool(o["theme_follow_map"]))
+        for w in widgets:w.blockSignals(False)
+
+    def change_theme(self,*_):
+        self.config.values.update(
+            theme_preset=self.theme_preset.currentData() or "escuro",
+            theme_accent_hue=int(self.theme_accent.currentData() if self.theme_accent.currentData() is not None else -1),
+            theme_brightness=int(self.theme_brightness.value()),theme_contrast=int(self.theme_contrast.value()),
+            theme_saturation=int(self.theme_saturation.value()),theme_font_px=int(self.theme_font.value()),
+            theme_follow_display=self.theme_follow_display.isChecked(),theme_follow_map=self.theme_follow_map.isChecked())
+        self.config.save()
+        self.apply_appearance()
+
+    def reset_theme(self):
+        from .appearance import DEFAULTS
+        self.config.values.update(DEFAULTS)
+        self.config.save()
+        self.load_theme_controls()
+        self.apply_appearance()
+
+    def apply_appearance(self):
+        """Gera a folha de estilo do tema e aplica na hora em toda a janela, painéis, janelas destacadas e diálogos."""
+        from .appearance import transform_qss, text_contrast, display_dim
+        o=self.theme_options()
+        app=QApplication.instance()
+        if app is not None:
+            app.setStyleSheet(transform_qss(STYLE,o))
+            identity=o==THEME_DEFAULTS
+            for w in app.allWidgets():
+                original=w.property("pt2vhf_qss")
+                if original is None:
+                    current=w.styleSheet()
+                    if not current:
+                        continue
+                    w.setProperty("pt2vhf_qss",current)
+                    original=current
+                w.setStyleSheet(original if identity else transform_qss(original,o))
+        ratio=text_contrast(o)
+        if hasattr(self,"theme_status"):
+            ok=ratio>=4.5
+            self.theme_status.setText(f"Contraste do texto: {ratio:.1f}:1 · "+("OK (WCAG AA)" if ok else
+                                      "abaixo de 4,5:1 — texto pode ficar ilegível; reduza o brilho/ajuste o contraste"))
+            from .appearance import transform
+            self.theme_status.setProperty("pt2vhf_qss",None)
+            self.theme_status.setStyleSheet("font-size:11px;font-weight:700;color:"+
+                                            (transform("#2fae5f" if o["theme_preset"]=="claro" else "#5af08a",o) if ok else "#d93030"))
+        dim=display_dim(o)
+        for lcd in (getattr(self,"lcd",None),getattr(self,"display_preview",None)):
+            if lcd is not None:
+                lcd.set_dim(dim if o["theme_follow_display"] else 1.0)
+        try:
+            self.map.page().runJavaScript("document.documentElement.style.filter="+
+                                          json.dumps(f"brightness({dim:.2f})" if o["theme_follow_map"] else "none"))
+        except Exception:
+            pass
+
     def change_display_settings(self,*_,save=True):
         model=self.display_model.currentData() or "matriz"
         font=self.display_font.currentData() or "normal"
         theme=self.display_theme.currentData() or "âmbar"
         self.display_font.setEnabled(model=="matriz")
-        self.display_theme.setEnabled(model!="digital")
         for widget in (getattr(self,"lcd",None),getattr(self,"display_preview",None)):
             if widget is not None:
                 widget.set_model(model);widget.set_font_style(font);widget.set_theme(theme)
         if save:
             self.config.values.update(display_model=model,display_font=font,lcd_theme=theme)
             self.config.save()
+
+    def toggle_display_detached(self):
+        """Destaca o display numa janela própria (outro monitor) ou o devolve à aba Operação."""
+        from .display_window import DisplayWindow, MAX_HEIGHT_DOCKED
+        if self.display_window is None:
+            self.display_window=DisplayWindow(self.lcd,self.config,self._dock_display)
+            self.display_placeholder.setVisible(True)
+            if self.config.values.get("display_window_fullscreen",False):
+                self.display_window.showFullScreen()
+            else:
+                self.display_window.show()
+            self.config.values["display_detached"]=True
+            self.config.save()
+            self.log("Display destacado em janela própria (F11 tela cheia; fechar a janela devolve o display)")
+        else:
+            self.display_window.close()
+
+    def _dock_display(self):
+        from .display_window import MAX_HEIGHT_DOCKED
+        window,self.display_window=self.display_window,None
+        self.lcd.detached=False
+        self.lcd.setMinimumHeight(118)
+        self.lcd.setMaximumHeight(MAX_HEIGHT_DOCKED)
+        self.display_cards.insertWidget(0,self.lcd,1)
+        self.lcd.show()
+        self.display_placeholder.setVisible(False)
+        if not getattr(self,"_closing_app",False):
+            self.config.values["display_detached"]=False
+            self.config.save()
+
+    def set_display_choice(self,model=None,theme=None):
+        """Escolhe modelo/cor do display pelas mesmas caixas de Apresentação (salva e aplica na hora)."""
+        for combo,value in ((self.display_model,model),(self.display_theme,theme)):
+            if value is not None:
+                index=combo.findData(value)
+                if index>=0:
+                    combo.setCurrentIndex(index)
+
+    def display_scope_tune(self,frac):
+        """Clique no escopo do display: mesma regra do clique no waterfall do painel SDR."""
+        wf=getattr(getattr(self,"sdr_panel",None),"waterfall",None)
+        if wf is None or not self.lcd.state.scope:
+            return
+        wf.on_click((float(frac)-0.5)*2*wf.span_hz)
+
+    def cycle_display(self,what):
+        """Teclas TIPO (modelo) e LUZ (cor do backlight) do display: passam para o próximo item."""
+        from .lcd import MODELS, next_in
+        if what=="model":
+            self.set_display_choice(model=next_in(MODELS,self.display_model.currentData()))
+            self.log("Display: "+self.display_model.currentText())
+        else:
+            from .lcd import themes_for
+            model=self.display_model.currentData()
+            self.set_display_choice(theme=next_in(themes_for(model),self.display_theme.currentData()))
+            self.log("Display: backlight "+self.display_theme.currentText())
 
     def toggle_rx_only(self):
         enabled=not bool(self.config.values.get("rx_only",False))
@@ -2851,7 +3173,8 @@ class MainWindow(RotorUiMixin, QMainWindow):
                                tx_hz=int(calc['tx_hz']) if ul is not None else None,tx_mode=tx_mode,
                                doppler_hz=int(calc['rx_offset_hz']),elevation=float(p['elevation']),
                                visible=bool(p['visible']),auto=bool(self.cat_tracking_armed),
-                               rx_only=bool(self.config.values.get("rx_only",False)))
+                               rx_only=bool(self.config.values.get("rx_only",False)),
+                               sat_name=self.sat_combo.currentText())
             self.lcd.setToolTip(f"RX nominal {self.radio_freq(dl)}"
                                 +(f" · TX nominal {self.radio_freq(ul)}" if ul is not None else " · somente recepção")
                                 +" · A/B inverte MAIN↔SUB · RX ONLY opera só em recepção")
@@ -3155,7 +3478,7 @@ class MainWindow(RotorUiMixin, QMainWindow):
         cached=load_cached(self.config.dir,ident)
         if cached:
             self.satinfo[ident]=cached
-        lang=str(self.config.values.get("language","pt-BR")).split("-")[0]
+        lang=self.ui_language().split("-")[0]
         self.background(f"satinfo:{ident}",lambda:fetch_info(self.config.dir,ident,name,lang))
 
     def satinfo_html(self,ident,for_qt=True):
@@ -3219,7 +3542,7 @@ class MainWindow(RotorUiMixin, QMainWindow):
         if self.pass_sort.isChecked():
             rows.sort(key=lambda p:-(p.get("quality").score if p.get("quality") else -1))
         self._pass_rows_view=rows
-        lang=str(self.config.values.get("language","pt-BR"))
+        lang=self.ui_language()
         alerts=self.config.values.get("pass_alerts",[])
         self.pass_table.setRowCount(len(rows))
         for i,p in enumerate(rows):
@@ -3404,7 +3727,8 @@ class MainWindow(RotorUiMixin, QMainWindow):
                      "track_future":self.track_cache["future"] if self.track_cache_key and self.track_cache_key[0]==str(self.sat_combo.currentData()) else [],
                      "footprint":circle,
                      "label":f"{self.sat.name} · elevação {pos['elevation']:.1f}° · alcance {pos['range_km']:.0f} km · órbita TLE/OMM",
-                     "info":self.satinfo_html(str(self.sat_combo.currentData() or ""),for_qt=False)}
+                     "info":self.satinfo_html(str(self.sat_combo.currentData() or ""),for_qt=False),
+                     "antenna":self.rotor_map_payload(station)}
             self.sat_combo.setToolTip(self.satinfo_html(str(self.sat_combo.currentData() or "")))
             self.map.page().runJavaScript('window.updateOrbit && window.updateOrbit('+json.dumps(payload)+');')
             # A past error banner must not survive a successful map render.
@@ -3614,6 +3938,17 @@ class MainWindow(RotorUiMixin, QMainWindow):
     def background_result(self,key,data):
         self.pending_jobs.discard(key)
         if self.rotor_result(key,data):
+            return
+        if key=="web-firewall":
+            self._web_firewall=data
+            self.web_refresh_diagnostics()
+            return
+        if key=="web-firewall-add":
+            ok,msg,present=data
+            self._web_firewall=present
+            self.web_status.setText(msg)
+            self.log('Web: '+msg)
+            self.web_refresh_diagnostics()
             return
         if key=="rig":
             self.sdr_panel.rig_result(data)
@@ -3875,10 +4210,9 @@ class MainWindow(RotorUiMixin, QMainWindow):
             self.cat_indicator.setText("CAT")
             self.cat_indicator.setToolTip("CAT indisponível · "+message[:160])
             self.cat_indicator.setStyleSheet("font-size:12px;font-weight:800;color:#ffe7e7;background:#783437;border:1px solid #db565e")
-            friendly=("Porta CAT indisponível. Confira COM, cabo, driver e Configurações."
-                      if any(marker in message.casefold() for marker in
-                             ("file not found","filenotfound","could not open port","cannot find","no such file","não foi possível encontrar"))
-                      else "Falha de conexão CAT. Confira a porta e veja LOGs / CAT.")
+            from .cat import port_error_text
+            friendly,advice=port_error_text(message,str(self.config.values.get("port","") or ""))
+            friendly+=". "+("Confira COM, cabo, driver e Configurações." if "indisponível" in friendly else "Veja LOGs / CAT.")
             self.cat_tune_status.setText(friendly)
             self.cat_tune_status.setToolTip(message)
             self.log("CAT: falha ao conectar: "+message)
@@ -3888,7 +4222,7 @@ class MainWindow(RotorUiMixin, QMainWindow):
                     self.cat_tune_status.setText("Porta salva não respondeu · procurando o rádio…")
                     QTimer.singleShot(0,self.start_cat_scan)
                 else:
-                    QMessageBox.warning(self,"Falha de conexão CAT",message)
+                    self.show_cat_port_error(message)
             self._cat_after_scan=False
             return
         if key=="cat-readback":
@@ -4150,38 +4484,194 @@ class MainWindow(RotorUiMixin, QMainWindow):
         self.config.values['web_enabled']=self.web_enabled.isChecked()
         self.config.values['web_allow_lan']=self.web_lan.isChecked()
         self.config.values['web_port']=int(self.web_port.value())
+        self.config.values['web_session_hours']=int(self.web_session_hours.value())
+        controls=self.web_controls.isChecked()
+        if controls and not self.config.values.get('web_pin_hash'):
+            self.web_controls.blockSignals(True);self.web_controls.setChecked(False);self.web_controls.blockSignals(False)
+            controls=False
+            self.web_status.setText('Defina o PIN da estação antes de permitir controle pela rede.')
+        self.config.values['web_controls']=controls
         self.config.save()
-        if self.web_server is not None:
-            self.web_server.stop()
-            self.web_server=None
+        self.stop_web_server()
         if self.web_enabled.isChecked():
             self.start_web_server()
         else:
             self.web_status.setText('Interface Web desativada')
+            self.web_refresh_diagnostics()
+
+    def web_save_pin(self):
+        from .web_ui import pin_hash, valid_pin
+        import secrets as _secrets
+        pin=self.web_pin.text().strip()
+        if not valid_pin(pin):
+            self.web_status.setText('PIN inválido: use de 4 a 12 dígitos.')
+            return
+        salt=_secrets.token_hex(16)
+        self.config.values['web_pin_salt']=salt
+        self.config.values['web_pin_hash']=pin_hash(pin,salt)
+        self.config.save()
+        self.web_pin.clear()
+        self.web_pin.setPlaceholderText('definido')
+        if self.web_server is not None:
+            self.web_server.pin_salt=salt
+            self.web_server.pin_hash_value=self.config.values['web_pin_hash']
+        self.web_status.setText('PIN da estação salvo.')
+        self.log('Web: PIN da estação alterado')
+
+    def stop_web_server(self):
+        if self.web_server is not None:
+            self.web_server.stop()
+            self.web_server=None
+        timer=getattr(self,'web_timer',None)
+        if timer is not None:
+            timer.stop()
 
     def start_web_server(self):
         if self.web_server is not None:
             return True
+        c=self.config.values
         try:
             server=LocalStatusServer(
-                lan=bool(self.config.values.get('web_allow_lan',False)),
-                port=int(self.config.values.get('web_port',8094)),
-                map_path=Path(__file__).with_name('map.html'))
+                lan=bool(c.get('web_allow_lan',False)),
+                port=int(c.get('web_port',8094)),
+                map_path=Path(__file__).with_name('map.html'),
+                controls=bool(c.get('web_controls',False)) and bool(c.get('web_pin_hash')),
+                pin_hash_value=c.get('web_pin_hash',''),pin_salt=c.get('web_pin_salt',''),
+                session_hours=int(c.get('web_session_hours',8)))
             server.start()
             self.web_server=server
+            self._web_events_seen=0
+            if getattr(self,'web_timer',None) is None:
+                self.web_timer=QTimer(self)
+                self.web_timer.timeout.connect(self.web_tick)
+            self.web_timer.start(500)
+            self._web_firewall=None
+            if server.lan and sys.platform=='win32':
+                from .web_ui import firewall_rule_present
+                self.background('web-firewall',lambda port=server.port:firewall_rule_present(port))
             self.publish_web_snapshot(force=True)
             access=server.url
             if not access:
                 access=f'http://IP-DA-REDE:{server.port}/?key={server.key}'
             self.web_status.setText('Interface Web ativa · '+access)
-            self.web_status.setToolTip('Link de acesso LAN com chave temporária; não compartilhe fora da rede.')
+            self.web_status.setToolTip('Link de acesso LAN com chave; não compartilhe fora da rede.')
             self.log('Painel Web iniciado · LAN habilitada' if server.lan else 'Painel Web local iniciado')
+            if server.controls:
+                self.log('Painel Web: controle pela rede habilitado (com PIN; PTT/TX nunca)')
+            self.web_refresh_diagnostics()
             return True
         except (OSError,ValueError) as exc:
             self.web_server=None
             self.web_status.setText('Falha ao iniciar Web: '+str(exc))
             self.log('Falha ao iniciar painel Web: '+str(exc))
             return False
+
+    def web_tick(self):
+        """Thread da janela: aplica pedidos do navegador, copia eventos para o log e atualiza o diagnóstico."""
+        server=self.web_server
+        if server is None:
+            return
+        events=list(server.events)
+        seen=min(getattr(self,'_web_events_seen',0),len(events))
+        if len(events)==server.events.maxlen and seen==len(events):
+            seen=len(events)
+        for line in events[seen:]:
+            self.log('Web: '+line)
+        self._web_events_seen=len(events)
+        for cmd in server.drain_commands():
+            self.apply_web_command(cmd)
+        self._web_diag_tick=getattr(self,'_web_diag_tick',0)+1
+        if self._web_diag_tick%4==0:
+            self.web_refresh_diagnostics()
+
+    def apply_web_command(self,cmd):
+        """Executa um pedido validado do navegador. Nunca há PTT/TX aqui."""
+        server=self.web_server
+        if server is None or not server.controls:
+            return False
+        action,value,ip=cmd.get('action'),cmd.get('value'),cmd.get('ip','?')
+        who=f'Web ({ip})'
+        if action=='select_satellite':
+            idx=self.sat_combo.findData(value)
+            if idx<0:
+                idx=self.sat_combo.findText(str(value))
+            if idx<0:
+                self.log(who+': satélite não encontrado na lista: '+str(value));return False
+            self.sat_combo.setCurrentIndex(idx)
+            self.log(who+': satélite '+self.sat_combo.currentText())
+        elif action=='auto_cat':
+            self.auto_cat.setChecked(bool(value))
+            self.log(who+': Auto CAT '+('ligado' if value else 'desligado'))
+        elif action=='ab':
+            self.log(who+': A/B')
+            self.toggle_main_sub()
+        elif action=='rx_only':
+            if bool(value)!=bool(self.config.values.get('rx_only',False)):
+                self.toggle_rx_only()
+            self.log(who+': RX ONLY '+('ligado' if value else 'desligado'))
+        elif action in ('rotor_track','rotor_park','rotor_stop'):
+            if not self.rotor_cfg('rotor_enabled'):
+                self.log(who+': rotor desativado nas Configurações');return False
+            if action=='rotor_track':
+                self.rotor_track_btn.setChecked(bool(value))
+                self.log(who+': rastreamento do rotor '+('pedido' if value else 'desligado'))
+            elif action=='rotor_park':
+                self.log(who+': estacionar rotor');self.rotor_park()
+            else:
+                self.rotor_stop('PARAR pela rede, '+str(ip))
+        else:
+            return False
+        self.publish_web_snapshot(force=True)
+        return True
+
+    def web_refresh_diagnostics(self):
+        label=getattr(self,'web_diag',None)
+        combo=getattr(self,'web_addresses',None)
+        server=self.web_server
+        if label is None:
+            return
+        if server is None:
+            label.setText('Servidor: parado')
+            if combo is not None:combo.clear()
+            return
+        d=server.diagnostics()
+        if combo is not None:
+            current=[combo.itemText(i) for i in range(combo.count())]
+            if current!=d['addresses']:
+                combo.clear();combo.addItems(d['addresses'])
+                fm=combo.fontMetrics()
+                widest=max([fm.horizontalAdvance(a) for a in d['addresses']]+[fm.horizontalAdvance('http://192.168.100.100:8094/')])
+                combo.setFixedWidth(widest+48)
+        parts=[f"Servidor: escutando na porta {d['port']}" if d['listening'] else 'Servidor: parado']
+        if d['lan']:
+            fw=getattr(self,'_web_firewall',None)
+            if sys.platform=='win32':
+                parts.append('Firewall: '+('regra presente' if fw else 'regra ausente' if fw is False else 'verificando…'))
+            if not d['addresses']:
+                parts.append('Nenhum IPv4 de rede local encontrado')
+        parts.append('Último acesso remoto: '+(d['last_remote'] or 'nenhum'))
+        active=d['remote_active']
+        parts.append('Navegador remoto ativo agora: '+(', '.join(active) if active else 'não'))
+        if d['controls']:
+            parts.append('Controle pela rede: LIGADO')
+        label.setText(' · '.join(parts))
+
+    def web_request_firewall(self):
+        from .web_ui import request_windows_firewall_rule, firewall_rule_present
+        port=int(self.web_port.value())
+        self.web_status.setText('Pedindo ao Windows para liberar a porta TCP '+str(port)+'…')
+        def task():
+            ok,msg=request_windows_firewall_rule(port)
+            return ok,msg,firewall_rule_present(port)
+        self.background('web-firewall-add',task)
+
+    def web_rotate_key(self):
+        if self.web_server is None:
+            self.web_status.setText('Interface Web desativada');return
+        self.web_server.rotate_key()
+        self.log('Web: chave de acesso renovada; links antigos e sessões abertas perderam o acesso')
+        self.web_status.setText('Nova chave · '+(self.web_server.url or 'IP da LAN não detectado'))
+        self.web_refresh_diagnostics()
 
     def open_web_dashboard(self):
         if not self.start_web_server():
@@ -4197,11 +4687,28 @@ class MainWindow(RotorUiMixin, QMainWindow):
     def copy_web_url(self):
         if not self.start_web_server():
             return
-        url=self.web_server.url
+        combo=getattr(self,'web_addresses',None)
+        url=combo.currentText() if combo is not None and combo.currentText() else self.web_server.url
         if not url:
             url=f'http://IP-DA-REDE:{self.web_server.port}/?key={self.web_server.key}'
         QApplication.clipboard().setText(url)
         self.web_status.setText('Endereço copiado: '+url)
+
+    def web_display_png(self):
+        """Imagem do display (mesmo modelo/tema da janela) em PNG, feita no thread da janela."""
+        from .qt_compat import QBuffer, QByteArray, QIODevice
+        lcd=getattr(self,'lcd',None)
+        if lcd is None:
+            return b''
+        w,h=max(lcd.width(),600),max(lcd.height(),90)
+        img,_=lcd.render_image(w,h,1.0)
+        data=QByteArray()
+        buf=QBuffer(data)
+        mode=getattr(QIODevice,'WriteOnly',None) or QIODevice.OpenModeFlag.WriteOnly
+        buf.open(mode)
+        img.save(buf,'PNG')
+        buf.close()
+        return bytes(data.data())
 
     def publish_web_snapshot(self,force=False):
         server=self.web_server
@@ -4259,9 +4766,47 @@ class MainWindow(RotorUiMixin, QMainWindow):
             'visibility':txt('visibility'),
             'passes':passes,
             'orbit':orbit,
+            **self.web_extra_snapshot(server),
         })
+
+    def web_extra_snapshot(self,server):
+        """Rotor, APRS, lista de satélites, Auto CAT/RX ONLY e a imagem do display para o painel Web."""
+        def txt(name):
+            item=getattr(self,name,None)
+            return item.text() if item is not None else ''
+        rotor={'enabled':bool(self.rotor_cfg('rotor_enabled'))}
+        if rotor['enabled']:
+            connected=bool(getattr(getattr(self,'rotor',None),'connected',False))
+            rotor.update(connected=connected,tracking=bool(getattr(self,'rotor_tracking',False)),
+                         state='rastreando' if getattr(self,'rotor_tracking',False) else ('conectado' if connected else 'desconectado'),
+                         position=txt('rotor_pos_label'),target=txt('rotor_target_label'),status=txt('rotor_label'))
+        aprs=[]
+        for rec in list(getattr(getattr(self,'sdr_panel',None),'records',[]) or [])[:15]:
+            aprs.append({'utc':str(rec.get('utc',''))[11:19],'source':str(rec.get('source','')),
+                         'text':str(rec.get('aprs') or rec.get('ax25') or rec.get('hex') or '')[:160]})
+        extra={'rotor':rotor,'aprs':aprs,'auto_cat':bool(self.auto_cat.isChecked()),
+               'rx_only':bool(self.config.values.get('rx_only',False)),'display':''}
+        if server.controls:
+            sats=[]
+            for i in range(min(self.sat_combo.count(),500)):
+                data=self.sat_combo.itemData(i)
+                sats.append({'id':str(data if data is not None else self.sat_combo.itemText(i)),'name':self.sat_combo.itemText(i)})
+            current=self.sat_combo.currentData()
+            extra.update(satellites=sats,satellite_id=str(current if current is not None else self.sat_combo.currentText()))
+        if server.browser_recent():
+            try:
+                png=self.web_display_png()
+                if png:
+                    server.publish_display(png)
+                    extra['display']=str(int(time.time()*1000))
+            except Exception as exc:
+                report_exception('Web display',exc)
+        return extra
     def closeEvent(self,event):
         self.rotor_shutdown()
+        self._closing_app=True
+        if getattr(self,"display_window",None) is not None:
+            self.display_window.close()   # lembra posição/monitor; display_detached continua True
         try:
             if self.sdr_dock.isVisible() and not self.sdr_dock.isFloating():
                 self.config.values["sdr_dock_height"]=int(self.sdr_dock.height())

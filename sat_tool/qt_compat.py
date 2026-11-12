@@ -6,7 +6,7 @@ what the build installed, never on a guessed Windows version string.
 import sys
 
 try:
-    from PySide6.QtCore import Qt, QTimer, QObject, Signal, Slot, QUrl
+    from PySide6.QtCore import Qt, QTimer, QObject, Signal, Slot, QUrl, QBuffer, QByteArray, QIODevice
     from PySide6.QtGui import QDoubleValidator, QFont, QIcon, QPixmap, QColor, QBrush
     from PySide6.QtWidgets import (
         QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
@@ -23,7 +23,7 @@ except ImportError as qt6_error:
     # broken Qt6 native DLL loads, which should fail visibly during QA.
     if "No module named 'PySide6'" not in str(qt6_error):
         raise
-    from PySide2.QtCore import Qt, QTimer, QObject, Signal, Slot, QUrl
+    from PySide2.QtCore import Qt, QTimer, QObject, Signal, Slot, QUrl, QBuffer, QByteArray, QIODevice
     from PySide2.QtGui import QDoubleValidator, QFont, QIcon, QPixmap, QColor, QBrush
     from PySide2.QtWidgets import (
         QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
@@ -35,6 +35,15 @@ except ImportError as qt6_error:
     from PySide2.QtWebEngineWidgets import QWebEngineView
     from PySide2.QtPositioning import QGeoPositionInfoSource
     QT_BINDING = "PySide2"
+
+
+try:
+    from PySide6.QtWidgets import QSizePolicy
+    from PySide6.QtGui import QShortcut, QKeySequence
+except ImportError:  # pragma: no cover - Qt5 legacy build
+    from PySide2.QtWidgets import QSizePolicy, QShortcut
+    from PySide2.QtGui import QKeySequence
+QSizePolicy_Maximum = QSizePolicy.Maximum if hasattr(QSizePolicy, "Maximum") else QSizePolicy.Policy.Maximum
 
 
 def qt_exec(app):

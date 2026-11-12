@@ -515,6 +515,16 @@ class SdrPanel(QWidget):
         self.w.log("Configurações de SDR/equipamentos salvas")
 
     # ------------------------------------------------------------ detecção
+    def show_dock_automatically(self):
+        """Mostra o painel uma única vez por sessão, a menos que o operador o tenha ocultado."""
+        dock = self.parentWidget()
+        if dock is None or dock.isVisible() or getattr(self, "_auto_shown", False):
+            return
+        self._auto_shown = True
+        if self.cfg.get("sdr_dock_user_hidden", False):
+            return
+        dock.setVisible(True)
+
     def detect(self):
         if self.receiver and self.receiver.status.running:
             return
@@ -532,9 +542,9 @@ class SdrPanel(QWidget):
             self._led(False)
             return
         self.sdr_status.setText(f"RTL-SDR detectado: {', '.join(labels)}")
-        dock = self.parentWidget()
-        if dock is not None and not self._asked_devices and not dock.isVisible():
-            dock.setVisible(True)  # primeira detecção: mostra o painel
+        # v1.7.1: mostra o painel só na primeira detecção da sessão e nunca depois que o operador o
+        # fechou (antes, a detecção a cada 5 s reabria o painel sem parar).
+        self.show_dock_automatically()
         self._led(False, warn=True)
         key = devices[0].serial or devices[0].label
         keys = {d.serial or d.label for d in devices}
@@ -672,8 +682,7 @@ class SdrPanel(QWidget):
         self.dispatch.reset()
         self.fast_tick()
         self.receiver.start()
-        if self.parentWidget() is not None:
-            self.parentWidget().setVisible(True)
+        self.show_dock_automatically()
         self.w.log(f"SDR iniciado: {dev.label}")
 
     def stop_sdr(self):
@@ -1060,6 +1069,22 @@ class SdrPanel(QWidget):
         self.tlm_status.setText(f"Exportado: {path}")
         self.w.log(f"Telemetria exportada em JSON: {path}")
 
+    def feed_display_scope(self, fed):
+        """v1.7.1: o escopo dos displays estilo rádio usa a mesma FFT do waterfall (sem segundo fluxo de IQ)."""
+        lcd = getattr(self.w, "lcd", None)
+        if lcd is None or not hasattr(lcd, "push_scope"):
+            return
+        wf = self.waterfall
+        now = time.monotonic()
+        if fed and wf._avg_row is not None:
+            self._scope_t = now
+            row = np.asarray(wf._avg_row, dtype=float)
+            idx = np.linspace(0, len(row) - 1, min(160, len(row)))
+            row = np.interp(idx, np.arange(len(row)), row)
+            lcd.push_scope(np.clip((row - wf.floor_db) / max(wf.range_db, 1.0), 0, 1).tolist(), wf.span_hz)
+        elif lcd.state.scope is not None and now - getattr(self, "_scope_t", 0.0) > 2.0:
+            lcd.push_scope(None)
+
     # -------------------------------------------------------- drenagem GUI
     def drain(self):
         rec = self.receiver
@@ -1077,12 +1102,15 @@ class SdrPanel(QWidget):
                 self.sdr_status.setText(st.error)
                 if not self._prep_offered:
                     self.check_preparation(interactive=True)
+        fed = False
         try:
             while True:
                 spec, center = self._spec_q.get_nowait()
                 self.waterfall.push(spec, center)
+                fed = True
         except queue.Empty:
             pass
+        self.feed_display_scope(fed)
         try:
             while True:
                 frame, source = self._frame_q.get_nowait()

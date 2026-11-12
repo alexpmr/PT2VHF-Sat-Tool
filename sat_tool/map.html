@@ -11,6 +11,7 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#061628;fon
 .land{fill:#1b4860;stroke:#43809a;stroke-opacity:.9;stroke-width:.65}
 .coast{fill:none;stroke:#70a8ad;stroke-opacity:.16;stroke-width:1.8}
 .waterline{stroke:#31789b;stroke-opacity:.13;stroke-width:2}
+.antenna{fill:none;stroke:#5af08a;stroke-width:2.2;stroke-dasharray:6 4;stroke-linecap:round}
 .track{fill:none;stroke:#f6d964;stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round}
 .track-history{fill:none;stroke:#f6d964;stroke-width:2.4;stroke-opacity:.95;stroke-linecap:round;stroke-linejoin:round}
 .track-forecast{fill:none;stroke:#ffe9a3;stroke-width:2.2;stroke-dasharray:8 5;stroke-linecap:round;stroke-linejoin:round}
@@ -110,6 +111,7 @@ window.updateOrbit=function(p){
  if(p&&p.track){p.track.forEach(a=>pathLine(a,"track"));}
  if(p&&p.track_past){p.track_past.forEach(a=>pathLine(a,"track-history"));}
  if(p&&p.track_future){p.track_future.forEach(a=>pathLine(a,"track-forecast"));}
+ if(p&&p.antenna&&Array.isArray(p.antenna.line)){pathLine(p.antenna.line,"antenna");}
  if(p&&p.station&&Number.isFinite(+p.station.lat)&&Number.isFinite(+p.station.lon)){
  const [x,y]=xy(p.station.lat,p.station.lon);
  add("circle",{cx:x,cy:y,r:8,fill:"#f4d55a",opacity:".26"});

@@ -20,7 +20,7 @@
 
 ### P0 · Controle CAT contínuo — HOMOLOGADO em 06/11/2026 (v1.5.0)
 - [x] Validar com TS-2000 físico por **10 minutos sem reconectar nem clicar**, múltiplas correções Doppler FA/FB e respectivos readbacks com timestamps, dentro/fora da visada, sem PTT. Corrigir starvation, concorrência ou estados inconsistentes quando reproduzidos. Diferenciar porta aberta, leitura CAT validada e Auto CAT efetivamente ativo.
-- [ ] Tratar porta ausente (ex.: COM15 / FileNotFoundError) com mensagem clara "Porta CAT indisponível", orientação sobre cabo/driver/COM e atalho para Configurações; registrar detalhes técnicos em LOGs/CAT. Não confundir falha de conexão com sintonia bloqueada.
+- [x] (v1.7.1) Tratar porta ausente (ex.: COM15 / FileNotFoundError) com mensagem clara "Porta CAT indisponível", orientação sobre cabo/driver/COM e atalho para Configurações; registrar detalhes técnicos em LOGs/CAT. Não confundir falha de conexão com sintonia bloqueada.
 
 ### P1 · Responsividade da aba Operação — capturas de 05/11
 - [ ] **Topo:** manter título/versão e atualização juntos; trocar indicador CAT largo por **botão compacto CAT** (verde só com comunicação validada, vermelho desconectado/erro, âmbar conectando/degradado), clicável, com tooltip e texto acessível; sincronizar os controles de conexão.
@@ -98,7 +98,7 @@
   — a troca feita no TS-2000 é refletida corretamente no display e no Auto CAT.
 - [ ] Rotor G-5400B + ERC-M real (calibração, flip, PARAR): **aguardando cabo** DB15 (ERC-M) ↔ DIN 8 pinos (G-5400B);
   interface já reconhecida como porta serial USB.
-- [ ] **OTA 1.6.0→1.7.0 no Windows NÃO concluiu (retorno do operador em 07/11/2026):** "não funcionou redondo, tive que
+- [x] **OTA 1.6.0→1.7.0 no Windows NÃO concluiu (retorno do operador em 07/11/2026) — corrigido na v1.7.1, falta teste real:** "não funcionou redondo, tive que
   baixar e rodar. Acho que tem relação com o final, do driver RTL". Instalação manual da v1.7.0 funcionou.
   Investigar na próxima versão:
   - coletar `%TEMP%\PT2VHF-Sat-Tool-setup.log` (log do Inno com `/LOG`) e o resultado da tentativa;
@@ -110,9 +110,59 @@
   - registrar no app o motivo exato (código de saída, última etapa do log) e oferecer o link de download manual;
   - teste de atualização real 1.7.0→1.7.x com e sem RTL-SDR conectado e com a tarefa do driver marcada antes.
 
+## v1.7.1 — estilos de rádio, rotores, aparência, idiomas e acesso pela rede (11/11/2026)
+
+- [x] **OTA:** `apply-update.ps1` roda o Setup com `/MERGETASKS="!rtlsdr"` e `/OTA` (o driver RTL-SDR nunca roda em
+  atualização), nova tentativa em código 1/5, erro com o significado do código e as últimas linhas do log, link de
+  download manual no aviso. Falta o teste real 1.7.0→1.7.1 no Windows (com e sem RTL-SDR, tarefa marcada antes).
+- [x] **Porta COM** ocupada/ausente/sem permissão com título e orientação claros, atalho para Configurações; detalhe no log.
+- [x] **Configurações com campos do tamanho do conteúdo** (`form_sizing.fit_settings`): menus pela opção mais longa,
+  indicativo 12, lat/lon 12, locator 10 (com `maxLength`), grades alinhadas com sobra à direita.
+- [x] **Display:** teclas TIPO (F6) e LUZ (F7), 6 cores (âmbar, verde, azul, branco, vermelho, laranja), menu do clique
+  direito, **display destacável** (F8 / duplo clique) com tela cheia (F11), sempre visível, sem bordas, monitor e
+  posição lembrados (volta ao principal se o monitor sumir).
+- [x] **Estilos de rádios reais** (sem logotipos, só o nome do estilo na lista): IC-706MKIIG (verde/âmbar, teclas soft
+  F-1, band scope), IC-7100 (matriz branca, barra de status invertida, abas), FT-897/857 (backlight colorido, linha
+  A/B/C/F), IC-910H (MAIN em cima/SUB embaixo, medidor por banda), FT-991A e IC-9700 (TFT com escopo e waterfall).
+  Escopo com a FFT real do RTL-SDR (sem segundo fluxo de IQ), marcador do canal, span do painel SDR, clique
+  sintoniza, "SDR DESLIGADO" sem receptor; LUZ restrita às cores de cada estilo.
+- [x] **Configurações → Rotores** (conexão, limites e calibração do norte, ajustes de rastreamento, ajuste manual e
+  teste curto, log) e **faixa ROTOR** abaixo do display: bússola real × alvo com arco de EL, AZ/EL, chips de estado,
+  Rastrear/Estacionar/PARAR/Configurar…, seletor do rotor ativo, Esc/F12 = PARAR; linha verde da antena no mapa.
+- [x] **Aba Aparência** (absorve Apresentação): temas escuro, claro, alto contraste e noturno vermelho; destaque,
+  brilho, contraste, saturação, fonte; checagem WCAG; display e mapa acompanham o brilho; restaurar padrão.
+- [x] **Idioma no topo** com bandeira e nome nativo, 10 idiomas (pt-BR, en, es, fr, de, it, ja, pl, nl, zh-Hans),
+  catálogo em `sat_tool/locales/`, troca na hora, padrão = idioma do sistema; teste de cobertura das strings visíveis.
+- [x] **Acesso pela rede** como no APRS Client (ver item em Pendentes).
+- [x] **Bug:** painel SDR fechado voltava sozinho (ver item em Pendentes).
+- [x] **Rotor em tempo real com 2 gauges** (direção 0–360° e elevação 0–90°, real × alvo; ver item em Pendentes).
+- [ ] Homologar em campo: OTA 1.7.0→1.7.1, rotor G-5400B/ERC-M real (calibração, flip, PARAR), display destacado com
+  2 monitores e DPI diferentes, RTL-SDR real no escopo do display, acesso de celular/notebook pela LAN e regra de
+  firewall no Windows, fontes CJK no Windows/macOS.
+
 ## Pendentes
 
-- **Configurações → "Rotores": tudo de configuração e ajustes de rotor** (registrado em 07/11/2026; definição final do
+- **Rotor: indicação visual da direção e da inclinação em tempo real com 2 gauges** (registrado em 11/11/2026)
+  - Pedido do operador: "indicação visual da direção e inclinação do rotor em tempo real com 2 gauges, um de
+    direção e outro de elevação".
+  - **Implementado na v1.7.1** (entrou antes da publicação): `RotorCompass` virou o conjunto de dois
+    gauges separados: **DIREÇÃO** (mostrador 0–360° com N/L/S/O, traços a cada 10°) e **ELEVAÇÃO** (quadrante
+    0–90° com escala a cada 5°, números 30/60). Cada um tem ponteiro verde da posição real, ponteiro amarelo
+    tracejado do alvo do satélite e o valor "AZ 215°" / "EL 32°" em caixa abaixo do mostrador (os ponteiros
+    nunca cobrem o número). Atualização a cada leitura C2 (1 s). Aparecem na faixa ROTOR (tamanho 76) e em
+    Configurações → Rotores → Ajuste manual (tamanho 110). Tooltip traduzido nos 10 idiomas.
+    Imagem: `docs/backlog/rotor-gauges-direcao-elevacao.png`. Teste `tests/test_v172_rotor_gauges.py`.
+  - [ ] Conferir com o G-5400B real (aguardando cabo) que os ponteiros acompanham o movimento.
+
+- **BUG · Painel SDR volta a aparecer segundos depois de desligado** (registrado em 11/11/2026, v1.7.0)
+  - Relato do operador: "desligo o painel SDR e ele volta a aparecer uns segundos depois".
+  - Causa: a detecção do RTL-SDR roda a cada 5 s e, com o RTL-SDR escolhido para RX, reabria o painel
+    sempre que o encontrava oculto (a condição dependia só da lista de dongles já perguntados, vazia nesse caso).
+  - **Corrigido na v1.7.1:** o painel abre sozinho no máximo uma vez por sessão e nunca depois que o operador o
+    fecha (botão "Painel SDR" ou X); a escolha fica salva (`sdr_dock_user_hidden`) até ele abrir de novo.
+    Teste `tests/test_v171_sdr_dock_stays_hidden.py`. Falta confirmar no Windows com o RTL-SDR real.
+
+- **Configurações → "Rotores": tudo de configuração e ajustes de rotor** (registrado em 07/11/2026; definição final do — **implementado na v1.7.1**; falta homologar com o rotor real
   operador no mesmo dia — **sem aba principal separada**)
   - A sub-aba atual Configurações → "Rotor" é renomeada para **"Rotores"** e reúne **toda a configuração e todos os
     ajustes**:
@@ -142,7 +192,7 @@
   - Testes: migração das configurações atuais do rotor sem perda; PARAR acessível; simulador GS-232 na calibração e
     no ajuste manual.
 
-- **Destacar só o display para outro monitor** (registrado em 07/11/2026)
+- **Destacar só o display para outro monitor** (registrado em 07/11/2026) — **implementado na v1.7.1**; falta testar com 2 monitores reais
   - Botão/tecla "Destacar display" (e menu de contexto do display): abre **só o display** (com ou sem a moldura do
     painel realista) numa janela própria, que pode ser arrastada para **outro monitor**; voltar ao lugar com o mesmo
     botão ou fechando a janela (mesmo padrão do waterfall/telemetria destacáveis do painel SDR).
@@ -152,7 +202,7 @@
   - O display destacado continua funcional (A/B, RX ONLY, TIPO, LUZ, contagem LOS) e sincronizado com a janela
     principal; teste com 1 e 2 monitores e DPI diferentes em cada um.
 
-- **Display com moldura de rádio e etiqueta de marca/modelo (como um rádio real)** (registrado em 07/11/2026)
+- **Display com moldura de rádio e etiqueta de marca/modelo (como um rádio real)** (registrado em 07/11/2026) — **aguardando aprovação do mockup da moldura/etiqueta**; não implementado
   - Pedido do operador: mostrar marca e modelo no display, como num rádio real. **Decisão:** não reproduzir logotipos
     (marcas registradas; não sugerir produto oficial/endossado num programa distribuído). Em vez disso, **moldura de
     rádio opcional** ao redor do display, com **etiqueta preenchida pelo operador** em Configurações (texto livre:
@@ -169,7 +219,7 @@
   - Correção observada no mockup: no modelo matriz de pontos com display largo o texto "SWR 1.2" do lado SUB é
     cortado na borda — medir o texto e reduzir/ajustar a barra PO.
 
-- **Displays inspirados em rádios VHF/UHF (144/440 MHz, FM e SSB) de Yaesu, Icom e Kenwood** (registrado em 07/11/2026)
+- **Displays inspirados em rádios VHF/UHF (144/440 MHz, FM e SSB) de Yaesu, Icom e Kenwood** (registrado em 07/11/2026) — **6 estilos implementados na v1.7.1** (IC-706MKIIG, IC-7100, FT-897/857, IC-910H, FT-991A, IC-9700); FT-847, IC-705, TS-790 e FT-817/818 ainda dependem de referências e mockup; o painel metálico (moldura) segue o item da moldura
   - **Aprovado pelo operador (07/11/2026):** o painel realista (`docs/backlog/display-painel-realista-mockup.png`)
     é a base; os estilos dos rádios reais entram como modelos de display **dentro desse painel**.
   - Pesquisa inicial (manuais/fabricantes, 07/11/2026) — características a reproduzir:
@@ -250,7 +300,7 @@
   - **Mockup de cada modelo para aprovação do operador antes de implementar**; renderizadores vetoriais/pixel-perfect
     como os atuais (nítidos em qualquer DPI), com teste de renderização e teclas clicáveis.
 
-- **Seletor de idioma no menu superior (como no PT2VHF APRS Client) + revisão e tradução completa** (registrado em 07/11/2026)
+- **Seletor de idioma no menu superior (como no PT2VHF APRS Client) + revisão e tradução completa** (registrado em 07/11/2026) — **implementado na v1.7.1**; mensagens de status geradas em tempo de execução (ex.: "Atualizando elementos orbitais…", estados do rotor) ainda só em português
   - Referência enviada pelo operador: menu suspenso no topo da janela, com **bandeira + nome nativo**, igual ao APRS
     Client: Português (Brasil), English, Español, Français, Deutsch, Italiano, 日本語, Polski, Nederlands, 简体中文.
   - Hoje o Sat Tool tem o idioma só em Configurações e `sat_tool/i18n.py` cobre **6 idiomas** (pt-BR, en, es, fr, de,
@@ -265,7 +315,7 @@
   - Teste automatizado de cobertura: nenhuma string visível da interface sem tradução nos 10 idiomas; capturas de
     tela por idioma sem textos cortados (alemão/polonês mais longos).
 
-- **Configurações → aba "Aparência": tema do programa (cores, brilho etc.) + configuração do display** (registrado em 07/11/2026)
+- **Configurações → aba "Aparência": tema do programa (cores, brilho etc.) + configuração do display** (registrado em 07/11/2026) — **implementado na v1.7.1**
   - Nova aba **Aparência** (substitui/absorve a aba "Apresentação" da v1.7.0): a configuração do display
     (tipo, fonte, cor do backlight, prévia ao vivo) é **movida para dentro dela**, junto com idioma/formato de
     frequência e mapa/trajetória que hoje estão em Apresentação.
@@ -279,7 +329,7 @@
   - Testes: troca de tema/brilho sem reiniciar, persistência, restaurar padrão, contraste mínimo, nenhuma
     configuração perdida ao mover o display para a aba Aparência.
 
-- **Acesso pela web de outro computador, como no PT2VHF APRS Client** (registrado em 07/11/2026)
+- **Acesso pela web de outro computador, como no PT2VHF APRS Client** (registrado em 07/11/2026) — **implementado na v1.7.1** (sem QR code; atualização por polling de 1,5 s)
   - Situação atual (v1.3.18+): painel Web **somente leitura** (mapa, frequências, CAT, telemetria, passagens),
     localhost e LAN opt-in com chave temporária na URL. Ampliar para o mesmo modelo do APRS Client
     (`pt2vhf_aprs/local_server.py`, `lan_access.py`, `web.py`):
@@ -300,7 +350,7 @@
   - Testes: acesso de outro IP da LAN (simulado), firewall (mock), presença remota, recusa de IP público,
     controles bloqueados quando desabilitados, nenhuma rota de PTT.
 
-- **Configurações: menus e campos do tamanho do conteúdo (não esticados na largura toda)** (registrado em 07/11/2026)
+- **Configurações: menus e campos do tamanho do conteúdo (não esticados na largura toda)** (registrado em 07/11/2026) — **implementado na v1.7.1**
   - Hoje os menus suspensos (ex.: Apresentação → Tipo de display, Fonte, Cor) e os campos de texto/número
     (ex.: Estação → Indicativo, Latitude, Longitude, Altitude, Elevação mínima, Grid Locator; Rotor; Rádio) ocupam
     a largura inteira da janela — um campo de indicativo comporta mais de 300 caracteres.
@@ -312,7 +362,7 @@
   - Limitar também o tamanho de entrada onde fizer sentido (`maxLength`: indicativo, locator).
   - Testes: larguras máximas por tipo de campo em 1366×768 e 1920×1080, DPI 100–200% e idiomas; nada cortado.
 
-- **Display: teclas para alternar o tipo e a cor do backlight; novos modelos simulando rádios reais** (registrado em 07/11/2026)
+- **Display: teclas para alternar o tipo e a cor do backlight; novos modelos simulando rádios reais** (registrado em 07/11/2026) — **implementado na v1.7.1** (TIPO/LUZ, 6 cores e os estilos de rádio acima; VFD e HT de duas linhas não feitos)
   - **Tecla "TIPO"** no próprio display (ao lado de A/B e RX ONLY): cada clique passa para o próximo modelo
     (matriz → LED 7 seg. → LCD 7 seg. → Digital → Clássico → novos modelos…); menu de contexto (clique direito)
     com a lista para escolher direto. Salva a escolha (mesma configuração de Apresentação → Tipo de display).

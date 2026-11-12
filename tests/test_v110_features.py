@@ -41,7 +41,7 @@ def test_cat_telemetry_strict_parsers():
     with pytest.raises(ValueError):parse_meter("RM60031;")
 
 def test_six_languages_have_core_satellite_controls():
-    assert set(LANGUAGES)=={"pt-BR","en","es","fr","de","it"}
+    assert set(LANGUAGES)=={"pt-BR","en","es","fr","de","it","ja","pl","nl","zh-Hans"}  # v1.7.1
     for code in ("en","es","fr","de","it"):
         assert translated("Satélites",code)!="Satélites" or code=="es"
         assert translated("Marcar todos",code)!="Marcar todos"
