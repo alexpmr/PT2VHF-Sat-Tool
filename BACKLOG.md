@@ -142,6 +142,12 @@
 
 ## Pendentes
 
+- **Display: ícone <> para trocar MAIN e SUB** (registrado em 12/11/2026)
+  - Pedido do operador: "algum ícone tipo <> para trocar o main pelo sub e vice-versa".
+  - **Feito (1.7.2):** ícone "<>" no topo do display, centralizado entre MAIN e SUB (modelos matriz, LED/LCD 7 seg.
+    e Digital). O clique faz a mesma troca da tecla A/B, que continua disponível; o divisor central começa abaixo
+    do ícone e as etiquetas do lado SUB recuam para não encostar nele. Teste `tests/test_v172_swap_icon.py`.
+
 - **BUG · Tecla RX ONLY do display parecia sempre ligada** (registrado em 12/11/2026, v1.7.1)
   - Relato: "o botão rx only no display não altera quando eu clico. Fica como se estivesse sempre em rx only".
   - Causa: o clique alternava o modo, mas a tecla era desenhada igual nos dois estados (no modelo matriz, sempre

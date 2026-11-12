@@ -51,7 +51,7 @@ def test_all_models_render_all_keys_at_any_width():
                 lcd.set_model(model); lcd.set_theme(theme)
                 for w, h, dpr in ((900, 132, 1.0), (1300, 150, 2.0), (2400, 320, 1.25)):
                     img, keys = lcd.render_image(w, h, dpr)
-                    assert set(keys) == {"rxonly", "swap", "type", "light"}, (model, keys)
+                    assert set(keys) - {"swap2"} == {"rxonly", "swap", "type", "light"}, (model, keys)
                     rects = list(keys.values())
                     for r in rects:
                         assert 0 <= r.x() and r.right() <= w + 1 and r.bottom() <= h + 1

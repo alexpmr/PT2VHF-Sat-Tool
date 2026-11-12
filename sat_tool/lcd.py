@@ -29,6 +29,7 @@ except ImportError:  # PySide2
 
 # 5×7: cada caractere = 7 linhas de 5 bits (bit 4 = coluna esquerda).
 FONT = {
+    "<": (0x02, 0x04, 0x08, 0x10, 0x08, 0x04, 0x02), ">": (0x08, 0x04, 0x02, 0x01, 0x02, 0x04, 0x08),
     "0": (0x0E, 0x11, 0x13, 0x15, 0x19, 0x11, 0x0E), "1": (0x04, 0x0C, 0x04, 0x04, 0x04, 0x04, 0x0E),
     "2": (0x0E, 0x11, 0x01, 0x02, 0x04, 0x08, 0x1F), "3": (0x1F, 0x02, 0x04, 0x02, 0x01, 0x11, 0x0E),
     "4": (0x02, 0x06, 0x0A, 0x12, 0x1F, 0x02, 0x02), "5": (0x1F, 0x10, 0x1E, 0x01, 0x01, 0x11, 0x0E),
@@ -265,6 +266,19 @@ class _Style:
 
     active_keys: set = set()
 
+    def swap_icon(self, cx, y, max_w):
+        """Ícone <> compacto centrado em cx (cabe no vão entre MAIN e SUB); retorna o retângulo clicável."""
+        px = 12 * self.u
+        while px > 7 * self.u and self.text_w("<>", px) + 6 * self.u > max_w:
+            px -= 1 * self.u
+        w = self.text_w("<>", px) + 6 * self.u
+        r = QRectF(cx - w / 2, y, w, 20 * self.u)
+        self.p.setPen(QPen(self.ink, max(1.0, 1.1 * self.u)))
+        self.p.setBrush(QColor(0, 0, 0, 0))
+        self.p.drawRoundedRect(r, 3 * self.u, 3 * self.u)
+        self.label(r.x() + 3 * self.u, y + 2 * self.u, "<>", px)
+        return r
+
     def key(self, x, y, s):
         """Tecla com contorno; ligada (ex.: RX ONLY ativo) fica preenchida com o texto invertido."""
         w = self.key_w(s)
@@ -290,8 +304,9 @@ class _Style:
     def bar_color(self, i, n):
         return self.ink
 
-    def separator(self, x):
-        self.p.fillRect(QRectF(x, 10 * self.u, max(1.0, 1.5 * self.u), self.h - 50 * self.u), self.off)
+    def separator(self, x, top=None):
+        y0 = 10 * self.u if top is None else top
+        self.p.fillRect(QRectF(x, y0, max(1.0, 1.5 * self.u), self.h - 40 * self.u - y0), self.off)
 
     # números grandes: implementados por cada estilo
     def digits_w(self, s, size):
@@ -360,6 +375,14 @@ class _Matrix(_Style):
 
     def key_w(self, s):
         return (len(s) * 6 - 1 + 8) * self.small
+
+    def swap_icon(self, cx, y, max_w):
+        sp = self.small
+        w = (2 * 6 - 1 + 4) * sp
+        x, y = int(round(cx - w / 2)), int(round(y))
+        self.p.fillRect(x, y, w, 11 * sp, self.ink)
+        self.mtext(x + 2 * sp, y + 2 * sp, "<>", sp, self.light)
+        return QRectF(x, y, w, 11 * sp)
 
     def key(self, x, y, s):
         """Tecla cheia; RX ONLY (tecla de estado) só fica cheia quando ligada, senão só o contorno."""
@@ -581,11 +604,14 @@ def paint_ts2000(style: _Style, st: LcdState) -> dict:
                 size -= 1 * u
             small_size = size * 0.68
             dig_h = size
+    # v1.7.2: ícone <> no topo, entre MAIN e SUB: troca as bandas (mesma ação da tecla A/B)
+    swap_r = style.swap_icon(half, 8 * u, 2 * margin)
     for side, x0 in zip(sides(st), (margin, half + margin)):
         y = 8 * u
         rc = QColor("#2fbf4a") if digital and side["role"] == "RX" else None
         tc = QColor("#d8443a") if digital and side["role"] == "TX" else None
-        x = style.tag(x0, y, side["name"])
+        tx0 = max(x0, swap_r.right() + 4 * u) if x0 > half else x0   # etiquetas do SUB depois do ícone
+        x = style.tag(tx0, y, side["name"])
         x = style.tag(x, y, (("TX OFF" if st.rx_only else "SEM TX") if side["off"] else side["role"]), bg=rc or tc)
         if side["mode"]:
             style.label(x, y + 2 * u, side["mode"][:4].upper())
@@ -631,10 +657,11 @@ def paint_ts2000(style: _Style, st: LcdState) -> dict:
             ex = style.bar(lx, y, pw / 100, n, seg, 9 * u)
             txt = (f"{pw}W" if st.power_w is not None else "") + (f"  SWR {st.swr:.1f}" if st.swr is not None else "")
             style.label(ex + 6 * u, y - 3 * u, txt.strip())
-    style.separator(half - 1)
+    # v1.7.2: ícone <> no meio, entre MAIN e SUB: troca as bandas (mesma ação da tecla A/B)
+    keys = {"swap2": swap_r}
+    style.separator(half - 1, top=swap_r.bottom() + 4 * u)
     # indicadores + teclas
     y = H - 27 * u
-    keys = {}
     kx = W - margin
     for key, lab in DISPLAY_KEYS:
         kx -= style.key_w(lab)
@@ -838,7 +865,7 @@ class LcdDisplay(QWidget):
             event.accept()
             return
         if key:
-            {"swap": self.swap_clicked, "rxonly": self.rx_only_clicked,
+            {"swap": self.swap_clicked, "swap2": self.swap_clicked, "rxonly": self.rx_only_clicked,
              "type": self.type_clicked, "light": self.light_clicked}[key].emit()
             event.accept()
             return
