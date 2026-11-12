@@ -367,7 +367,7 @@ jobs:
       - name: Atualizar instaladores, contadores e OTA
         run: |
           python3 scripts/publish_sat_to_site.py --version 1.7.2 --release-dir release --site-dir site \
-            --notes 'v1.7.2: gauges de direção e elevação do rotor em tempo real; botão ROTOR no topo (liga/desliga o controlador) e rastreamento automático com estado RASTREANDO/PARADO; contagem regressiva LOS/AOS em segmentos no display; ícone <> troca MAIN e SUB; janela de AOS só com contagem e fechamento automático; abertura com o banner Powered by www.PT2VHF.com (10 s); binários com a versão no nome; correções: rotor aparecia DESCONECTADO conectado e tecla RX ONLY sem indicar o estado.
+            --notes 'v1.7.2: gauges de direção e elevação do rotor em tempo real; botão ROTOR no topo (liga/desliga o controlador) e rastreamento automático com estado RASTREANDO/PARADO; contagem regressiva LOS/AOS em segmentos no display; ícone <> troca MAIN e SUB; janela de AOS só com contagem e fechamento automático; abertura com o banner Powered by www.PT2VHF.com (10 s); binários com a versão no nome; correções: rotor aparecia DESCONECTADO conectado e tecla RX ONLY sem indicar o estado. Windows x64, Linux x64 e macOS ARM64.'
       - name: Commit e push no site (Hostinger)
         working-directory: site
         run: |

@@ -34,3 +34,13 @@ def test_release_asset_names_stable_for_existing_updater():
           "url":"https://www.pt2vhf.com/downloads/sat-tool/"+stem+"-Setup.exe"}]}
     update=select_release(data,"1.1.0","Win11-x64","Setup")
     assert update and update.asset_name==stem+"-Setup.exe"
+
+
+def test_release_notes_quote_is_closed():
+    """v1.7.2: as notas do site são um argumento entre aspas simples; sem a aspa final o job do site quebra."""
+    from pathlib import Path
+    wf = (Path(__file__).resolve().parents[1] / ".github" / "workflows" / "windows.yml").read_text(encoding="utf-8")
+    lines = [l for l in wf.splitlines() if "--notes '" in l]
+    assert len(lines) >= 2
+    for line in lines:
+        assert line.count("'") == 2, line[-80:]
