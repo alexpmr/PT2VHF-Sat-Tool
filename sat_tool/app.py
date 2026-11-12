@@ -156,6 +156,7 @@ class MainWindow(RotorUiMixin, QMainWindow):
         self.aos_alarm_dialog = None
         self.aos_alarm_target = None
         self.aos_alarm_title = None
+        self.aos_alarm_count = None
         self.aos_alarm_detail = None
         self.aos_alarm_silenced = False
         self.aos_alarm_last_second = None
@@ -3788,65 +3789,68 @@ class MainWindow(RotorUiMixin, QMainWindow):
         self.aos_alarm_dialog=None
         self.aos_alarm_target=None
         self.aos_alarm_title=None
+        self.aos_alarm_count=None
         self.aos_alarm_detail=None
 
     def _update_aos_countdown(self,now):
+        """v1.7.2: só a contagem regressiva até o AOS; a janela fecha sozinha quando chega a zero."""
         if self.aos_alarm_dialog is None or self.aos_alarm_target is None:
             return
         _,row,_=self.aos_alarm_target
         remaining=math.ceil((row['aos']-now).total_seconds())
-        if remaining < -4:
-            self.aos_alarm_dialog.close()
-            self._clear_aos_dialog()
-            return
-        if self.aos_alarm_title is not None:
-            self.aos_alarm_title.setText(
-                f"{row.get('name','Satélite')} · NORAD {row.get('id','')}\n"
-                + (f'AOS em {remaining} s' if remaining>0 else 'AOS · PASSAGEM INICIADA'))
-        if self.aos_alarm_detail is not None:
-            self.aos_alarm_detail.setText(
-                f"AOS {row['aos'].astimezone():%d/%m/%Y %H:%M:%S} local · "
-                f"UTC {row['aos']:%H:%M:%S} · Máx {row.get('max_el',0):.0f}°")
         if remaining != self.aos_alarm_last_second:
             if not self.aos_alarm_silenced and remaining>=0:
-                self.play_aos_sound(critical=(remaining==0))
-            elif (not self.aos_alarm_silenced and remaining<0
-                    and self.aos_alarm_last_second is not None
-                    and self.aos_alarm_last_second>0):
-                self.play_aos_sound(critical=True)
+                self.play_aos_sound(critical=(remaining<=0))
             self.aos_alarm_last_second=remaining
+        if remaining <= 0:
+            self.log(f"AOS {row.get('name','Satélite')}: contagem encerrada, janela fechada")
+            dialog=self.aos_alarm_dialog
+            self._clear_aos_dialog()
+            dialog.close()
+            return
+        if self.aos_alarm_title is not None:
+            self.aos_alarm_title.setText(f"{row.get('name','Satélite')} · AOS em")
+        if self.aos_alarm_count is not None:
+            m,sec=divmod(remaining,60)
+            self.aos_alarm_count.setText(f"{m}:{sec:02d}")
+        if self.aos_alarm_detail is not None:
+            self.aos_alarm_detail.setText(
+                f"AOS {row['aos'].astimezone():%H:%M:%S} local · UTC {row['aos']:%H:%M:%S} · "
+                f"Máx {row.get('max_el',0):.0f}°")
 
     def _open_aos_countdown(self,row,remaining,key=None):
-        """Popup não modal com contagem regressiva e som (alarme do selecionado ou aviso agendado)."""
+        """Janela não modal só com a contagem regressiva até o AOS (sem perguntas nem botões); fecha no AOS.
+        Depois do AOS não abre (a passagem já começou)."""
+        if remaining<=0 or row['aos']<=now_utc():
+            return
         found=(key or f"{row.get('id')}@{row['aos'].isoformat()}",row,remaining)
         self.aos_alarm_target=found
         self.aos_alarm_silenced=False
         self.aos_alarm_last_second=None
         dialog=QDialog(self)
-        dialog.setWindowTitle('Alerta AOS · contagem regressiva')
+        dialog.setWindowTitle('Contagem regressiva para o AOS')
         dialog.setWindowModality(Qt.NonModal)
         dialog.setAttribute(Qt.WA_ShowWithoutActivating,True)
         layout=QVBoxLayout(dialog)
         self.aos_alarm_title=QLabel()
-        self.aos_alarm_title.setStyleSheet('font-size:21px;font-weight:800;color:#73eac9')
+        self.aos_alarm_title.setAlignment(Qt.AlignCenter)
+        self.aos_alarm_title.setStyleSheet('font-size:17px;font-weight:800;color:#73eac9')
+        self.aos_alarm_count=QLabel()
+        self.aos_alarm_count.setAlignment(Qt.AlignCenter)
+        self.aos_alarm_count.setStyleSheet('font-size:54px;font-weight:900;color:#f5c542;'
+                                           'font-family:Consolas,"DejaVu Sans Mono",monospace')
         self.aos_alarm_detail=QLabel()
+        self.aos_alarm_detail.setAlignment(Qt.AlignCenter)
         self.aos_alarm_detail.setWordWrap(True)
-        layout.addWidget(self.aos_alarm_title)
-        layout.addWidget(self.aos_alarm_detail)
-        actions=QHBoxLayout()
-        jump=QPushButton('Ir para Operação')
-        mute=QPushButton('Silenciar')
-        dismiss=QPushButton('Fechar')
-        jump.clicked.connect(lambda:self.tabs.setCurrentIndex(0))
-        mute.clicked.connect(lambda:setattr(self,'aos_alarm_silenced',True))
-        dismiss.clicked.connect(dialog.close)
-        for button in (jump,mute,dismiss):
-            actions.addWidget(button)
-        layout.addLayout(actions)
+        self.aos_alarm_detail.setStyleSheet('color:#9fc3d6')
+        for w in (self.aos_alarm_title,self.aos_alarm_count,self.aos_alarm_detail):
+            layout.addWidget(w)
+        dialog.setMinimumWidth(300)
         dialog.finished.connect(lambda *_:self._clear_aos_dialog())
         self.aos_alarm_dialog=dialog
         self._update_aos_countdown(now_utc())
-        dialog.show()
+        if self.aos_alarm_dialog is dialog:
+            dialog.show()
 
     def check_selected_aos_alarm(self,now):
         '''Read-only audible AOS countdown; never commands radio or CAT.'''
