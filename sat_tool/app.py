@@ -250,6 +250,8 @@ class MainWindow(RotorUiMixin, QMainWindow):
         self.language_menu_button.setFixedHeight(h)
         self.utc.setFixedHeight(h)
         self.utc.setAlignment(Qt.AlignCenter)
+        if getattr(self,"resource_meter",None) is not None:
+            self.resource_meter.setFixedHeight(h+8)
 
     def install_display_shortcuts(self):
         """Atalhos do display: F6 = TIPO, F7 = LUZ, F8 = destacar/voltar."""
@@ -395,6 +397,9 @@ class MainWindow(RotorUiMixin, QMainWindow):
         self.summary.setWordWrap(False)
         self.summary.setMinimumWidth(80)
         header.addWidget(self.summary, 1)
+        from .resource_meter import ResourceMeter
+        self.resource_meter=ResourceMeter()   # v1.8.0: CPU e RAM do programa, como no APRS Client
+        header.addWidget(self.resource_meter,0,Qt.AlignVCenter)
         self.cat_indicator=QPushButton("CAT")
         self.cat_indicator.setToolTip("Clique para conectar ou desconectar o TS-2000 pela porta CAT configurada")
         self.cat_indicator.clicked.connect(self.toggle_connection)
@@ -2793,6 +2798,7 @@ class MainWindow(RotorUiMixin, QMainWindow):
 
     def apply_appearance(self):
         """Gera a folha de estilo do tema e aplica na hora em toda a janela, painéis, janelas destacadas e diálogos."""
+        QTimer.singleShot(0,self.align_top_controls)   # v1.8.0: fonte nova → botões do topo e medidor na mesma altura
         from .appearance import transform_qss, text_contrast, display_dim
         o=self.theme_options()
         app=QApplication.instance()

@@ -375,5 +375,6 @@
 "Siguiendo el satélite seleccionado · haga clic (o Esc/F12) para detener el rotor",
 "Rotor detenido · sigue solo cuando el satélite seleccionado está sobre el horizonte",
 "Seguimiento automático pausado por el operador · haga clic para reanudar",
-"Actualizando TLE en segundo plano…"
+"Actualizando TLE en segundo plano…",
+"Uso de CPU y memoria de PT2VHF Sat Tool"
 ]

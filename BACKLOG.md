@@ -158,6 +158,13 @@
 - **Próxima versão: 1.8.0** (registrado em 12/11/2026)
   - Pedido do operador: "próxima versão deverá ser 1.0", corrigido em seguida para "1.8".
   - Os itens marcados "Feito (1.8.0)" entram nela; a troca de número acontece quando o operador pedir o lançamento.
+- **Medidor de CPU e RAM** (registrado em 12/11/2026)
+  - Pedido do operador: "adicione um medidor de uso de memória e cpu", como o do PT2VHF APRS Client, na barra do topo.
+  - **Feito (1.8.0):** bloco compacto à esquerda de CAT/SDR/ROTOR com "CPU x,x%" e "RAM nnn MB" do próprio programa,
+    cada um com uma barrinha (verde, âmbar acima de 60%, vermelha acima de 85%); atualiza a cada 2 s. CPU em % da
+    máquina toda; a barra da RAM é a fração da memória física. `sat_tool/resource_meter.py` usa psutil (adicionado aos
+    requirements) e, sem ele, a biblioteca padrão. Teste `tests/test_v180_resource_meter.py`.
+
 - **Menus e campos do tamanho do conteúdo na tela principal** (registrado em 12/11/2026)
   - Pedido do operador: "ajuste o tamanho dos menus pulldown e campos de inserção, para o tamanho suficiente para mostrar
     a informação" (print: Satélite e Serviço/modo esticados na linha toda).

@@ -375,5 +375,6 @@
 "Inseguimento del satellite selezionato · clic (o Esc/F12) per fermare il rotore",
 "Rotore fermo · insegue da solo quando il satellite selezionato è sopra l'orizzonte",
 "Inseguimento automatico sospeso dall'operatore · clic per riprendere",
-"Aggiornamento TLE in background…"
+"Aggiornamento TLE in background…",
+"Uso di CPU e memoria di PT2VHF Sat Tool"
 ]
