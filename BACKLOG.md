@@ -155,6 +155,13 @@
 
 ## Pendentes
 
+- **Próxima versão numerada como 1.0** (registrado em 12/11/2026) — aguardando confirmação do operador
+  - Pedido do operador: "próxima versão deverá ser 1.0".
+  - Impacto: 1.0.0 é menor que a 1.7.2 publicada. O `publish_sat_to_site.py` recusa regressão de versão e o aviso de
+    atualização/OTA compara números, então quem está na 1.7.x não receberia a 1.0. Opções: 2.0 (segue a sequência) ou
+    1.0 com mudança de esquema no site/OTA (ex.: novo produto ou campo de época). Nada é lançado até a decisão.
+  - Os itens abaixo marcados "Feito (1.7.3)" vão para essa próxima versão, seja qual for o número.
+
 - **Pacote .deb para Ubuntu/Linux Mint** (registrado em 12/11/2026)
   - Pedido do operador: "versão .deb Linux ubuntu/mint".
   - **Feito (1.7.3):** o job Linux gera também `PT2VHF-Sat-Tool-v<versão>-Linux-x64.deb` (`scripts/build_deb.py`,
