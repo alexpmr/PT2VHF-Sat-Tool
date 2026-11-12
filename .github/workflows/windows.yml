@@ -186,6 +186,21 @@ jobs:
           if (-not (Test-Path "$base-Portable.exe" -PathType Leaf)) { throw 'Portable must be EXE onefile' }
           if (Get-ChildItem -Path dist -Filter '*.zip' -File) { throw 'No ZIP distribution permitted' }
           if (-not (Get-ChildItem 'dist/PT2VHF-Sat-Tool' -Recurse -Filter 'icon-256.png')) { throw 'Brand resource missing from installer payload' }
+      - name: Instalar em pasta temporária e conferir o EXE com a versão no nome
+        shell: pwsh
+        run: |
+          $dir = Join-Path $env:RUNNER_TEMP 'satinst'
+          New-Item -ItemType Directory -Force -Path $dir | Out-Null
+          # simula instalações anteriores: nome fixo antigo e nome com outra versão
+          Set-Content (Join-Path $dir 'PT2VHF-Sat-Tool.exe') 'old'; Set-Content (Join-Path $dir 'PT2VHF-Sat-Tool-v1.0.0.exe') 'old'
+          $setup = (Resolve-Path 'dist/PT2VHF-Sat-Tool-v1.7.1-${{ matrix.target }}-Setup.exe').Path
+          $p = Start-Process -FilePath $setup -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/SP-','/MERGETASKS="!rtlsdr,!desktopicon"',"/DIR=`"$dir`"") -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "Setup terminou com código $($p.ExitCode)" }
+          $exes = @(Get-ChildItem $dir -Filter 'PT2VHF-Sat-Tool*.exe' -File | Select-Object -ExpandProperty Name)
+          Write-Host "EXEs instalados: $($exes -join ', ')"
+          if ($exes.Count -ne 1 -or $exes[0] -ne 'PT2VHF-Sat-Tool-v1.7.1.exe') { throw "Esperado só PT2VHF-Sat-Tool-v1.7.1.exe: $($exes -join ', ')" }
+          $unins = Get-ChildItem $dir -Filter 'unins*.exe' | Select-Object -First 1
+          if ($unins) { Start-Process -FilePath $unins.FullName -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART') -Wait }
       - name: Checksums
         shell: pwsh
         run: |
@@ -264,11 +279,16 @@ jobs:
         run: |
           mkdir -p out
           base="PT2VHF-Sat-Tool-v1.7.1-${{ matrix.target }}"
+          app="PT2VHF-Sat-Tool-v1.7.1"   # nome com a versão (pasta, executável e .app)
           if [ "$RUNNER_OS" = macOS ]; then
-            hdiutil create -volname "PT2VHF Sat Tool" -srcfolder dist/PT2VHF-Sat-Tool.app -ov -format UDZO "out/$base.dmg"
+            mkdir -p dmg && mv dist/PT2VHF-Sat-Tool.app "dmg/$app.app"
+            hdiutil create -volname "PT2VHF Sat Tool v1.7.1" -srcfolder dmg -ov -format UDZO "out/$base.dmg"
           else
             cp linux/rtl-sdr.rules linux/LEIA-ME-RTL-SDR.txt dist/PT2VHF-Sat-Tool/
-            tar -C dist -czf "out/$base.tar.gz" PT2VHF-Sat-Tool
+            mv dist/PT2VHF-Sat-Tool/PT2VHF-Sat-Tool "dist/PT2VHF-Sat-Tool/$app"
+            mv dist/PT2VHF-Sat-Tool "dist/$app"
+            test -x "dist/$app/$app"
+            tar -C dist -czf "out/$base.tar.gz" "$app"
           fi
           ls -l out
       - name: Enviar pacote Linux/macOS diretamente à GitHub Release (sem artifacts)

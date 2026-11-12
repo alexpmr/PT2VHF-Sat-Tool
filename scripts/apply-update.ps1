@@ -130,7 +130,16 @@ try {
     "Falha ao instalar atualizacao PT2VHF Sat Tool: $detail" | Out-File -FilePath (Join-Path $env:TEMP 'PT2VHF-Sat-Tool-update-error.txt') -Encoding UTF8
 } finally {
     "$status`n$Version`n$detail" | Out-File -FilePath $resultFile -Encoding UTF8
-    if ($Executable -and (Test-Path -LiteralPath $Executable)) {
-        Start-Process -FilePath $Executable
+    # v1.7.2: o EXE instalado leva a versao no nome. Depois de um Setup bem-sucedido o proprio instalador
+    # (/OTA) abre o EXE novo; aqui so reabrimos em caso de falha ou na edicao portatil.
+    if (-not ($Mode -eq 'Setup' -and $status -eq 'ok')) {
+        $launch = $Executable
+        if (-not ($launch -and (Test-Path -LiteralPath $launch)) -and $Destination) {
+            $launch = Get-ChildItem -LiteralPath $Destination -Filter 'PT2VHF-Sat-Tool*.exe' -File -ErrorAction SilentlyContinue |
+                Sort-Object LastWriteTime -Descending | Select-Object -First 1 -ExpandProperty FullName
+        }
+        if ($launch -and (Test-Path -LiteralPath $launch)) {
+            Start-Process -FilePath $launch
+        }
     }
 }

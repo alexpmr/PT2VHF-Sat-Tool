@@ -1,5 +1,7 @@
 #define AppName "PT2VHF Sat Tool"
 #define AppVersion "1.7.1"
+; v1.7.2: o executavel instalado leva a versao no nome (PT2VHF-Sat-Tool-v1.7.2.exe)
+#define AppExe "PT2VHF-Sat-Tool-v" + AppVersion + ".exe"
 #ifndef BuildFlavor
   #define BuildFlavor "Win11-x64"
 #endif
@@ -39,23 +41,30 @@ ArchitecturesInstallIn64BitMode=x64compatible
 MinVersion={#MinTarget}
 PrivilegesRequired=lowest
 WizardStyle=modern
-UninstallDisplayIcon={app}\PT2VHF-Sat-Tool.exe
+UninstallDisplayIcon={app}\{#AppExe}
 CloseApplications=yes
 CloseApplicationsFilter=*.exe,*.dll,*.pak,*.dat,*.bin
 RestartApplications=no
 AppMutex=PT2VHF_Sat_Tool_Running
+[InstallDelete]
+; executaveis de versoes anteriores (nome fixo antigo e nomes com versao)
+Type: files; Name: "{app}\PT2VHF-Sat-Tool.exe"
+Type: files; Name: "{app}\PT2VHF-Sat-Tool-v*.exe"
 [Files]
-Source: "..\dist\PT2VHF-Sat-Tool\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\dist\PT2VHF-Sat-Tool\*"; Excludes: "\PT2VHF-Sat-Tool.exe"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\dist\PT2VHF-Sat-Tool\PT2VHF-Sat-Tool.exe"; DestDir: "{app}"; DestName: "{#AppExe}"; Flags: ignoreversion
 [Icons]
-Name: "{group}\PT2VHF Sat Tool"; Filename: "{app}\PT2VHF-Sat-Tool.exe"
-Name: "{autodesktop}\PT2VHF Sat Tool {#BuildFlavor}"; Filename: "{app}\PT2VHF-Sat-Tool.exe"; Tasks: desktopicon
+Name: "{group}\PT2VHF Sat Tool"; Filename: "{app}\{#AppExe}"
+Name: "{autodesktop}\PT2VHF Sat Tool {#BuildFlavor}"; Filename: "{app}\{#AppExe}"; Tasks: desktopicon
 [Tasks]
 Name: "desktopicon"; Description: "Criar atalho na Área de Trabalho"; GroupDescription: "Atalhos adicionais:"
 Name: "rtlsdr"; Description: "Preparar RTL-SDR (instala o driver WinUSB somente na interface 0 do dongle)"; GroupDescription: "Receptor SDR:"
 [Run]
 Filename: "{app}\_internal\drivers\wdi-simple.exe"; Parameters: "-n ""RTL2832U (PT2VHF Sat Tool)"" -m Realtek -v 0x0BDA -p 0x2838 -i 0 -t 0 -f rtlsdr_2838_pt2vhf.inf -d ""{tmp}\rtlsdr"" --stealth-cert -s -o 60000"; StatusMsg: "Preparando driver do RTL-SDR (WinUSB)..."; Flags: runhidden waituntilterminated skipifdoesntexist; Tasks: rtlsdr; Check: not WizardSilent and not IsOta
 Filename: "{app}\_internal\drivers\wdi-simple.exe"; Parameters: "-n ""RTL2832U (PT2VHF Sat Tool)"" -m Realtek -v 0x0BDA -p 0x2832 -i 0 -t 0 -f rtlsdr_2832_pt2vhf.inf -d ""{tmp}\rtlsdr"" --stealth-cert -s -o 60000"; Flags: runhidden waituntilterminated skipifdoesntexist; Tasks: rtlsdr; Check: not WizardSilent and not IsOta
-Filename: "{app}\PT2VHF-Sat-Tool.exe"; Description: "Executar PT2VHF Sat Tool"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\{#AppExe}"; Description: "Executar PT2VHF Sat Tool"; Flags: nowait postinstall skipifsilent
+; OTA: o atualizador antigo reabria o caminho do EXE anterior, que agora muda a cada versao; o Setup abre o novo.
+Filename: "{app}\{#AppExe}"; Flags: nowait runasoriginaluser; Check: IsOta
 [Code]
 // v1.7.1: atualizacao automatica (OTA) passa /OTA; a etapa do driver RTL-SDR nunca roda nela.
 function IsOta(): Boolean;

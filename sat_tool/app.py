@@ -4850,6 +4850,12 @@ def main():
     app.setStyleSheet(STYLE)
     app.setQuitOnLastWindowClosed(True)
     mutex=_single_instance_mutex()
+    try:  # v1.7.2: EXE portátil com a versão no nome, também depois de um OTA
+        from .updater import rename_portable_to_version
+        from . import __version__ as _ver
+        rename_portable_to_version(_ver)
+    except Exception:
+        pass
     window=MainWindow()
     window.show()
     QTimer.singleShot(2500,window.show_last_update_result)

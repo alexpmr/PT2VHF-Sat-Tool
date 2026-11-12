@@ -142,6 +142,25 @@
 
 ## Pendentes
 
+- **Nomes dos binários com a versão** (registrado em 12/11/2026)
+  - Pedido do operador: "nomes dos binários devem conter a versão para não serem iguais em todas as versões".
+  - Antes: os pacotes da Release/site já tinham a versão, mas o EXE instalado era sempre `PT2VHF-Sat-Tool.exe`,
+    o OTA do portátil copiava a versão nova por cima do nome antigo (ex.: arquivo `...-v1.7.0-...-Portable.exe`
+    com a 1.7.1 dentro) e o executável do Linux/macOS também tinha nome fixo.
+  - **Implementado (próxima versão, 1.7.2):**
+    - Setup: EXE instalado `PT2VHF-Sat-Tool-v<versão>.exe` (`DestName`), `[InstallDelete]` remove o nome antigo
+      e os de versões anteriores, atalhos/ícone de desinstalação apontam para o novo; no OTA (`/OTA`) o próprio
+      Setup abre o EXE novo, porque o atualizador da versão anterior reabriria o caminho antigo.
+    - `apply-update.ps1`: depois de Setup bem-sucedido não reabre (o instalador já abriu); em falha reabre o EXE
+      antigo ou o `PT2VHF-Sat-Tool*.exe` mais recente da pasta.
+    - Portátil: ao iniciar, o EXE se renomeia para `PT2VHF-Sat-Tool-v<versão>-<variante>-Portable.exe` quando o
+      nome tem outra versão (Windows permite renomear EXE em execução); `data/` ao lado não muda.
+    - Linux: pasta e executável `PT2VHF-Sat-Tool-v<versão>`; macOS: `PT2VHF-Sat-Tool-v<versão>.app` no .dmg.
+    - CI instala o Setup em pasta temporária com EXEs antigos simulados e exige só o EXE com a versão.
+    - Teste `tests/test_v172_versioned_binaries.py`.
+  - Atalhos criados à mão para o EXE portátil precisam ser refeitos a cada versão (o nome muda).
+  - [ ] Homologar OTA real 1.7.1→1.7.2 (Setup e Portátil) no Windows: programa reabre sozinho com o nome novo.
+
 - **Rotor: indicação visual da direção e da inclinação em tempo real com 2 gauges** (registrado em 11/11/2026)
   - Pedido do operador: "indicação visual da direção e inclinação do rotor em tempo real com 2 gauges, um de
     direção e outro de elevação".

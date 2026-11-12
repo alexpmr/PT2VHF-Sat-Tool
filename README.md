@@ -441,7 +441,9 @@ O build anterior apenas verificava a existência do EXE. Agora o GitHub Actions 
 Se persistir erro ao abrir, na pasta do aplicativo execute:
 
 ```powershell
-.\PT2VHF-Sat-Tool.exe --self-test "$env:TEMP\PT2VHF-Sat-Tool-diagnostics.json"
+# a partir da v1.7.2 o EXE leva a versão no nome (ex.: PT2VHF-Sat-Tool-v1.7.2.exe)
+$exe = Get-ChildItem .\PT2VHF-Sat-Tool*.exe | Select-Object -First 1
+& $exe.FullName --self-test "$env:TEMP\PT2VHF-Sat-Tool-diagnostics.json"
 Get-Content "$env:TEMP\PT2VHF-Sat-Tool-diagnostics.json"
 ```
 

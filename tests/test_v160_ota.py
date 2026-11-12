@@ -13,7 +13,7 @@ def test_script_waits_process_tree_kills_only_app_children_and_reports():
     for flag in ("/SILENT", "/SP-", "/CLOSEAPPLICATIONS", "/LOG=", "/DIR="):
         assert flag in ps
     assert "PT2VHF-Sat-Tool-update-result.txt" in ps
-    assert ps.index("finally") < ps.index("Start-Process -FilePath $Executable")  # sempre reabre
+    assert ps.index("finally") < ps.index("Start-Process -FilePath $launch")  # reabre (falha ou portátil; Setup ok: o instalador abre)
 
 
 def test_installer_detects_running_app_and_webengine_files():
