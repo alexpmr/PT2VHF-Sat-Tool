@@ -262,7 +262,7 @@
 "Różowy",
 "Aktywny rotor:",
 "Rotor rozłączony",
-"Rotor: rzeczywista pozycja (zielony) × cel satelity (żółty)",
+"Rotor w czasie rzeczywistym: kierunek (lewo) i elewacja (prawo)\nZielony: rzeczywista pozycja · żółty przerywany: cel satelity",
 "Rotory",
 "Fioletowy",
 "RADIO / CAT · KENWOOD TS-2000",

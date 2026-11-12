@@ -262,7 +262,7 @@
 "Pink",
 "Active rotator:",
 "Rotator disconnected",
-"Rotator: real position (green) × satellite target (yellow)",
+"Rotator in real time: direction (left) and elevation (right)\nGreen: actual position · dashed yellow: satellite target",
 "Rotators",
 "Purple",
 "RADIO / CAT · KENWOOD TS-2000",
