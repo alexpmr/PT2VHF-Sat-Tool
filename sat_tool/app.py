@@ -329,10 +329,12 @@ class MainWindow(RotorUiMixin, QMainWindow):
         self.cat_indicator.setFixedWidth(66)
         self.cat_indicator.setStyleSheet("font-size:12px;font-weight:800;color:#ef9a9a;padding:4px;background:#243143;border-radius:5px")
         header.addWidget(self.cat_indicator)
-        self.sdr_toggle=QPushButton("Painel SDR")
+        self.sdr_toggle=QPushButton("SDR")
         self.sdr_toggle.setToolTip("Mostrar/ocultar o painel SDR (não liga nem desliga o receptor)")
+        self.sdr_toggle.setFixedWidth(66)
         self.sdr_toggle.setStyleSheet("font-size:12px;font-weight:800")
         header.addWidget(self.sdr_toggle)
+        self.build_rotor_top_button(header)  # v1.7.2: liga/desliga o controlador do rotor, como CAT e SDR
         self.build_language_menu(header)
         self.utc = QLabel("DATA/HORA UTC —")
         self.utc.setStyleSheet("font-size:12px;font-weight:700;color:#dff9ff;padding:4px;background:#153751;border:1px solid #34758c;border-radius:5px")
@@ -1168,7 +1170,7 @@ class MainWindow(RotorUiMixin, QMainWindow):
         self.sdr_toggle.clicked.connect(self.toggle_sdr_dock)
 
     def toggle_sdr_dock(self):
-        """Botão Painel SDR: a escolha do operador vale até ele mudar (v1.7.1: o painel não reabre sozinho)."""
+        """Botão SDR: a escolha do operador vale até ele mudar (v1.7.1: o painel não reabre sozinho)."""
         show=not self.sdr_dock.isVisible()
         self.config.values["sdr_dock_user_hidden"]=not show
         self.sdr_dock.setVisible(show)

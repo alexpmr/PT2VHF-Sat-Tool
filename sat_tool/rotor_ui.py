@@ -327,9 +327,41 @@ class RotorUiMixin:
             return None
         self.background("rotor-detect", task)
 
+    # ------------------------------------------------------------------ botão ROTOR do topo (v1.7.2)
+    TOP_STYLES = {
+        "off": "color:#ffe7e7;background:#783437;border:1px solid #db565e",
+        "busy": "color:#ffe4b0;background:#755225;border:1px solid #e0aa55",
+        "on": "color:#ddfff0;background:#12533f;border:1px solid #36b88a",
+    }
+
+    def build_rotor_top_button(self, header):
+        """Botão ROTOR ao lado de CAT e SDR: liga/desliga (conecta/desconecta) o controlador do rotor."""
+        self.rotor_top_btn = QPushButton("ROTOR")
+        self.rotor_top_btn.setFixedWidth(66)
+        self.rotor_top_btn.clicked.connect(self.rotor_top_clicked)
+        header.addWidget(self.rotor_top_btn)
+        self.rotor_set_top("off")
+
+    def rotor_set_top(self, state):
+        btn = getattr(self, "rotor_top_btn", None)
+        if btn is None:
+            return
+        btn.setStyleSheet("font-size:12px;font-weight:800;padding:4px;border-radius:5px;" + self.TOP_STYLES[state])
+        port = str(self.rotor_cfg("rotor_port")) or "sem porta"
+        btn.setToolTip({"off": "Rotor desligado · clique para conectar o controlador",
+                        "busy": "Rotor conectando · " + port,
+                        "on": "Rotor conectado · " + port + " · clique para desconectar"}[state])
+        btn.setEnabled(state != "busy")
+
+    def rotor_top_clicked(self):
+        if not self.rotor.connected and not bool(self.rotor_cfg("rotor_enabled")):
+            self.rotor_enable.setChecked(True)  # o operador pediu para ligar: ativa o rotor
+        self.rotor_toggle_connection()
+
     def rotor_toggle_connection(self):
         if self.rotor.connected:
             self.rotor_stop("desconectar")
+            self.rotor_set_top("busy")
             self.background("rotor-close", self.rotor.close)
             return
         self.rotor_save()
@@ -338,6 +370,7 @@ class RotorUiMixin:
             QMessageBox.information(self, "Rotor", "Escolha a porta COM do rotor (ou use Detectar).")
             return
         self.rotor_settings_status.setText(f"Conectando ao rotor em {port}…")
+        self.rotor_set_top("busy")
         self.background("rotor-connect", lambda: self.rotor.connect(port, baud))
 
     # ------------------------------------------------------------------ faixa ROTOR da aba Operação
@@ -625,7 +658,9 @@ class RotorUiMixin:
             self.rotor_connect_btn.setText("Desconectar")
             self.rotor_settings_status.setText(f"Rotor conectado · AZ {data[0]:.0f}° EL {data[1]:.0f}°")
             self.rotor_bar.setVisible(True)
+            self.rotor_set_top("on")
         elif key == "rotor-close":
+            self.rotor_set_top("off")
             self.rotor_connect_btn.setText("Conectar")
             self.rotor_settings_status.setText("Rotor desconectado")
         elif key == "rotor-detect":
@@ -646,6 +681,9 @@ class RotorUiMixin:
         if key == "rotor-connect":
             self.rotor_settings_status.setText("Rotor não conectou: " + message[:160])
             self.rotor.close()
+            self.rotor_set_top("off")
+        elif key == "rotor-close":
+            self.rotor_set_top("on" if self.rotor.connected else "off")
         elif key == "rotor-move":
             self.rotor_set_chips("ERRO", "")
             self.rotor_stop("falha ao mover: " + message[:80])

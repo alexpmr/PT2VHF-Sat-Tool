@@ -142,6 +142,17 @@
 
 ## Pendentes
 
+- **Botão ROTOR no topo (liga/desliga o controlador) e "Painel SDR" → "SDR"** (registrado em 12/11/2026)
+  - Pedido do operador (com captura do topo): "adicione um botão que liga e desliga o controlador de rotor, como
+    no CAT e SDR. Troque Painel SDR por apenas SDR".
+  - **Implementado (próxima versão, 1.7.2):** botão **ROTOR** à direita de CAT e SDR, mesma largura e cores
+    (vermelho desligado, âmbar conectando, verde conectado), tooltip com a porta; clique conecta/desconecta o
+    controlador na porta de Configurações → Rotores (sem porta, pede para escolher/Detectar). Ligar pelo topo
+    também ativa o rotor (faixa ROTOR aparece). Desligar para o rastreamento antes de fechar a porta.
+    Botão "Painel SDR" agora se chama **SDR** (mesma função: mostra/oculta o painel; cor = receptor ligado).
+    Teste `tests/test_v172_top_buttons.py`; capturas em `docs/backlog/topo-cat-sdr-rotor.png`.
+  - [ ] Conferir com o G-5400B/ERC-M real (aguardando cabo).
+
 - **Nomes dos binários com a versão** (registrado em 12/11/2026)
   - Pedido do operador: "nomes dos binários devem conter a versão para não serem iguais em todas as versões".
   - Antes: os pacotes da Release/site já tinham a versão, mas o EXE instalado era sempre `PT2VHF-Sat-Tool.exe`,
