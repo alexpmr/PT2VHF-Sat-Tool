@@ -158,6 +158,12 @@
 - **Próxima versão: 1.8.0** (registrado em 12/11/2026)
   - Pedido do operador: "próxima versão deverá ser 1.0", corrigido em seguida para "1.8".
   - Os itens marcados "Feito (1.8.0)" entram nela; a troca de número acontece quando o operador pedir o lançamento.
+- **AOS no display com segundos** (registrado em 12/11/2026)
+  - Pedido do operador: "no painel, indicação de aos, adicione segundos também. XXh:xxm:xxs".
+  - **Feito (1.8.0):** acima de 1 h a contagem do display passa de "1H05" para "01:05:42" (horas:minutos:segundos),
+    na contagem grande em segmentos e nas etiquetas AOS/LOS de todos os modelos; abaixo de 1 h continua "5:42".
+    Os separadores são ":" porque os segmentos não desenham "m" e "s". Teste em `tests/test_v170_display_rotor_ota.py`.
+
 - **Medidor de CPU e RAM** (registrado em 12/11/2026)
   - Pedido do operador: "adicione um medidor de uso de memória e cpu", como o do PT2VHF APRS Client, na barra do topo.
   - **Feito (1.8.0):** bloco compacto à esquerda de CAT/SDR/ROTOR com "CPU x,x%" e "RAM nnn MB" do próprio programa,

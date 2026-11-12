@@ -127,12 +127,12 @@ def next_in(seq, current, step: int = 1):
 
 
 def countdown_text(seconds: float | None) -> str:
-    """Contagem curta para o display: 5:42, 0:28, 1H05 (acima de 1 h)."""
+    """Contagem para o display: 5:42, 0:28; acima de 1 h com segundos, 01:05:42 (v1.8.0, antes 1H05)."""
     if seconds is None:
         return ""
     s = max(0, int(seconds))
     if s >= 3600:
-        return f"{s // 3600}H{(s % 3600) // 60:02d}"
+        return f"{s // 3600:02d}:{(s % 3600) // 60:02d}:{s % 60:02d}"
     return f"{s // 60}:{s % 60:02d}"
 
 

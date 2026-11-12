@@ -17,7 +17,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 # ----------------------------------------------------------------- display
 def test_countdown_and_indicator_priority():
     from sat_tool.lcd import LcdState, countdown_text, indicator_tags, smeter_text
-    assert countdown_text(342) == "5:42" and countdown_text(28) == "0:28" and countdown_text(3900) == "1H05"
+    assert countdown_text(342) == "5:42" and countdown_text(28) == "0:28" and countdown_text(3900) == "01:05:00" and countdown_text(3942) == "01:05:42"
     assert smeter_text(15) == "S9" and smeter_text(18) == "S9+12" and smeter_text(5) == "S3"
     st = LcdState(visible=True, los_s=25, sat_on=True, link="CAT", auto=True, doppler_hz=-6800, elevation=12)
     tags = indicator_tags(st)
