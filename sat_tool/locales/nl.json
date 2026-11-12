@@ -212,7 +212,7 @@
 "Normaal",
 "Rood nachtthema (spaart het nachtzicht)",
 "Niveau",
-"Sat Tool beweegt de antenne nooit alleen omdat een satelliet is gekozen: volgen begint met de knop 'Overkomst volgen' op het tabblad Bediening; STOP is altijd zichtbaar (Esc/F12). De ERC-M emuleert GS-232: stel daarin het Yaesu-rotortype in. Elevatie tot 180° maakt flip mogelijk.",
+"Met de rotor verbonden volgt Sat Tool de gekozen satelliet zelf zolang die boven de horizon staat (voorpositioneren voor AOS, parkeren bij LOS). De knop VOLGT/GESTOPT op het tabblad Bediening stopt de rotor en pauzeert het automatisch volgen (Esc/F12). De ERC-M emuleert GS-232: stel daarin het rotortype Yaesu in. Elevatie tot 180° maakt flip mogelijk.",
 "De kaart volgt de opgeslagen voorkeuren. Gebruik Grondstation om het station te markeren.",
 "Het programma kan bij het openen verbinden, maar volgt pas na een expliciete satellietkeuze. Het schakelt SAT niet in en zendt niet.",
 "Bediening",
@@ -369,5 +369,10 @@
 "IC-910H-stijl (MAIN boven, SUB onder)",
 "FT-991A-stijl (kleurenscherm met spectrum)",
 "IC-9700-stijl (kleurenscherm, spectrum en waterval)",
-"Rotor uit · klik om de controller te verbinden"
+"Rotor uit · klik om de controller te verbinden",
+"VOLGT",
+"GESTOPT",
+"Volgt de gekozen satelliet · klik (of Esc/F12) om de rotor te stoppen",
+"Rotor gestopt · volgt zelf als de gekozen satelliet boven de horizon staat",
+"Automatisch volgen gepauzeerd door de operator · klik om te hervatten"
 ]

@@ -1299,6 +1299,8 @@ class MainWindow(RotorUiMixin, QMainWindow):
     def apply_language(self):
         locale=self.ui_language()
         old=getattr(self,"_language_active","pt-BR")
+        if hasattr(self,"rotor_set_state_button"):  # botão RASTREANDO/PARADO muda em tempo de execução
+            self.rotor_set_state_button(bool(getattr(self,"rotor_tracking",False) and getattr(self,"rotor_auto",True)))
         for widget,kind,original in self._language_texts:
             if kind=="items":
                 for i,text in enumerate(original):
@@ -4619,12 +4621,12 @@ class MainWindow(RotorUiMixin, QMainWindow):
             if not self.rotor_cfg('rotor_enabled'):
                 self.log(who+': rotor desativado nas Configurações');return False
             if action=='rotor_track':
-                self.rotor_track_btn.setChecked(bool(value))
+                self.rotor_set_auto(bool(value),'rastreamento pausado pela rede, '+str(ip))
                 self.log(who+': rastreamento do rotor '+('pedido' if value else 'desligado'))
             elif action=='rotor_park':
-                self.log(who+': estacionar rotor');self.rotor_park()
+                self.log(who+': estacionar rotor');self.rotor_park_manual()
             else:
-                self.rotor_stop('PARAR pela rede, '+str(ip))
+                self.rotor_set_auto(False,'PARAR pela rede, '+str(ip))
         else:
             return False
         self.publish_web_snapshot(force=True)
@@ -4783,7 +4785,7 @@ class MainWindow(RotorUiMixin, QMainWindow):
         rotor={'enabled':bool(self.rotor_cfg('rotor_enabled'))}
         if rotor['enabled']:
             connected=bool(getattr(getattr(self,'rotor',None),'connected',False))
-            rotor.update(connected=connected,tracking=bool(getattr(self,'rotor_tracking',False)),
+            rotor.update(connected=connected,tracking=bool(getattr(self,'rotor_tracking',False)),auto=bool(getattr(self,'rotor_auto',True)),
                          state='rastreando' if getattr(self,'rotor_tracking',False) else ('conectado' if connected else 'desconectado'),
                          position=txt('rotor_pos_label'),target=txt('rotor_target_label'),status=txt('rotor_label'))
         aprs=[]

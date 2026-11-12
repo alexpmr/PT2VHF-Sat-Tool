@@ -212,7 +212,7 @@
 "Normalna",
 "Nocny czerwony (chroni widzenie nocne)",
 "Poziom",
-"Sat Tool nigdy nie porusza anteną tylko dlatego, że wybrano satelitę: śledzenie zaczyna się przyciskiem „Śledź przelot” na karcie Praca; STOP jest zawsze widoczny (Esc/F12). ERC-M emuluje GS-232: ustaw w nim typ rotora Yaesu. Elewacja do 180° umożliwia flip.",
+"Przy podłączonym rotorze Sat Tool sam śledzi wybranego satelitę, gdy jest nad horyzontem (wstępne ustawienie przed AOS, parkowanie przy LOS). Przycisk ŚLEDZI/ZATRZYMANY w karcie Praca zatrzymuje rotor i wstrzymuje automatyczne śledzenie (Esc/F12). ERC-M emuluje GS-232: ustaw w nim typ rotora Yaesu. Elewacja do 180° pozwala na flip.",
 "Mapa respektuje zapisane preferencje. Aby oznaczyć stację, użyj Stacja naziemna.",
 "Program może połączyć się przy starcie, ale śledzi dopiero po jawnym wyborze satelity. Nie włącza SAT i nie nadaje.",
 "Praca",
@@ -369,5 +369,10 @@
 "Styl IC-910H (MAIN u góry, SUB na dole)",
 "Styl FT-991A (kolorowy ekran z widmem)",
 "Styl IC-9700 (kolorowy ekran, widmo i wodospad)",
-"Rotor wyłączony · kliknij, aby podłączyć sterownik"
+"Rotor wyłączony · kliknij, aby podłączyć sterownik",
+"ŚLEDZI",
+"ZATRZYMANY",
+"Śledzenie wybranego satelity · kliknij (lub Esc/F12), aby zatrzymać rotor",
+"Rotor zatrzymany · śledzi sam, gdy wybrany satelita jest nad horyzontem",
+"Automatyczne śledzenie wstrzymane przez operatora · kliknij, aby wznowić"
 ]

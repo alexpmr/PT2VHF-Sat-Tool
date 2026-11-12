@@ -32,6 +32,8 @@ class RotorUiMixin:
         self.rotor_log_lines = []
         self.rotor = GS232Rotor(self.rotor_log)
         self.rotor_tracking = False
+        self.rotor_auto = True          # v1.7.2: rastreamento automático armado (pausado pelo PARADO/Esc/F12)
+        self.rotor_parked_pass = None
         self.rotor_plan = None
         self.rotor_plan_pass = None
         self.rotor_target = None
@@ -194,9 +196,7 @@ class RotorUiMixin:
         self.rotor_log_view.setMaximumBlockCount(ROTOR_LOG_LINES); self.rotor_log_view.setMinimumHeight(120)
         self.rotor_log_view.setPlainText("\n".join(self.rotor_log_lines))
         lgv.addWidget(self.rotor_log_view)
-        lgv.addWidget(label("O Sat Tool nunca move a antena só por selecionar um satélite: o rastreamento começa no "
-                            "botão 'Rastrear passagem' da aba Operação; PARAR fica sempre visível (Esc/F12). O ERC-M "
-                            "emula o GS-232: configure nele o tipo de rotor Yaesu. Elevação até 180° permite o flip."))
+        lgv.addWidget(label("Com o rotor conectado, o Sat Tool rastreia sozinho o satélite selecionado quando ele está acima do horizonte (pré-posiciona antes do AOS e estaciona no LOS). O botão RASTREANDO/PARADO da aba Operação para o rotor e pausa o automático (Esc/F12). O ERC-M emula o GS-232: configure nele o tipo de rotor Yaesu. Elevação até 180° permite o flip."))
         layout.addWidget(lg)
         layout.addStretch(1)
 
@@ -416,16 +416,14 @@ class RotorUiMixin:
         row.addLayout(st_col, 1)
         btn_col = QVBoxLayout(); btn_col.setSpacing(2)
         buttons = QHBoxLayout()
-        self.rotor_track_btn = QPushButton("Rastrear passagem")
-        self.rotor_track_btn.setCheckable(True)
-        self.rotor_track_btn.setToolTip("Pré-posiciona no AOS, acompanha a passagem do satélite selecionado e estaciona no LOS")
         self.rotor_park_btn = QPushButton("Estacionar")
-        self.rotor_stop_btn = QPushButton("PARAR")
-        self.rotor_stop_btn.setStyleSheet("font-weight:900;color:#fff;background:#a32626;border:1px solid #e05656;padding:4px 18px")
-        self.rotor_stop_btn.setToolTip("Interrompe imediatamente azimute e elevação (GS-232 'S') · atalho Esc ou F12")
+        # v1.7.2: sem "Rastrear passagem"; o rotor rastreia sozinho o satélite selecionado acima do horizonte.
+        # PARAR virou o estado: verde RASTREANDO / vermelho PARADO; o clique para (ou retoma) o automático.
+        self.rotor_stop_btn = QPushButton("PARADO")
+        self.rotor_stop_btn.setMinimumWidth(118)
         self.rotor_config_btn = QPushButton("Configurar…")
         self.rotor_config_btn.setToolTip("Configurações → Rotores")
-        for w in (self.rotor_track_btn, self.rotor_park_btn, self.rotor_stop_btn, self.rotor_config_btn):
+        for w in (self.rotor_park_btn, self.rotor_stop_btn, self.rotor_config_btn):
             buttons.addWidget(w)
         btn_col.addLayout(buttons)
         sel = QHBoxLayout()
@@ -443,9 +441,9 @@ class RotorUiMixin:
         outer.addLayout(row)
         layout.addWidget(self.rotor_bar)
         self.rotor_bar.setVisible(bool(self.rotor_cfg("rotor_enabled")))
-        self.rotor_track_btn.toggled.connect(self.rotor_toggle_tracking)
-        self.rotor_park_btn.clicked.connect(self.rotor_park)
-        self.rotor_stop_btn.clicked.connect(lambda: self.rotor_stop("PARAR pelo operador"))
+        self.rotor_park_btn.clicked.connect(self.rotor_park_manual)
+        self.rotor_stop_btn.clicked.connect(self.rotor_state_clicked)
+        self.rotor_set_state_button(False)
         self.rotor_config_btn.clicked.connect(lambda: self.open_settings("Rotores"))
         self.rotor_active.currentIndexChanged.connect(self.rotor_change_active)
         self.rotor_set_chips("DESCONECTADO", "")
@@ -463,7 +461,7 @@ class RotorUiMixin:
     def rotor_shortcut_stop(self):
         """Esc/F12: PARAR, só enquanto houver rotor habilitado (sem confirmação)."""
         if bool(self.rotor_cfg("rotor_enabled")):
-            self.rotor_stop("PARAR pelo operador (atalho)")
+            self.rotor_set_auto(False, "PARAR pelo operador (atalho)")
 
     def rotor_change_active(self, *_):
         code = self.rotor_active.currentData() or "g5400b"
@@ -515,34 +513,62 @@ class RotorUiMixin:
             self.rotor_settings_compass.set_values(real, tgt, flip)
             self.rotor_live.setText("Posição ao vivo: " + text + ("" if text == raw else f"  (controlador {raw})"))
 
-    def rotor_toggle_tracking(self, on):
+    # ------------------------------------------------------------------ rastreamento automático (v1.7.2)
+    def rotor_set_state_button(self, tracking):
+        btn = getattr(self, "rotor_stop_btn", None)
+        if btn is None:
+            return
+        from .i18n import translated
+        loc = self.ui_language() if hasattr(self, "ui_language") else "pt-BR"
+        tr = lambda t: translated(t, loc)
+        if tracking:
+            btn.setText(tr("RASTREANDO"))
+            btn.setStyleSheet("font-weight:900;color:#ddfff0;background:#12533f;border:1px solid #36b88a;padding:4px 14px")
+            btn.setToolTip(tr("Rastreando o satélite selecionado · clique (ou Esc/F12) para parar o rotor"))
+        else:
+            btn.setText(tr("PARADO"))
+            btn.setStyleSheet("font-weight:900;color:#ffe7e7;background:#783437;border:1px solid #db565e;padding:4px 14px")
+            btn.setToolTip(tr("Rotor parado · rastreia sozinho quando o satélite selecionado estiver acima do horizonte"
+                              if self.rotor_auto else
+                              "Rastreamento automático pausado pelo operador · clique para retomar"))
+
+    def rotor_state_clicked(self):
+        """RASTREANDO → para o rotor e pausa o automático; PARADO pausado → retoma o automático."""
+        if self.rotor_auto:
+            self.rotor_set_auto(False, "parado pelo operador")
+        else:
+            self.rotor_set_auto(True)
+
+    def rotor_set_auto(self, on, reason=""):
+        self.rotor_auto = bool(on)
         if on:
-            if not self.rotor.connected:
-                self.rotor_track_btn.setChecked(False)
-                QMessageBox.information(self, "Rotor", "Conecte o rotor em Configurações → Rotores antes de rastrear.")
-                return
-            if self.sat is None:
-                self.rotor_track_btn.setChecked(False)
-                return
-            self.rotor_tracking = True
             self.rotor_plan = None
             self.rotor_plan_pass = None
-            self.log("Rotor: rastreamento ligado pelo operador (" + str(self.sat_combo.currentText()) + ")")
+            self.log("Rotor: rastreamento automático retomado")
         else:
-            if self.rotor_tracking:
-                self.rotor_stop("rastreamento desligado")
+            self.rotor_stop(reason or "PARAR pelo operador")
+        self.rotor_set_state_button(self.rotor_tracking and self.rotor_auto)
+
+    def rotor_toggle_tracking(self, on):
+        """Compatibilidade (controle pela rede 'rotor_track'): liga/pausa o rastreamento automático."""
+        self.rotor_set_auto(bool(on), "rastreamento desligado")
 
     def rotor_stop(self, reason=""):
         was = self.rotor_tracking
         self.rotor_tracking = False
         self.rotor_plan = None
-        if getattr(self, "rotor_track_btn", None) is not None and self.rotor_track_btn.isChecked():
-            self.rotor_track_btn.blockSignals(True); self.rotor_track_btn.setChecked(False); self.rotor_track_btn.blockSignals(False)
+        self.rotor_set_state_button(False)
         if self.rotor.connected:
             self.pending_jobs.discard("rotor-stop")
             self.background("rotor-stop", self.rotor.stop)
         if reason and (was or "PARAR" in reason):
             self.log("Rotor: parado (" + reason + ")")
+
+    def rotor_park_manual(self):
+        """Estacionar pelo operador: pausa o automático (senão o próximo segundo voltaria ao satélite)."""
+        if self.rotor_auto:
+            self.rotor_set_auto(False, "estacionar pelo operador")
+        self.rotor_park()
 
     def rotor_park(self):
         if not self.rotor.connected:
@@ -580,13 +606,16 @@ class RotorUiMixin:
         self.rotor_update_target_label()
         if hasattr(self, "lcd"):
             self.lcd.set_state(rotor=(f"ROT {pos[0]:.0f}/{pos[1]:.0f}" if pos else ""))
-        if not self.rotor_tracking or self.sat is None:
-            self.rotor_label.setText(text + " · parado")
+        if not self.rotor_auto or self.sat is None:
+            self.rotor_tracking = False
+            self.rotor_set_state_button(False)
+            self.rotor_label.setText(text + (" · rastreamento automático pausado (clique em PARADO para retomar)"
+                                             if not self.rotor_auto else " · nenhum satélite selecionado"))
             parked = pos is not None and abs(pos[0] - self.rotor_profile().park_az) <= 2 and abs(pos[1] - self.rotor_profile().park_el) <= 2
             self.rotor_set_chips("ESTACIONADO" if parked else "PARADO", "")
             return
         if self.rotor.failures >= 3:
-            self.rotor_stop("sem resposta do controlador")
+            self.rotor_set_auto(False, "sem resposta do controlador")
             QMessageBox.warning(self, "Rotor", "O controlador do rotor parou de responder. Rastreamento interrompido.")
             return
         event = getattr(self, "next_candidate", None)
@@ -606,12 +635,18 @@ class RotorUiMixin:
             plan_txt = (f"Plano: AOS {event['aos'].astimezone().strftime('%H:%M')} → LOS "
                         f"{event['los'].astimezone().strftime('%H:%M')} · {mode}")
             if now >= event["los"]:
+                self.rotor_tracking = False
+                self.rotor_set_state_button(False)
                 self.rotor_set_chips("ESTACIONADO", mode)
                 self.rotor_label.setText(text + " · LOS: estacionando")
-                self.rotor_park()
+                if self.rotor_parked_pass != key:   # estaciona uma vez por passagem
+                    self.rotor_parked_pass = key
+                    self.rotor_park()
                 return
             if now < event["aos"]:
                 if (event["aos"] - now).total_seconds() > float(self.rotor_cfg("rotor_prepos_s")):
+                    self.rotor_tracking = False
+                    self.rotor_set_state_button(False)
                     self.rotor_set_chips("AGUARDANDO AOS", mode)
                     self.rotor_label.setText(plan_txt)
                     return
@@ -630,6 +665,10 @@ class RotorUiMixin:
             return
         if target is None:
             return
+        if not self.rotor_tracking:
+            self.log(f"Rotor: rastreamento automático de {self.sat_combo.currentText()} ({phase})")
+        self.rotor_tracking = True
+        self.rotor_set_state_button(True)
         self.rotor_target = target
         self.rotor_label.setText(plan_txt + f" · {phase}")
         if needs_move(target, pos, prof) and time.monotonic() - self.rotor.last_command_at >= prof.min_interval_s:
@@ -668,6 +707,8 @@ class RotorUiMixin:
             self.rotor_settings_status.setText(f"Rotor conectado · AZ {data[0]:.0f}° EL {data[1]:.0f}°")
             self.rotor_bar.setVisible(True)
             self.rotor_set_top("on")
+            self.rotor_auto = True   # conectar arma o rastreamento automático
+            self.rotor_set_state_button(False)
             self.rotor_set_chips("PARADO", "")
             self.rotor_label.setText("Conectado · " + str(self.rotor_cfg("rotor_port")))
             if data:

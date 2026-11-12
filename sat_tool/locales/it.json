@@ -212,7 +212,7 @@
 "Normale",
 "Notturno rosso (preserva la visione notturna)",
 "Livello",
-"Sat Tool non muove mai l'antenna solo perché è selezionato un satellite: l'inseguimento inizia con il pulsante 'Insegui passaggio' della scheda Operatività; STOP è sempre visibile (Esc/F12). L'ERC-M emula il GS-232: imposta in esso il tipo di rotore Yaesu. Elevazione fino a 180° consente il flip.",
+"Con il rotore collegato, Sat Tool insegue da solo il satellite selezionato quando è sopra l'orizzonte (pre-posiziona prima dell'AOS e parcheggia al LOS). Il pulsante INSEGUE/FERMO della scheda Operazione ferma il rotore e sospende l'inseguimento automatico (Esc/F12). L'ERC-M emula il GS-232: impostate il tipo di rotore Yaesu. Elevazione fino a 180° consente il flip.",
 "La mappa rispetta le preferenze salvate. Per segnare la stazione usa Stazione di terra.",
 "Il programma può connettersi all'avvio, ma insegue solo dopo una scelta esplicita del satellite. Non abilita SAT né trasmette.",
 "Operatività",
@@ -369,5 +369,10 @@
 "Stile IC-910H (MAIN sopra, SUB sotto)",
 "Stile FT-991A (schermo a colori con spettro)",
 "Stile IC-9700 (schermo a colori, spettro e waterfall)",
-"Rotore spento · clicca per collegare il controller"
+"Rotore spento · clicca per collegare il controller",
+"INSEGUE",
+"FERMO",
+"Inseguimento del satellite selezionato · clic (o Esc/F12) per fermare il rotore",
+"Rotore fermo · insegue da solo quando il satellite selezionato è sopra l'orizzonte",
+"Inseguimento automatico sospeso dall'operatore · clic per riprendere"
 ]

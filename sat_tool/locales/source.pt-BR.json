@@ -212,7 +212,7 @@
 "Normal",
 "Noturno vermelho (preserva a visão noturna)",
 "Nível",
-"O Sat Tool nunca move a antena só por selecionar um satélite: o rastreamento começa no botão 'Rastrear passagem' da aba Operação; PARAR fica sempre visível (Esc/F12). O ERC-M emula o GS-232: configure nele o tipo de rotor Yaesu. Elevação até 180° permite o flip.",
+"Com o rotor conectado, o Sat Tool rastreia sozinho o satélite selecionado quando ele está acima do horizonte (pré-posiciona antes do AOS e estaciona no LOS). O botão RASTREANDO/PARADO da aba Operação para o rotor e pausa o automático (Esc/F12). O ERC-M emula o GS-232: configure nele o tipo de rotor Yaesu. Elevação até 180° permite o flip.",
 "O mapa respeita as preferências salvas. Para marcar a estação, use Estação Terrena.",
 "O programa pode conectar ao abrir, mas só rastreia após escolha explícita do satélite. Não habilita SAT nem transmite.",
 "Operação",
@@ -369,5 +369,10 @@
 "Estilo IC-910H (MAIN em cima, SUB embaixo)",
 "Estilo FT-991A (tela colorida com escopo)",
 "Estilo IC-9700 (tela colorida, escopo e waterfall)",
-"Rotor desligado · clique para conectar o controlador"
+"Rotor desligado · clique para conectar o controlador",
+"RASTREANDO",
+"PARADO",
+"Rastreando o satélite selecionado · clique (ou Esc/F12) para parar o rotor",
+"Rotor parado · rastreia sozinho quando o satélite selecionado estiver acima do horizonte",
+"Rastreamento automático pausado pelo operador · clique para retomar"
 ]
