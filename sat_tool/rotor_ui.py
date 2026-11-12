@@ -354,8 +354,6 @@ class RotorUiMixin:
         btn.setEnabled(state != "busy")
 
     def rotor_top_clicked(self):
-        if not self.rotor.connected and not bool(self.rotor_cfg("rotor_enabled")):
-            self.rotor_enable.setChecked(True)  # o operador pediu para ligar: ativa o rotor
         self.rotor_toggle_connection()
 
     def rotor_toggle_connection(self):
@@ -364,6 +362,13 @@ class RotorUiMixin:
             self.rotor_set_top("busy")
             self.background("rotor-close", self.rotor.close)
             return
+        # v1.7.2 (bug 12/11): conectar com "Habilitar" desmarcado salvava o rotor como desabilitado, o que
+        # agendava o fechamento da porta logo após abri-la e parava a leitura de posição (faixa em
+        # DESCONECTADO e gauges parados). Conectar = rotor habilitado.
+        if not self.rotor_enable.isChecked():
+            self.rotor_enable.blockSignals(True)
+            self.rotor_enable.setChecked(True)
+            self.rotor_enable.blockSignals(False)
         self.rotor_save()
         port, baud = str(self.rotor_cfg("rotor_port")), int(self.rotor_cfg("rotor_baud"))
         if not port:
@@ -495,16 +500,20 @@ class RotorUiMixin:
 
     def rotor_show_position(self, pos):
         from .rotor_widgets import RotorCompass
-        text = f"AZ {pos[0]:.0f}°  EL {pos[1]:.0f}°" if pos else "AZ —°  EL —°"
-        self.rotor_pos_label.setText(text)
         off = float(self.rotor_cfg("rotor_north_offset"))  # coordenadas do rotor → direção real
         real = RotorCompass.pointing(pos[0] - off, pos[1]) if pos else None
+        # v1.7.2: o número grande mostra a mesma direção dos gauges (para onde a antena aponta); a leitura
+        # crua do controlador (até 450°/180°, com flip) fica no tooltip e em Configurações → Rotores.
+        raw = f"AZ {pos[0]:.0f}°  EL {pos[1]:.0f}°" if pos else "AZ —°  EL —°"
+        text = f"AZ {real[0]:.0f}°  EL {real[1]:.0f}°" if real else raw
+        self.rotor_pos_label.setText(text)
+        self.rotor_pos_label.setToolTip("Direção da antena · leitura do controlador (GS-232 C2): " + raw)
         tgt = RotorCompass.pointing(self.rotor_target[0] - off, self.rotor_target[1]) if self.rotor_target else None
         flip = bool(self.rotor_plan and self.rotor_plan.get("mode") == "flip")
         self.rotor_compass.set_values(real, tgt, flip)
         if getattr(self, "rotor_settings_compass", None) is not None:
             self.rotor_settings_compass.set_values(real, tgt, flip)
-            self.rotor_live.setText("Posição ao vivo: " + text)
+            self.rotor_live.setText("Posição ao vivo: " + text + ("" if text == raw else f"  (controlador {raw})"))
 
     def rotor_toggle_tracking(self, on):
         if on:
@@ -659,8 +668,14 @@ class RotorUiMixin:
             self.rotor_settings_status.setText(f"Rotor conectado · AZ {data[0]:.0f}° EL {data[1]:.0f}°")
             self.rotor_bar.setVisible(True)
             self.rotor_set_top("on")
+            self.rotor_set_chips("PARADO", "")
+            self.rotor_label.setText("Conectado · " + str(self.rotor_cfg("rotor_port")))
+            if data:
+                self.rotor_show_position(data)
         elif key == "rotor-close":
             self.rotor_set_top("off")
+            self.rotor_set_chips("DESCONECTADO", "")
+            self.rotor_label.setText("Desconectado · Configurar… → Rotores")
             self.rotor_connect_btn.setText("Conectar")
             self.rotor_settings_status.setText("Rotor desconectado")
         elif key == "rotor-detect":
