@@ -41,3 +41,12 @@ def test_ts2000_layouts_draw_big_countdown_instead_of_small_tag():
     r = subprocess.run([sys.executable, "-c", source], capture_output=True, text=True, timeout=60,
                        env={**os.environ, "QT_QPA_PLATFORM": "offscreen"})
     assert r.returncode == 0, r.stdout + r.stderr
+
+
+def test_countdown_units_h_m_s_half_height():
+    """v1.8.0: contagem grande com H, M e S na metade da altura dos números."""
+    from sat_tool.lcd import countdown_parts, _Style
+    assert countdown_parts(3942) == [("01", "H"), ("05", "M"), ("42", "S")]
+    assert countdown_parts(342) == [("05", "M"), ("42", "S")]
+    assert countdown_parts(None) == []
+    assert hasattr(_Style, "countdown") and hasattr(_Style, "unit")

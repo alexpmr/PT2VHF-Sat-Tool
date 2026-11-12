@@ -162,7 +162,12 @@
   - Pedido do operador: "no painel, indicação de aos, adicione segundos também. XXh:xxm:xxs".
   - **Feito (1.8.0):** acima de 1 h a contagem do display passa de "1H05" para "01:05:42" (horas:minutos:segundos),
     na contagem grande em segmentos e nas etiquetas AOS/LOS de todos os modelos; abaixo de 1 h continua "5:42".
-    Os separadores são ":" porque os segmentos não desenham "m" e "s". Teste em `tests/test_v170_display_rotor_ota.py`.
+    Teste em `tests/test_v170_display_rotor_ota.py`.
+  - Ajuste pedido em seguida: "deixe o H, M e S com a metade do tamanho dos números". **Feito (1.8.0):** a contagem
+    grande (matriz, LED/LCD 7 seg. e Digital) mostra 01H05M42S (abaixo de 1 h, 05M42S) com as letras na metade da
+    altura, alinhadas embaixo; na matriz as letras são de pontos, nos 7 segmentos são letras sólidas (segmentos não
+    formam "M"). As etiquetas pequenas (Clássico e estilos de rádio) seguem 01:05:42.
+    Teste em `tests/test_v172_display_countdown.py`.
 
 - **Medidor de CPU e RAM** (registrado em 12/11/2026)
   - Pedido do operador: "adicione um medidor de uso de memória e cpu", como o do PT2VHF APRS Client, na barra do topo.

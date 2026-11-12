@@ -136,6 +136,16 @@ def countdown_text(seconds: float | None) -> str:
     return f"{s // 60}:{s % 60:02d}"
 
 
+def countdown_parts(seconds: float | None) -> list:
+    """v1.8.0: contagem grande do display em grupos (número, unidade): 01H 05M 42S; abaixo de 1 h, 05M 42S."""
+    if seconds is None:
+        return []
+    s = max(0, int(seconds))
+    h, m, sec = s // 3600, (s % 3600) // 60, s % 60
+    parts = [(f"{h:02d}", "H")] if h else []
+    return parts + [(f"{m:02d}", "M"), (f"{sec:02d}", "S")]
+
+
 def smeter_text(signal: int) -> str:
     """TS-2000: 0–15 = S0–S9; acima, +dB em passos de ~4 dB."""
     return f"S{min(9, signal * 9 // 15)}" if signal <= 15 else f"S9+{(signal - 15) * 4}"
@@ -308,6 +318,34 @@ class _Style:
         y0 = 10 * self.u if top is None else top
         self.p.fillRect(QRectF(x, y0, max(1.0, 1.5 * self.u), self.h - 40 * self.u - y0), self.off)
 
+    # v1.8.0: contagem com as letras H, M e S na metade da altura dos números, alinhadas embaixo
+    def digit_h(self, size):
+        return size
+
+    def unit_px(self, size):
+        return self.digit_h(size) * 0.5 / 0.72      # altura de maiúscula ≈ metade dos números
+
+    def unit_w(self, unit, size):
+        return self.text_w(unit, self.unit_px(size))
+
+    def unit(self, x, y, unit, size):
+        px = self.unit_px(size)
+        self.p.setFont(self.font(px))
+        self.p.setPen(self.ink)
+        self.p.drawText(QPointF(x, y + self.digit_h(size)), unit)
+        return x + self.unit_w(unit, size)
+
+    def countdown_w(self, parts, size):
+        gap = self.digit_h(size) * 0.12
+        return sum(self.digits_w("88", size) + gap + self.unit_w(u, size) + gap for _, u in parts) - gap
+
+    def countdown(self, x, y, parts, size):
+        gap = self.digit_h(size) * 0.12
+        for num, u in parts:
+            x = self.digits(x, y, num, size) + gap
+            x = self.unit(x, y, u, size) + gap
+        return x - gap
+
     # números grandes: implementados por cada estilo
     def digits_w(self, s, size):
         raise NotImplementedError
@@ -409,6 +447,32 @@ class _Matrix(_Style):
     def digits_w(self, s, pitch):
         adv = 7 if self.bold else 6
         return (len(s) * adv - 1) * pitch
+
+    def digit_h(self, pitch):
+        return 7 * pitch
+
+    def _unit_pitch(self, pitch):
+        return max(1, int(round(pitch / 2)))
+
+    def unit_w(self, unit, pitch):
+        return (len(unit) * 6 - 1) * self._unit_pitch(pitch)
+
+    def unit(self, x, y, unit, pitch):   # letra em pontos, metade do passo dos números, alinhada embaixo
+        up = self._unit_pitch(pitch)
+        x, y = int(round(x)), int(round(y))
+        return self.mtext(x, y + 7 * pitch - 7 * up, unit, up)
+
+    def countdown_w(self, parts, pitch):
+        gap = self._unit_pitch(pitch)
+        return sum(self.digits_w("88", pitch) + gap + self.unit_w(u, pitch) + gap for _, u in parts) - gap
+
+    def countdown(self, x, y, parts, pitch):
+        gap = self._unit_pitch(pitch)
+        x = int(round(x))
+        for num, u in parts:
+            x = int(self.digits(x, y, num, pitch)) + gap
+            x = int(self.unit(x, y, u, pitch)) + gap
+        return x - gap
 
     def digits(self, x, y, s, pitch):
         return self.mtext(x, y, s, pitch, grid=True, bold=self.bold)
@@ -588,11 +652,12 @@ def paint_ts2000(style: _Style, st: LcdState) -> dict:
     # v1.7.2: contagem da passagem em segmentos, à direita da frequência MAIN (LOS na passagem, AOS fora dela)
     cd_s = st.los_s if st.los_s is not None else st.aos_s
     cd_lab = "LOS" if st.los_s is not None else "AOS"
-    cd_txt = countdown_text(cd_s) if cd_s is not None else ""
+    cd_parts = countdown_parts(cd_s)     # v1.8.0: 01H05M42S, letras na metade da altura
+    cd_txt = "".join(n + u for n, u in cd_parts)
     if cd_txt:
         def cd_dims(sz):
             cs = max(2, sz - 2) if matrix else sz * 0.62
-            return cs, style.digits_w("88:88" if len(cd_txt) <= 5 else cd_txt, cs)
+            return cs, style.countdown_w(cd_parts, cs)
         if matrix:
             while size > 2 and style.digits_w("436.795.1", size) + 6 * size + cd_dims(size)[1] + 6 * size > avail:
                 size -= 1
@@ -635,10 +700,10 @@ def paint_ts2000(style: _Style, st: LcdState) -> dict:
             cs, cw = cd_dims(size)
             ch = 7 * cs if matrix else cs
             bottom = (dy + 7 * size) if matrix else (dy + (44 * u - dig_h) + dig_h)
-            cx = x0 + avail - style.digits_w(cd_txt, cs)   # alinhada à direita da metade MAIN
+            cx = x0 + avail - cw   # alinhada à direita da metade MAIN
             style.tag(cx, y, cd_lab, blink=(st.los_s is not None and st.los_s <= 30))
-            style.digits(int(round(cx)) if matrix else cx, int(round(bottom - ch)) if matrix else bottom - ch,
-                         cd_txt, cs)
+            style.countdown(int(round(cx)) if matrix else cx, int(round(bottom - ch)) if matrix else bottom - ch,
+                            cd_parts, cs)
         y = dy + max(dig_h, 44 * u) + 8 * u
         seg = 9 * u if avail > 300 * u else 7 * u
         n = 22 if avail > 300 * u else 14
