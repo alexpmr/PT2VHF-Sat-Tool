@@ -155,16 +155,12 @@
 
 ## Pendentes
 
-- **Próxima versão numerada como 1.0** (registrado em 12/11/2026) — aguardando confirmação do operador
-  - Pedido do operador: "próxima versão deverá ser 1.0".
-  - Impacto: 1.0.0 é menor que a 1.7.2 publicada. O `publish_sat_to_site.py` recusa regressão de versão e o aviso de
-    atualização/OTA compara números, então quem está na 1.7.x não receberia a 1.0. Opções: 2.0 (segue a sequência) ou
-    1.0 com mudança de esquema no site/OTA (ex.: novo produto ou campo de época). Nada é lançado até a decisão.
-  - Os itens abaixo marcados "Feito (1.7.3)" vão para essa próxima versão, seja qual for o número.
-
+- **Próxima versão: 1.8.0** (registrado em 12/11/2026)
+  - Pedido do operador: "próxima versão deverá ser 1.0", corrigido em seguida para "1.8".
+  - Os itens marcados "Feito (1.8.0)" entram nela; a troca de número acontece quando o operador pedir o lançamento.
 - **Pacote .deb para Ubuntu/Linux Mint** (registrado em 12/11/2026)
   - Pedido do operador: "versão .deb Linux ubuntu/mint".
-  - **Feito (1.7.3):** o job Linux gera também `PT2VHF-Sat-Tool-v<versão>-Linux-x64.deb` (`scripts/build_deb.py`,
+  - **Feito (1.8.0):** o job Linux gera também `PT2VHF-Sat-Tool-v<versão>-Linux-x64.deb` (`scripts/build_deb.py`,
     amd64, glibc 2.35+: Ubuntu 22.04+ / Mint 21+). Instala em `/opt/pt2vhf-sat-tool`, comando `pt2vhf-sat-tool`,
     atalho no menu (categoria Radioamador), ícone, regra udev do RTL-SDR (sem root) e bloqueio do driver
     dvb_usb_rtl28xxu; dependências do Qt declaradas (o apt instala o que faltar). Configurações seguem em
@@ -177,7 +173,7 @@
   - Pedido do operador: "ao abrir, atualizar o tle em background, enquanto o usuário usa o app".
   - Antes: na abertura, se o cache tivesse mais que o intervalo configurado (4 h), abria a janela modal "Atualização
     TLE / OMM", que travava o uso até terminar.
-  - **Feito (1.7.3):** 1,5 s depois de abrir, o app baixa os TLE/OMM em segundo plano, sem janela; o progresso aparece
+  - **Feito (1.8.0):** 1,5 s depois de abrir, o app baixa os TLE/OMM em segundo plano, sem janela; o progresso aparece
     na linha de resumo ("Atualizando TLE em segundo plano… 3/7") e o catálogo é recarregado ao final, mantendo o satélite
     selecionado. Cache com menos de 2 h é reaproveitado (limite de download do CelesTrak). O botão manual nas
     Configurações continua com a janela de progresso. Teste `tests/test_v172_tle_background.py`.
