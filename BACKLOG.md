@@ -155,6 +155,17 @@
 
 ## Pendentes
 
+- **Pacote .deb para Ubuntu/Linux Mint** (registrado em 12/11/2026)
+  - Pedido do operador: "versão .deb Linux ubuntu/mint".
+  - **Feito (1.7.3):** o job Linux gera também `PT2VHF-Sat-Tool-v<versão>-Linux-x64.deb` (`scripts/build_deb.py`,
+    amd64, glibc 2.35+: Ubuntu 22.04+ / Mint 21+). Instala em `/opt/pt2vhf-sat-tool`, comando `pt2vhf-sat-tool`,
+    atalho no menu (categoria Radioamador), ícone, regra udev do RTL-SDR (sem root) e bloqueio do driver
+    dvb_usb_rtl28xxu; dependências do Qt declaradas (o apt instala o que faltar). Configurações seguem em
+    `~/.config/PT2VHF/SatTool`. O CI instala o .deb com `apt`, roda o autoteste pelo comando do sistema e remove;
+    a validação da release e a publicação no site (updates.json, edição "Linux — .deb") incluem o arquivo.
+    Instalação: `sudo apt install ./PT2VHF-Sat-Tool-v<versão>-Linux-x64.deb`. Teste `tests/test_v173_deb_package.py`.
+  - Atenção: a página de downloads do site precisa exibir a nova edição `linux-deb` (contador `linux-deb-x64`).
+
 - **TLE atualizado em segundo plano ao abrir** (registrado em 12/11/2026)
   - Pedido do operador: "ao abrir, atualizar o tle em background, enquanto o usuário usa o app".
   - Antes: na abertura, se o cache tivesse mais que o intervalo configurado (4 h), abria a janela modal "Atualização

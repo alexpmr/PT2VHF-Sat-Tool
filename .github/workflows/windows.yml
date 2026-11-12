@@ -290,8 +290,27 @@ jobs:
             mv dist/PT2VHF-Sat-Tool "dist/$app"
             test -x "dist/$app/$app"
             tar -C dist -czf "out/$base.tar.gz" "$app"
+            # pacote .deb (Ubuntu 22.04+ / Linux Mint 21+) a partir da mesma pasta
+            python scripts/build_deb.py --version "${app#PT2VHF-Sat-Tool-v}" --app-dir "dist/$app" --out out
           fi
           ls -l out
+      - name: Instalar o .deb e rodar o autoteste pelo comando do sistema
+        if: runner.os == 'Linux'
+        env:
+          QT_QPA_PLATFORM: offscreen
+          QTWEBENGINE_CHROMIUM_FLAGS: --no-sandbox
+        run: |
+          set -euo pipefail
+          deb=$(ls out/*.deb)
+          dpkg-deb -I "$deb"
+          sudo apt-get install -y -q "./$deb"
+          test -x /usr/bin/pt2vhf-sat-tool && test -f /usr/share/applications/pt2vhf-sat-tool.desktop
+          test -f /usr/lib/udev/rules.d/60-pt2vhf-rtl-sdr.rules
+          report="$RUNNER_TEMP/selftest-deb.json"
+          pt2vhf-sat-tool --self-test "$report" PySide6 || true
+          python -c "import json,sys; d=json.load(open(sys.argv[1])); assert d['status']=='passed' and d['frozen'], d" "$report"
+          sudo apt-get remove -y -q pt2vhf-sat-tool
+          test ! -e /opt/pt2vhf-sat-tool
       - name: Enviar pacote Linux/macOS diretamente à GitHub Release (sem artifacts)
         if: github.event_name != 'pull_request'
         shell: bash
@@ -300,7 +319,7 @@ jobs:
           RELEASE_TAG: ${{ needs.prepare_release.outputs.release_tag }}
         run: |
           set -euo pipefail
-          test "$(find out -maxdepth 1 -type f | wc -l)" -eq 1
+          test "$(find out -maxdepth 1 -type f | wc -l)" -eq "$([ "$RUNNER_OS" = Linux ] && echo 2 || echo 1)"   # Linux: .tar.gz + .deb
           gh release upload "$RELEASE_TAG" out/* --repo "$GITHUB_REPOSITORY" --clobber
   release:
     name: Validar pacotes na GitHub Release
@@ -317,13 +336,14 @@ jobs:
           set -euo pipefail
           mkdir -p release
           gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --dir release --pattern 'PT2VHF-Sat-Tool-v1.7.2-*'
-      - name: Validar quatro pacotes e SHA-256
+      - name: Validar pacotes (Windows, Linux .tar.gz e .deb, macOS) e SHA-256
         run: |
           set -euo pipefail
           for file in \
             PT2VHF-Sat-Tool-v1.7.2-Win11-x64-Setup.exe \
             PT2VHF-Sat-Tool-v1.7.2-Win11-x64-Portable.exe \
             PT2VHF-Sat-Tool-v1.7.2-Linux-x64.tar.gz \
+            PT2VHF-Sat-Tool-v1.7.2-Linux-x64.deb \
             PT2VHF-Sat-Tool-v1.7.2-macOS-arm64.dmg \
             PT2VHF-Sat-Tool-v1.7.2-Win11-x64-SHA256.txt; do
             test -s "release/$file" || { echo "::error::Pacote ausente: $file"; exit 1; }
