@@ -158,6 +158,18 @@
 - **Próxima versão: 1.8.0** (registrado em 12/11/2026)
   - Pedido do operador: "próxima versão deverá ser 1.0", corrigido em seguida para "1.8".
   - Os itens marcados "Feito (1.8.0)" entram nela; a troca de número acontece quando o operador pedir o lançamento.
+- **Menus e campos do tamanho do conteúdo na tela principal** (registrado em 12/11/2026)
+  - Pedido do operador: "ajuste o tamanho dos menus pulldown e campos de inserção, para o tamanho suficiente para mostrar
+    a informação" (print: Satélite e Serviço/modo esticados na linha toda).
+  - **Feito (1.8.0):** Satélite e Serviço/modo acompanham o texto escolhido (reajustam ao trocar a opção, a lista, a
+    fonte ou o tema); a lista aberta fica larga o bastante para a opção mais longa; sobra fica à direita. Na aba
+    Satélites, pesquisa (48 caracteres), Categorias e botões de ação com a largura do conteúdo. As Configurações já
+    eram assim desde a 1.7.1. Teste `tests/test_v180_sizing_top_buttons.py`.
+
+- **Botões CAT, SDR e ROTOR com tamanhos diferentes** (registrado em 12/11/2026)
+  - **Feito (1.8.0):** os três com a mesma largura e altura (`TOP_BUTTON_WIDTH`) e o mesmo estilo base
+    (`top_button_style`, só as cores mudam com o estado); seletor de idioma e relógio UTC na mesma altura. Mesmo teste.
+
 - **Pacote .deb para Ubuntu/Linux Mint** (registrado em 12/11/2026)
   - Pedido do operador: "versão .deb Linux ubuntu/mint".
   - **Feito (1.8.0):** o job Linux gera também `PT2VHF-Sat-Tool-v<versão>-Linux-x64.deb` (`scripts/build_deb.py`,

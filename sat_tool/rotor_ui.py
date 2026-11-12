@@ -337,7 +337,6 @@ class RotorUiMixin:
     def build_rotor_top_button(self, header):
         """Botão ROTOR ao lado de CAT e SDR: liga/desliga (conecta/desconecta) o controlador do rotor."""
         self.rotor_top_btn = QPushButton("ROTOR")
-        self.rotor_top_btn.setFixedWidth(66)
         self.rotor_top_btn.clicked.connect(self.rotor_top_clicked)
         header.addWidget(self.rotor_top_btn)
         self.rotor_set_top("off")
@@ -346,7 +345,8 @@ class RotorUiMixin:
         btn = getattr(self, "rotor_top_btn", None)
         if btn is None:
             return
-        btn.setStyleSheet("font-size:12px;font-weight:800;padding:4px;border-radius:5px;" + self.TOP_STYLES[state])
+        from .app import top_button_style
+        btn.setStyleSheet(top_button_style(self.TOP_STYLES[state]))
         port = str(self.rotor_cfg("rotor_port")) or "sem porta"
         btn.setToolTip({"off": "Rotor desligado · clique para conectar o controlador",
                         "busy": "Rotor conectando · " + port,

@@ -5,7 +5,12 @@ widget: menus pela opção mais longa, campos numéricos pela maior entrada vál
 de texto pelo número de caracteres esperado. Linhas horizontais e grades ganham uma sobra à direita,
 de modo que rótulo e campo fiquem juntos e o espaço extra fique depois.
 """
-from .qt_compat import QComboBox, QDoubleSpinBox, QLineEdit, QHBoxLayout, QGridLayout, QWidget
+from .qt_compat import QComboBox, QDoubleSpinBox, QLineEdit, QHBoxLayout, QGridLayout, QWidget, QObject, QTimer
+
+try:
+    from PySide6.QtCore import QEvent
+except ImportError:  # PySide2
+    from PySide2.QtCore import QEvent
 
 # Caracteres esperados por campo de texto (atributo da janela → (largura em caracteres, maxLength ou 0)).
 TEXT_FIELDS = {
@@ -116,3 +121,41 @@ def fit_settings(window, root: QWidget):
         if w.layout() is not None:
             _add_trailing_space(w.layout(), seen)
     return widths
+
+
+def fit_combo_to_current(combo, min_text: str = "0000000000") -> int:
+    """v1.8.0: menus da tela principal com a largura do texto escolhido (não esticados na linha toda).
+
+    A lista aberta fica pelo menos tão larga quanto a opção mais longa, para nada aparecer cortado."""
+    text = combo.currentText() or min_text
+    width = max(_advance(combo, text), _advance(combo, min_text)) + COMBO_PADDING
+    combo.setFixedWidth(width)
+    count = combo.count()
+    if count and count <= 3000 and getattr(combo, "_pt2vhf_popup_count", None) != count:
+        widest = max(_advance(combo, combo.itemText(i)) for i in range(count))
+        combo.view().setMinimumWidth(widest + COMBO_PADDING)
+        combo._pt2vhf_popup_count = count
+    return width
+
+
+class _RefitOnFont(QObject):
+    def __init__(self, combo, min_text):
+        super().__init__(combo)
+        self.combo, self.min_text = combo, min_text
+
+    def eventFilter(self, obj, event):
+        if event.type() in (QEvent.FontChange, QEvent.StyleChange, QEvent.Show):
+            QTimer.singleShot(0, lambda: fit_combo_to_current(self.combo, self.min_text))
+        return False
+
+
+def keep_combo_fitted(combo, min_text: str = "0000000000"):
+    """Reajusta ao trocar a opção (mesmo com sinais do combo bloqueados), a lista ou a fonte/tema."""
+    refit = lambda *_: QTimer.singleShot(0, lambda: fit_combo_to_current(combo, min_text))
+    combo.currentTextChanged.connect(refit)
+    model = combo.model()
+    for sig in (model.rowsInserted, model.rowsRemoved, model.modelReset, model.dataChanged):
+        sig.connect(refit)
+    combo._pt2vhf_refit = _RefitOnFont(combo, min_text)
+    combo.installEventFilter(combo._pt2vhf_refit)
+    fit_combo_to_current(combo, min_text)
