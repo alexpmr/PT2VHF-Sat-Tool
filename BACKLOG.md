@@ -147,7 +147,9 @@
     radioamadores".
   - **Feito (1.7.2):** a janela de boas-vindas mostra o banner (`assets/branding/welcome-banner.jpg`, incluído nos
     builds Windows/Linux/macOS), clicável para www.PT2VHF.com, com o link e o botão Fechar embaixo. Se o arquivo faltar,
-    volta ao título antigo. Teste `tests/test_v172_welcome_banner.py`.
+    volta ao título antigo. Banner trocado em 12/11 pela versão com sete ferramentas (inclui Prop Tool). Fica 10 s
+    na tela, com contagem regressiva discreta (⏱ 10 s e barra laranja) ao lado do Fechar, e fecha sozinha ao final.
+    Teste `tests/test_v172_welcome_banner.py`.
 
 - **Display: ícone <> para trocar MAIN e SUB** (registrado em 12/11/2026)
   - Pedido do operador: "algum ícone tipo <> para trocar o main pelo sub e vice-versa".

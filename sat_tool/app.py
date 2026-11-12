@@ -53,6 +53,9 @@ from .core import (Station, now_utc, make_satellite, position, ground_track, foo
                    predict_passes, transponder_options, doppler_frequencies, paired_linear_uplink,
                    ground_track_between, track_period_bounds)
 
+WELCOME_SECONDS = 10   # v1.7.2: tempo do banner de abertura na tela
+
+
 def branding_asset(name):
     root=Path(getattr(sys,'_MEIPASS',Path(__file__).resolve().parents[1]))
     return root/'assets'/'branding'/name
@@ -272,9 +275,36 @@ class MainWindow(RotorUiMixin, QMainWindow):
         close = buttons.addButton('Fechar', QDialogButtonBox.RejectRole)
         close.setDefault(True)
         buttons.rejected.connect(dialog.reject)
+        # v1.7.2: fica 10 s na tela, com contagem regressiva discreta embaixo, e fecha sozinha
+        countdown = QLabel()
+        countdown.setObjectName('welcomeCountdown')
+        countdown.setStyleSheet('color:#8fa9c4;font-size:11px')
+        bar = QProgressBar()
+        bar.setRange(0, WELCOME_SECONDS)
+        bar.setTextVisible(False)
+        bar.setFixedSize(90, 4)
+        bar.setStyleSheet('QProgressBar{background:#1c3049;border:0;border-radius:2px}'
+                          'QProgressBar::chunk{background:#f08a24;border-radius:2px}')
+        left = {'s': WELCOME_SECONDS}
+
+        def tick():
+            countdown.setText(f"\u23f1 {left['s']} s")
+            bar.setValue(left['s'])
+            if left['s'] <= 0:
+                timer.stop()
+                dialog.accept()
+            left['s'] -= 1
+
+        timer = QTimer(dialog)
+        timer.timeout.connect(tick)
+        tick()
+        timer.start(1000)
+        dialog.finished.connect(lambda *_: timer.stop())
         row = QHBoxLayout()
         row.addWidget(link)
         row.addStretch(1)
+        row.addWidget(bar)
+        row.addWidget(countdown)
         row.addWidget(buttons)
         layout.addLayout(row)
         qt_exec(dialog)
