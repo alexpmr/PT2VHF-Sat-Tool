@@ -35,7 +35,7 @@ O sufixo `Win11-x64` é mantido para compatibilidade com o atualizador e também
 
 - **Displays no estilo de rádios reais** (sem logotipos): IC-706MKIIG (LCD verde/âmbar), IC-7100 (matriz branca), FT-897/857 (backlight colorido), IC-910H (MAIN em cima, SUB embaixo), FT-991A e IC-9700 (tela colorida). Escopo e waterfall do display usam os dados reais do RTL-SDR; clique no escopo sintoniza.
 - **Display:** teclas **TIPO** (F6) e **LUZ** (F7), 6 cores de backlight, menu do clique direito e **display destacável** (F8) para outro monitor, com tela cheia (F11), sempre visível e sem bordas.
-- **Configurações → Rotores** completa (conexão, limites e calibração, ajustes de rastreamento, ajuste manual e teste, log) e **faixa ROTOR** na tela principal com bússola, alvo, PARAR (Esc/F12) e linha da antena no mapa.
+- **Configurações → Rotores** completa (conexão, limites e calibração, ajustes de rastreamento, ajuste manual e teste, log) e **faixa ROTOR** na tela principal com **dois gauges em tempo real** (direção 0–360° e elevação 0–90°, posição real × alvo do satélite), PARAR (Esc/F12) e linha da antena no mapa.
 - **Aparência:** temas escuro, claro, alto contraste e noturno (vermelho), cor de destaque, brilho, contraste, saturação e tamanho da fonte, com verificação de contraste.
 - **Idioma no topo** com bandeiras: português, inglês, espanhol, francês, alemão, italiano, japonês, polonês, holandês e chinês simplificado; troca sem reiniciar.
 - **Configurações** com campos e menus do tamanho do conteúdo; **porta COM** ocupada ou ausente com mensagem clara; **OTA** não trava mais na instalação do driver RTL-SDR; **painel SDR** fechado não reabre sozinho.
