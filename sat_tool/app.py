@@ -164,6 +164,7 @@ class MainWindow(RotorUiMixin, QMainWindow):
         self.frequency_started_at = None
         self.orbit_started_at = None
         self.orbit_progress_dialog = None
+        self.orbit_quiet = False
         self.aos_alarm_dialog = None
         self.aos_alarm_target = None
         self.aos_alarm_title = None
@@ -2196,15 +2197,18 @@ class MainWindow(RotorUiMixin, QMainWindow):
         age=age_hours(self.config.dir,"amateur_omm.json")
         missing=any(age_hours(self.config.dir,"group_"+g+".json") is None for g in groups)
         if age is not None and age<2 and not force and not missing:
+            if quiet:   # v1.8.1: na abertura, cache recente não mostra nada
+                self.log(f"TLE/OMM: cache de {age:.1f} h ainda válido; sem download")
+                return
             self.summary.setText(f"OMM em cache há {age:.1f} h; aguarde o intervalo de 2 h")
             return
         if "omm" in self.pending_jobs:return
         self.orbit_started_at=time.monotonic()
         def notify(index,total,group,count,errors):
             self.events.result.emit("omm-stage",(index,total,group,count,errors))
-        if quiet:   # v1.7.2: segundo plano, progresso só na linha de resumo
+        self.orbit_quiet=quiet
+        if quiet:   # v1.8.1: download transparente, nada na tela (só no log)
             self.orbit_progress_dialog=None
-            self.summary.setText(self.tle_bg_text())
             self.log("TLE/OMM: atualização em segundo plano iniciada")
             self.background("omm",lambda:refresh_orbits(self.config.dir,groups=groups,progress=notify))
             return
@@ -4127,8 +4131,10 @@ class MainWindow(RotorUiMixin, QMainWindow):
                     f"{round(index*100/max(total,1))}% · Tempo restante estimado: {eta}\n"
                     f"Tempo decorrido: {format_duration(elapsed)} · falhas {errors}")
                 dlg.setValue(index)
-            else:
+            elif not getattr(self,"orbit_quiet",False):
                 self.summary.setText(f"{self.tle_bg_text()} {index}/{total}")
+            else:
+                self.log(f"TLE/OMM: categoria {index}/{total} {group} · {count} satélites")
             return
         if key=="tx-batch-item":
             ident,rows,index,total=data
@@ -4280,6 +4286,7 @@ class MainWindow(RotorUiMixin, QMainWindow):
             if self.orbit_progress_dialog:
                 self.orbit_progress_dialog.close()
                 self.orbit_progress_dialog=None
+            self.orbit_quiet=False
             self.populate_catalog(data)
             self.refresh_passes()
             self.log(f'Catálogo atualizado: {len(data)} objetos OMM')
@@ -4457,6 +4464,9 @@ class MainWindow(RotorUiMixin, QMainWindow):
             if self.orbit_progress_dialog:
                 self.orbit_progress_dialog.close()
                 self.orbit_progress_dialog=None
+            if getattr(self,"orbit_quiet",False):   # v1.8.1: falha em segundo plano só no log
+                self.orbit_quiet=False
+                return
             self.summary.setText('Sem atualização: usando cache OMM, se existente')
         if key.startswith('photo:') and key.split(':')[1]==str(self.sat_combo.currentData()):
             self.photo.setHtml(photo_html(None))

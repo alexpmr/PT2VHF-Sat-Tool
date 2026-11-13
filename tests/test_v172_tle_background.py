@@ -1,4 +1,5 @@
-"""v1.7.2 (backlog 12/11/2026): ao abrir, TLE/OMM atualizados em segundo plano, sem janela modal."""
+"""v1.7.2 (backlog 12/11/2026): ao abrir, TLE/OMM atualizados em segundo plano, sem janela modal.
+v1.8.1 (backlog 13/11/2026): transparente, sem nada na tela (nem na linha de resumo); só no log."""
 import os
 import subprocess
 import sys
@@ -32,9 +33,17 @@ def test_startup_refreshes_tle_in_background_without_dialog():
             assert "omm" in jobs, jobs
             assert w.orbit_progress_dialog is None
             assert gui.QApplication.activeModalWidget() is None
-            assert "segundo plano" in w.summary.text(), w.summary.text()
+            before=w.summary.text()
+            assert "segundo plano" not in before and "TLE" not in before.upper().replace("OMM/TLE",""), before
             w.background_result("omm-stage",(3,7,"amateur",40,0))
-            assert w.summary.text().endswith("3/7"), w.summary.text()
+            assert w.summary.text()==before, w.summary.text()
+            w.background_error("omm","sem rede")
+            assert w.summary.text()==before, w.summary.text()
+            assert w.orbit_quiet is False
+            # cache recente: a abertura não mostra o aviso de intervalo de 2 h
+            gui.age_hours=lambda *a:0.5
+            w.startup_refresh_catalog()
+            assert "cache" not in w.summary.text(), w.summary.text()
     ''')
     r = subprocess.run([sys.executable, "-c", source], capture_output=True, text=True, timeout=120,
                        env={**os.environ, "QT_QPA_PLATFORM": "offscreen", "LANG": "pt_BR.UTF-8"})
