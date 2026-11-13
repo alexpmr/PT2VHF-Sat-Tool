@@ -159,6 +159,13 @@
   - Pedido: "baixar os TLEs em background, sem mostrar na tela ao iniciar, de forma transparente".
   - **Feito (próxima versão):** o download da abertura não escreve mais nada na linha de resumo (nem progresso,
     nem o aviso de cache recente, nem falha); tudo vai só para o log. O botão manual continua com a janela de progresso.
+- **Bug: ao atualizar, baixa e fecha o programa; nada mais acontece** (registrado em 13/11/2026)
+  - Contexto: OTA 1.7.2 → 1.8.0, o primeiro em que o EXE instalado tem a versão no nome. O atualizador da 1.7.2
+    deixa o Setup (/OTA) reabrir o programa e não reabre nada quando o Setup termina bem.
+  - **Feito (próxima versão):** o atualizador grava cada etapa em %TEMP%\\PT2VHF-Sat-Tool-update-helper.log e,
+    se em 15 s nenhum EXE do programa estiver rodando na pasta, abre o mais novo. CI do Windows simula o OTA
+    (atualizador + Setup /OTA) e falha se o programa não reabrir.
+  - Pendente: edição usada pelo Alex (Setup/Portátil) e os arquivos de resultado/log do %TEMP%.
 - **Versão 1.8.0 publicada em 13/11/2026** (registrado em 12/11/2026)
   - Pedido do operador: "próxima versão deverá ser 1.0", corrigido em seguida para "1.8".
   - Os itens marcados "Feito (1.8.0)" entram nela; a troca de número acontece quando o operador pedir o lançamento.

@@ -16,6 +16,12 @@ $resultFile = Join-Path $env:TEMP 'PT2VHF-Sat-Tool-update-result.txt'
 $setupLog = Join-Path $env:TEMP 'PT2VHF-Sat-Tool-setup.log'
 $status = 'erro'
 $detail = ''
+# v1.8.1: registro de cada etapa (diagnostico quando o OTA "baixa, fecha e nada acontece")
+$helperLog = Join-Path $env:TEMP 'PT2VHF-Sat-Tool-update-helper.log'
+function Write-Step([string]$text) {
+    try { "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') $text" | Out-File -FilePath $helperLog -Append -Encoding UTF8 } catch { }
+}
+Write-Step "inicio: modo=$Mode versao=$Version pid=$WaitPid destino=$Destination exe=$Executable pacote=$Package"
 
 function Get-Descendants([int]$root) {
     # Instantaneo da arvore enquanto o app ainda existe (PIDs dos filhos e netos).
@@ -60,6 +66,7 @@ function Get-InnoExitMeaning([int]$code) {
 try {
     $children = @(Get-Descendants $WaitPid)
     $left = Wait-Exit (@($WaitPid) + $children) 90
+    Write-Step "app encerrado; restantes: $($left -join ',')"
     if ($left.Count -gt 0) {
         # Somente processos que eram filhos do Sat Tool (mapa/QtWebEngine); nunca de outros programas.
         foreach ($id in $left) {
@@ -85,8 +92,10 @@ try {
         if ($Destination) { $setupArgs += "/DIR=`"$Destination`"" }
         $code = -1
         for ($attempt = 1; $attempt -le 2; $attempt++) {
+            Write-Step "instalador: tentativa $attempt"
             $p = Start-Process -FilePath $Package -ArgumentList $setupArgs -Wait -PassThru
             $code = $p.ExitCode
+            Write-Step "instalador: codigo $code"
             # 1 = Setup nao iniciou (ex.: AppMutex ainda presente); 5 = falha em "Preparando para instalar"
             # (arquivo em uso). Uma nova tentativa apos alguns segundos costuma resolver.
             if ($code -eq 0 -or ($code -ne 1 -and $code -ne 5)) { break }
@@ -130,16 +139,36 @@ try {
     "Falha ao instalar atualizacao PT2VHF Sat Tool: $detail" | Out-File -FilePath (Join-Path $env:TEMP 'PT2VHF-Sat-Tool-update-error.txt') -Encoding UTF8
 } finally {
     "$status`n$Version`n$detail" | Out-File -FilePath $resultFile -Encoding UTF8
-    # v1.7.2: o EXE instalado leva a versao no nome. Depois de um Setup bem-sucedido o proprio instalador
-    # (/OTA) abre o EXE novo; aqui so reabrimos em caso de falha ou na edicao portatil.
-    if (-not ($Mode -eq 'Setup' -and $status -eq 'ok')) {
+    Write-Step "resultado: $status $detail"
+    # v1.7.2: o EXE instalado leva a versao no nome e o Setup (/OTA) abre o EXE novo.
+    # v1.8.1: se depois de alguns segundos nenhum EXE do programa estiver rodando na pasta, o atualizador abre
+    # o mais recente (antes, se o Setup nao abrisse, nada acontecia). Falha e portatil reabrem como antes.
+    $running = $false
+    if ($Mode -eq 'Setup' -and $status -eq 'ok' -and $Destination) {
+        for ($i = 0; $i -lt 15 -and -not $running; $i++) {
+            Start-Sleep -Seconds 1
+            $running = @(Get-Process -ErrorAction SilentlyContinue | Where-Object {
+                $_.Name -like 'PT2VHF-Sat-Tool*' -and $_.Path -and
+                $_.Path.StartsWith($Destination, [System.StringComparison]::OrdinalIgnoreCase)
+            }).Count -gt 0
+        }
+        Write-Step "programa aberto pelo instalador: $running"
+    }
+    if (-not $running) {
         $launch = $Executable
-        if (-not ($launch -and (Test-Path -LiteralPath $launch)) -and $Destination) {
-            $launch = Get-ChildItem -LiteralPath $Destination -Filter 'PT2VHF-Sat-Tool*.exe' -File -ErrorAction SilentlyContinue |
-                Sort-Object LastWriteTime -Descending | Select-Object -First 1 -ExpandProperty FullName
+        if ($Mode -eq 'Setup' -or -not ($launch -and (Test-Path -LiteralPath $launch))) {
+            if ($Destination) {
+                $newest = Get-ChildItem -LiteralPath $Destination -Filter 'PT2VHF-Sat-Tool*.exe' -File -ErrorAction SilentlyContinue |
+                    Where-Object { $_.Name -notlike '*Setup*' } |
+                    Sort-Object LastWriteTime -Descending | Select-Object -First 1 -ExpandProperty FullName
+                if ($newest) { $launch = $newest }
+            }
         }
         if ($launch -and (Test-Path -LiteralPath $launch)) {
-            Start-Process -FilePath $launch
+            Write-Step "abrindo: $launch"
+            Start-Process -FilePath $launch -WorkingDirectory (Split-Path -Parent $launch)
+        } else {
+            Write-Step "nenhum executavel encontrado para abrir"
         }
     }
 }

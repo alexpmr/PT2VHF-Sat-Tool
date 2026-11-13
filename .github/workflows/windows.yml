@@ -200,6 +200,36 @@ jobs:
           $exes = @(Get-ChildItem $dir -Filter 'PT2VHF-Sat-Tool*.exe' -File | Select-Object -ExpandProperty Name)
           Write-Host "EXEs instalados: $($exes -join ', ')"
           if ($exes.Count -ne 1 -or $exes[0] -ne 'PT2VHF-Sat-Tool-v1.8.0.exe') { throw "Esperado só PT2VHF-Sat-Tool-v1.8.0.exe: $($exes -join ', ')" }
+      - name: Simular o OTA (atualizador externo + Setup /OTA) e conferir que o programa reabre
+        if: matrix.target == 'Win11-x64'
+        shell: pwsh
+        run: |
+          # v1.8.1 (bug 13/11/2026): "ao atualizar, baixa e fecha o programa; nada mais acontece".
+          $dir = Join-Path $env:RUNNER_TEMP 'satinst'
+          $setup = (Resolve-Path 'dist/PT2VHF-Sat-Tool-v1.8.0-${{ matrix.target }}-Setup.exe').Path
+          $pkgDir = Join-Path $env:RUNNER_TEMP 'otapkg'; New-Item -ItemType Directory -Force -Path $pkgDir | Out-Null
+          $pkg = Join-Path $pkgDir (Split-Path -Leaf $setup); Copy-Item $setup $pkg -Force
+          $helper = Join-Path $pkgDir 'apply-update.ps1'; Copy-Item 'scripts/apply-update.ps1' $helper -Force
+          Remove-Item (Join-Path $env:TEMP 'PT2VHF-Sat-Tool-update-helper.log') -ErrorAction SilentlyContinue
+          $fake = Start-Process -FilePath 'powershell.exe' -ArgumentList @('-NoProfile','-Command','Start-Sleep -Seconds 3') -PassThru
+          $exe = Join-Path $dir 'PT2VHF-Sat-Tool-v1.8.0.exe'
+          $h = Start-Process -FilePath 'powershell.exe' -ArgumentList @('-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',$helper,
+                '-WaitPid',$fake.Id,'-Package',$pkg,'-Destination',$dir,'-Executable',$exe,'-Mode','Setup','-Version','1.8.0') -Wait -PassThru
+          $log = Join-Path $env:TEMP 'PT2VHF-Sat-Tool-update-helper.log'
+          if (Test-Path $log) { Get-Content $log | ForEach-Object { Write-Host "helper: $_" } }
+          $setupLog = Join-Path $env:TEMP 'PT2VHF-Sat-Tool-setup.log'
+          if (Test-Path $setupLog) { Get-Content $setupLog -Tail 15 | ForEach-Object { Write-Host "setup: $_" } }
+          $procs = @(Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.Name -like 'PT2VHF-Sat-Tool*' -and $_.Path -and $_.Path.StartsWith($dir) })
+          Write-Host "Processos do programa depois do OTA: $($procs | ForEach-Object { $_.Path })"
+          $procs | Stop-Process -Force -ErrorAction SilentlyContinue
+          Get-Process -Name 'QtWebEngineProcess' -ErrorAction SilentlyContinue | Where-Object { $_.Path -and $_.Path.StartsWith($dir) } | Stop-Process -Force -ErrorAction SilentlyContinue
+          if (-not ((Get-Content $log -Raw) -match 'resultado: ok')) { throw 'OTA: o Setup não terminou com sucesso' }
+          if ($procs.Count -eq 0) { throw 'OTA: o programa não reabriu depois da atualização' }
+      - name: Remover a instalação de teste
+        shell: pwsh
+        run: |
+          $dir = Join-Path $env:RUNNER_TEMP 'satinst'
+          Start-Sleep -Seconds 2
           $unins = Get-ChildItem $dir -Filter 'unins*.exe' | Select-Object -First 1
           if ($unins) { Start-Process -FilePath $unins.FullName -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART') -Wait }
       - name: Checksums
