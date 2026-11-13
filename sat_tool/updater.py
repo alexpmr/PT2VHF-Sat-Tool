@@ -160,10 +160,25 @@ def select_release(manifest, current_version: str, variant: str, kind: str,
     return None
 
 
+CALLSIGN_RE = re.compile(r'^(?=.*[0-9])(?=.*[A-Z])[A-Z0-9]{1,8}(/[A-Z0-9]{1,8}){0,2}$')
+
+
+def callsign_param(callsign) -> str:
+    """v1.8.0: indicativo enviado na consulta de versão (lista de usuários no site); vazio se inválido."""
+    call = str(callsign or '').strip().upper()
+    return call if len(call) <= 16 and CALLSIGN_RE.fullmatch(call) else ''
+
+
+def update_url(callsign=None) -> str:
+    call = callsign_param(callsign)
+    return UPDATE_API + ('&call=' + call.replace('/', '%2F') if call else '')
+
+
 def check_for_update(current_version: str, variant: str, kind: str,
-                     *, include_prereleases: bool = True):
-    response = requests.get(UPDATE_API, timeout=20, headers=HEADERS, allow_redirects=False)
-    if response.is_redirect or response.url != UPDATE_API:
+                     *, include_prereleases: bool = True, callsign=None):
+    url = update_url(callsign)
+    response = requests.get(url, timeout=20, headers=HEADERS, allow_redirects=False)
+    if response.is_redirect or urlsplit(response.url)._replace(query='') != urlsplit(UPDATE_API)._replace(query=''):
         raise ValueError('Redirecionamento bloqueado na consulta de atualização')
     response.raise_for_status()
     if len(response.content) > MAX_MANIFEST_BYTES:

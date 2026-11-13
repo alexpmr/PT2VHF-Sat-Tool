@@ -374,5 +374,9 @@
 "GESTOPPT",
 "Verfolgt den gewählten Satelliten · klicken (oder Esc/F12) stoppt den Rotor",
 "Rotor gestoppt · verfolgt selbstständig, wenn der gewählte Satellit über dem Horizont steht",
-"Automatische Verfolgung vom Operator pausiert · klicken zum Fortsetzen"
+"Automatische Verfolgung vom Operator pausiert · klicken zum Fortsetzen",
+"TLE werden im Hintergrund aktualisiert…",
+"CPU- und Speichernutzung von PT2VHF Sat Tool",
+"Mein Rufzeichen bei der Suche nach neuer Version senden (Nutzerliste auf www.pt2vhf.com/sat)",
+"Sendet nur das Rufzeichen der Station mit der Versionsprüfung. Das Land ergibt sich aus dem Präfix. Abwählen, um nicht in der Liste zu erscheinen."
 ]

@@ -374,5 +374,9 @@
 "STOPPED",
 "Tracking the selected satellite · click (or Esc/F12) to stop the rotator",
 "Rotator stopped · tracks by itself when the selected satellite is above the horizon",
-"Automatic tracking paused by the operator · click to resume"
+"Automatic tracking paused by the operator · click to resume",
+"Updating TLEs in the background…",
+"PT2VHF Sat Tool CPU and memory usage",
+"Send my callsign when checking for a new version (user list at www.pt2vhf.com/sat)",
+"Sends only the station callsign with the version check. The country comes from the prefix. Uncheck to stay off the list."
 ]

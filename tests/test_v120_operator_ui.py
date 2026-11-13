@@ -14,7 +14,8 @@ def test_predicted_rx_tx_above_map_and_independent_of_cat():
     assert "self.pred_tx.setText(" in source
     assert 'self.preview_doppler(pos=pos,when=now)' in source
     assert 'self.tick_timer.start(1000)' in source
-    assert "self.mode_combo,3" in source and "self.sat_combo,2" in source
+    # v1.8.0: menus do tamanho do texto (keep_combo_fitted) em vez de esticados por fator
+    assert "keep_combo_fitted(self.sat_combo" in source and "keep_combo_fitted(self.mode_combo" in source
     assert "self.corrected_label" in source
 
 

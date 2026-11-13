@@ -29,6 +29,8 @@ EDITIONS = (
      "Windows — Portátil", "Windows 10 1809+ / 11 64 bits, EXE único sem instalar", b"MZ"),
     ("linux-targz", "linux-tar-x64", "tar.gz", "Linux-x64.tar.gz", "linux-x64", "x64",
      "Linux — .tar.gz", "Linux x64 (glibc 2.35+, ex.: Ubuntu 22.04+); extraia e execute o arquivo PT2VHF-Sat-Tool-v<versão> da pasta", b"\x1f\x8b"),
+    ("linux-deb", "linux-deb-x64", "deb", "Linux-x64.deb", "linux-x64", "x64",
+     "Linux — .deb (Ubuntu/Mint)", "Ubuntu 22.04+ / Linux Mint 21+ 64 bits; instale com: sudo apt install ./PT2VHF-Sat-Tool-v<versão>-Linux-x64.deb", b"!<arch>\n"),
     ("macos", "mac-dmg-arm64", "dmg", "macOS-arm64.dmg", "macos-arm64", "Apple Silicon",
      "macOS — .dmg", "macOS 14+ Apple Silicon (M1 ou superior); arraste para Aplicativos", b""),
 )

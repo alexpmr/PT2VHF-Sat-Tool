@@ -56,6 +56,14 @@ from .core import (Station, now_utc, make_satellite, position, ground_track, foo
 WELCOME_SECONDS = 10   # v1.7.2: tempo do banner de abertura na tela
 
 
+TOP_BUTTON_WIDTH = 72   # v1.8.0: CAT, SDR e ROTOR com a mesma largura e altura
+
+
+def top_button_style(colors):
+    """Estilo comum dos botões do topo (CAT, SDR, ROTOR): só as cores mudam com o estado."""
+    return "font-size:12px;font-weight:800;padding:0px 4px;border-radius:5px;" + colors
+
+
 def branding_asset(name):
     root=Path(getattr(sys,'_MEIPASS',Path(__file__).resolve().parents[1]))
     return root/'assets'/'branding'/name
@@ -204,8 +212,9 @@ class MainWindow(RotorUiMixin, QMainWindow):
         self.populate_catalog(load_orbits(self.config.dir))
         self.update_ports()
         self.init_sdr_dock()
-        if age_hours(self.config.dir,"amateur_omm.json") is None or age_hours(self.config.dir,"amateur_omm.json")>self.config.values.get("tle_update_hours",4):
-            self.refresh_catalog()
+        # v1.7.2: ao abrir, atualiza os TLE/OMM em segundo plano (sem janela modal) enquanto o app é usado.
+        # O cache só é reaproveitado se tiver menos de 2 h (limite de download do CelesTrak).
+        QTimer.singleShot(1500, self.startup_refresh_catalog)
         self.tick_timer = QTimer(self)
         self.tick_timer.timeout.connect(self.tick)
         self.tick_timer.start(1000)
@@ -228,6 +237,21 @@ class MainWindow(RotorUiMixin, QMainWindow):
         self.install_display_shortcuts()
         if self.theme_options()!=THEME_DEFAULTS:
             QTimer.singleShot(0,self.apply_appearance)
+
+    def top_control_height(self):
+        fm=self.utc.fontMetrics()
+        return max(28,fm.height()+14,self.language_menu_button.sizeHint().height())
+
+    def align_top_controls(self):
+        """v1.8.0: os três botões com o mesmo tamanho; idioma e relógio UTC na mesma altura."""
+        h=self.top_control_height()
+        for btn in (self.cat_indicator,self.sdr_toggle,getattr(self,"rotor_top_btn",None)):
+            if btn is not None:btn.setFixedSize(TOP_BUTTON_WIDTH,h)
+        self.language_menu_button.setFixedHeight(h)
+        self.utc.setFixedHeight(h)
+        self.utc.setAlignment(Qt.AlignCenter)
+        if getattr(self,"resource_meter",None) is not None:
+            self.resource_meter.setFixedHeight(h+8)
 
     def install_display_shortcuts(self):
         """Atalhos do display: F6 = TIPO, F7 = LUZ, F8 = destacar/voltar."""
@@ -373,16 +397,17 @@ class MainWindow(RotorUiMixin, QMainWindow):
         self.summary.setWordWrap(False)
         self.summary.setMinimumWidth(80)
         header.addWidget(self.summary, 1)
+        from .resource_meter import ResourceMeter
+        self.resource_meter=ResourceMeter()   # v1.8.0: CPU e RAM do programa, como no APRS Client
+        header.addWidget(self.resource_meter,0,Qt.AlignVCenter)
         self.cat_indicator=QPushButton("CAT")
         self.cat_indicator.setToolTip("Clique para conectar ou desconectar o TS-2000 pela porta CAT configurada")
         self.cat_indicator.clicked.connect(self.toggle_connection)
-        self.cat_indicator.setFixedWidth(66)
-        self.cat_indicator.setStyleSheet("font-size:12px;font-weight:800;color:#ef9a9a;padding:4px;background:#243143;border-radius:5px")
+        self.cat_indicator.setStyleSheet(top_button_style("color:#ef9a9a;background:#243143;border:1px solid #3d5470"))
         header.addWidget(self.cat_indicator)
         self.sdr_toggle=QPushButton("SDR")
         self.sdr_toggle.setToolTip("Mostrar/ocultar o painel SDR (não liga nem desliga o receptor)")
-        self.sdr_toggle.setFixedWidth(66)
-        self.sdr_toggle.setStyleSheet("font-size:12px;font-weight:800")
+        self.sdr_toggle.setStyleSheet(top_button_style("color:#ffd0c4;background:#5a2a2a;border:1px solid #c96a5a"))
         header.addWidget(self.sdr_toggle)
         self.build_rotor_top_button(header)  # v1.7.2: liga/desliga o controlador do rotor, como CAT e SDR
         self.build_language_menu(header)
@@ -391,6 +416,7 @@ class MainWindow(RotorUiMixin, QMainWindow):
         self.utc.setWordWrap(False)
         self.utc.setMinimumWidth(0)
         header.addWidget(self.utc)
+        self.align_top_controls()   # v1.8.0: CAT, SDR e ROTOR do mesmo tamanho, na altura do idioma e do relógio
         op.addLayout(header)
         upcoming,upcoming_layout=group("PRÓXIMA PASSAGEM DO SATÉLITE SELECIONADO · CONTAGEM REGRESSIVA")
         upcoming_row=QHBoxLayout()
@@ -500,9 +526,15 @@ class MainWindow(RotorUiMixin, QMainWindow):
         operator_panel,ov=group("SATÉLITE · FREQUÊNCIAS")
         selectors=QHBoxLayout()
         selectors.addWidget(label("Satélite"))
-        selectors.addWidget(self.sat_combo,2)
+        selectors.addWidget(self.sat_combo)
+        selectors.addSpacing(8)
         selectors.addWidget(label("Serviço / modo"))
-        selectors.addWidget(self.mode_combo,3)
+        selectors.addWidget(self.mode_combo)
+        selectors.addStretch(1)   # v1.8.0: menus do tamanho do texto, sobra à direita
+        from .form_sizing import keep_combo_fitted
+        self.sat_combo.setMinimumWidth(0); self.mode_combo.setMinimumWidth(0)
+        keep_combo_fitted(self.sat_combo, "SAUDISAT 1C")
+        keep_combo_fitted(self.mode_combo, "Aguardando frequências")
         ov.addLayout(selectors)
         frequency_cards=QHBoxLayout()
         frequency_cards.setSpacing(4)
@@ -802,7 +834,10 @@ class MainWindow(RotorUiMixin, QMainWindow):
         self.catalog_search=QLineEdit()
         self.catalog_search.setPlaceholderText("Filtrar nome, NORAD, modo ou frequência…")
         self.catalog_search.textChanged.connect(self.refresh_satellite_table)
-        catalog_layout.addWidget(self.catalog_search)
+        from .form_sizing import text_width
+        self.catalog_search.setMaximumWidth(text_width(self.catalog_search, 48))   # v1.8.0: pelo conteúdo
+        catalog_filters=QHBoxLayout()
+        catalog_filters.addWidget(self.catalog_search,1)
         self.catalog_category=QPushButton("Categorias · múltipla seleção")
         self.catalog_category_menu=QMenu(self.catalog_category)
         self.catalog_category_actions={}
@@ -819,7 +854,9 @@ class MainWindow(RotorUiMixin, QMainWindow):
         clear_all=self.catalog_category_menu.addAction("Limpar filtro")
         clear_all.triggered.connect(lambda:self.set_catalog_categories(False))
         self.catalog_category.setMenu(self.catalog_category_menu)
-        catalog_layout.addWidget(self.catalog_category)
+        catalog_filters.addWidget(self.catalog_category)
+        catalog_filters.addStretch(1)
+        catalog_layout.addLayout(catalog_filters)
         catalog_actions=QHBoxLayout()
         self.scope_filtered=QCheckBox("Somente resultados filtrados")
         self.scope_filtered.setToolTip("Marcar/desmarcar somente os satélites exibidos; desmarcado: catálogo inteiro")
@@ -840,6 +877,7 @@ class MainWindow(RotorUiMixin, QMainWindow):
         for widget in (self.scope_filtered,self.mark_catalog_all,self.mark_catalog_none,
                        self.refresh_catalog_freq,self.stop_catalog_freq):
             catalog_actions.addWidget(widget)
+        catalog_actions.addStretch(1)
         catalog_layout.addLayout(catalog_actions)
         self.catalog_progress=label("SatNOGS: frequências em cache; atualização sob demanda.")
         catalog_layout.addWidget(self.catalog_progress)
@@ -1159,6 +1197,10 @@ class MainWindow(RotorUiMixin, QMainWindow):
         ug.addWidget(self.update_minutes)
         self.include_prerelease=QCheckBox("Incluir versões de testes / pré-lançamentos")
         ug.addWidget(self.include_prerelease)
+        self.share_callsign=QCheckBox("Informar meu indicativo ao consultar versão nova (lista de usuários em www.pt2vhf.com/sat)")
+        self.share_callsign.setToolTip("Envia apenas o indicativo da estação, junto com a consulta de versão. O país vem do "
+                                       "prefixo. Desmarque para não aparecer na lista.")
+        ug.addWidget(self.share_callsign)
         self.auto_update_check=QCheckBox("Atualizar automaticamente, sem perguntar (recomendado)")
         self.auto_update_check.setChecked(bool(self.config.values.get("auto_update",True)))
         self.auto_update_check.setToolTip("Ao detectar versão nova em www.pt2vhf.com: baixa, confere SHA-256 e instala. "
@@ -1293,6 +1335,7 @@ class MainWindow(RotorUiMixin, QMainWindow):
         self.threshold.setValue(float(c['tune_threshold_hz']))
         self.update_minutes.setValue(float(c.get('version_check_minutes',15)))
         self.include_prerelease.setChecked(bool(c.get('include_prereleases', True)))
+        self.share_callsign.setChecked(bool(c.get('share_callsign', True)))
         self.language_combo.blockSignals(True)
         self.language_combo.setCurrentIndex(max(0,self.language_combo.findData(self.ui_language())))
         self.language_combo.blockSignals(False)
@@ -1425,6 +1468,7 @@ class MainWindow(RotorUiMixin, QMainWindow):
     def save_update_preferences(self):
         self.config.values['version_check_minutes']=int(self.update_minutes.value())
         self.config.values['include_prereleases']=self.include_prerelease.isChecked()
+        self.config.values['share_callsign']=self.share_callsign.isChecked()
         self.config.values['auto_update']=self.auto_update_check.isChecked()
         self.config.save()
         self.log('Preferências de atualizações salvas')
@@ -1447,7 +1491,18 @@ class MainWindow(RotorUiMixin, QMainWindow):
         self.version_btn.setText('Verificando…')
         self.background('update-check', lambda: check_for_update(
             __version__,variant,kind,
-            include_prereleases=bool(self.config.values.get('include_prereleases',True))))
+            include_prereleases=bool(self.config.values.get('include_prereleases',True)),
+            callsign=self.update_callsign()))
+
+    def update_callsign(self):
+        """v1.8.0: indicativo informado ao site na consulta de versão (só ele), se a opção estiver ligada e a
+        estação configurada (evita mandar o indicativo de exemplo de quem nunca preencheu a estação)."""
+        c=self.config.values
+        if not c.get('share_callsign',True):
+            return None
+        if not str(c.get('lat','')).strip() or not str(c.get('lon','')).strip():
+            return None
+        return str(c.get('callsign','')).strip().upper() or None
 
     def request_update(self,manual=False,silent=False):
         if not self.update_distribution:
@@ -1931,7 +1986,7 @@ class MainWindow(RotorUiMixin, QMainWindow):
         self.cat_connect_was_startup=bool(startup)
         self.cat_indicator.setText("CAT")
         self.cat_indicator.setToolTip("CAT conectando · "+port)
-        self.cat_indicator.setStyleSheet("font-size:12px;font-weight:800;color:#ffe4b0;background:#755225;border:1px solid #e0aa55")
+        self.cat_indicator.setStyleSheet(top_button_style("color:#ffe4b0;background:#755225;border:1px solid #e0aa55"))
         self.cat_indicator.setEnabled(False)
         self.connection.setEnabled(False)
         self.cat_tune_status.setText("CAT: conectando "+port+" (somente leitura inicial)…")
@@ -1949,7 +2004,7 @@ class MainWindow(RotorUiMixin, QMainWindow):
         saved=self.config.values.get("port","").strip()
         preferred=(saved,int(self.config.values.get("baud",9600) or 9600)) if saved else None
         self.cat_indicator.setToolTip("Procurando o rádio · clique para cancelar")
-        self.cat_indicator.setStyleSheet("font-size:12px;font-weight:800;color:#ffe4b0;background:#755225;border:1px solid #e0aa55")
+        self.cat_indicator.setStyleSheet(top_button_style("color:#ffe4b0;background:#755225;border:1px solid #e0aa55"))
         self.cat_tune_status.setText(self._cat_scan_progress)
         self.log("CAT: varredura automática de portas iniciada")
         def progress(text):
@@ -1965,7 +2020,7 @@ class MainWindow(RotorUiMixin, QMainWindow):
         if found is None:
             cancelled=report[-1:]==["Varredura cancelada"]
             self.cat_tune_status.setText("Varredura cancelada" if cancelled else "Nenhum rádio encontrado nas portas seriais")
-            self.cat_indicator.setStyleSheet("font-size:12px;font-weight:800;color:#ffe7e7;background:#783437;border:1px solid #db565e")
+            self.cat_indicator.setStyleSheet(top_button_style("color:#ffe7e7;background:#783437;border:1px solid #db565e"))
             if not cancelled:
                 QMessageBox.warning(self,"CAT não encontrado",
                     "Nenhum TS-2000 ou FT-817/818 respondeu nas portas seriais.\n\nConfira cabo, driver USB-serial, "
@@ -2020,7 +2075,7 @@ class MainWindow(RotorUiMixin, QMainWindow):
         self.last_cat_success=None
         self.cat_indicator.setText("CAT")
         self.cat_indicator.setToolTip("CAT desconectado · clique para conectar")
-        self.cat_indicator.setStyleSheet("font-size:12px;font-weight:800;color:#ffe7e7;background:#783437;border:1px solid #db565e")
+        self.cat_indicator.setStyleSheet(top_button_style("color:#ffe7e7;background:#783437;border:1px solid #db565e"))
         self.connection.setText("Conectar")
         self.radio_label.setText("Desconectado")
         self.map_radio_label.setText("CAT desconectado · RX — MHz · TX — MHz · Modo —")
@@ -2076,7 +2131,7 @@ class MainWindow(RotorUiMixin, QMainWindow):
         self.last_cat_success=now_utc()
         self.cat_indicator.setText("CAT")
         self.cat_indicator.setToolTip("CAT conectado e validado · "+self.ports.currentText()+" · clique para desconectar")
-        self.cat_indicator.setStyleSheet("font-size:12px;font-weight:800;color:#ddfff0;background:#12533f;border:1px solid #36b88a")
+        self.cat_indicator.setStyleSheet(top_button_style("color:#ddfff0;background:#12533f;border:1px solid #36b88a"))
         self.cat_live_label.setText(
             "RÁDIO REAL (CAT) · MAIN RX [FA] "+self.radio_freq(st.downlink)+
             "  |  SAT UPLINK [FB] "+self.radio_freq(st.uplink)+
@@ -2129,7 +2184,14 @@ class MainWindow(RotorUiMixin, QMainWindow):
             self.cat_operating_detail.setText(
                 "Estado operacional SA/MD: aguardando leitura válida do rádio")
 
-    def refresh_catalog(self,force=False):
+    def tle_bg_text(self):
+        from .i18n import translated
+        return translated("Atualizando TLE em segundo plano…", self.ui_language() if hasattr(self, "ui_language") else "pt-BR")
+
+    def startup_refresh_catalog(self):
+        self.refresh_catalog(quiet=True)
+
+    def refresh_catalog(self,force=False,quiet=False):
         groups=self.config.values.get("orbit_groups",list(DEFAULT_GROUPS))
         age=age_hours(self.config.dir,"amateur_omm.json")
         missing=any(age_hours(self.config.dir,"group_"+g+".json") is None for g in groups)
@@ -2138,6 +2200,14 @@ class MainWindow(RotorUiMixin, QMainWindow):
             return
         if "omm" in self.pending_jobs:return
         self.orbit_started_at=time.monotonic()
+        def notify(index,total,group,count,errors):
+            self.events.result.emit("omm-stage",(index,total,group,count,errors))
+        if quiet:   # v1.7.2: segundo plano, progresso só na linha de resumo
+            self.orbit_progress_dialog=None
+            self.summary.setText(self.tle_bg_text())
+            self.log("TLE/OMM: atualização em segundo plano iniciada")
+            self.background("omm",lambda:refresh_orbits(self.config.dir,groups=groups,progress=notify))
+            return
         dlg=QProgressDialog("Baixando catálogo orbital por categorias…","",0,len(groups),self)
         dlg.setWindowTitle("Atualização TLE / OMM")
         dlg.setMinimumDuration(0)
@@ -2149,8 +2219,6 @@ class MainWindow(RotorUiMixin, QMainWindow):
         dlg.show()
         self.orbit_progress_dialog=dlg
         self.summary.setText("Atualizando elementos orbitais…")
-        def notify(index,total,group,count,errors):
-            self.events.result.emit("omm-stage",(index,total,group,count,errors))
         self.background("omm",lambda:refresh_orbits(self.config.dir,groups=groups,progress=notify))
 
     def populate_catalog(self, objects):
@@ -2747,6 +2815,7 @@ class MainWindow(RotorUiMixin, QMainWindow):
 
     def apply_appearance(self):
         """Gera a folha de estilo do tema e aplica na hora em toda a janela, painéis, janelas destacadas e diálogos."""
+        QTimer.singleShot(0,self.align_top_controls)   # v1.8.0: fonte nova → botões do topo e medidor na mesma altura
         from .appearance import transform_qss, text_contrast, display_dim
         o=self.theme_options()
         app=QApplication.instance()
@@ -3980,7 +4049,7 @@ class MainWindow(RotorUiMixin, QMainWindow):
                 self.map_radio_label.setStyleSheet("color:#e3ad61;font-weight:700")
                 self.cat_indicator.setText("CAT")
                 self.cat_indicator.setToolTip(f"CAT sem resposta há {age:.0f}s · confira a porta")
-                self.cat_indicator.setStyleSheet("font-size:12px;font-weight:800;color:#ffead3;background:#755225;border:1px solid #e0aa55")
+                self.cat_indicator.setStyleSheet(top_button_style("color:#ffead3;background:#755225;border:1px solid #e0aa55"))
                 self.cat_status.setText(f"● CAT desatualizado há {age:.0f}s")
                 self.cat_status.setStyleSheet("color:#efc17b;font-size:12px")
                 self.cat_details.setText("Leitura CAT vencida · conferir cabo e porta COM")
@@ -4058,6 +4127,8 @@ class MainWindow(RotorUiMixin, QMainWindow):
                     f"{round(index*100/max(total,1))}% · Tempo restante estimado: {eta}\n"
                     f"Tempo decorrido: {format_duration(elapsed)} · falhas {errors}")
                 dlg.setValue(index)
+            else:
+                self.summary.setText(f"{self.tle_bg_text()} {index}/{total}")
             return
         if key=="tx-batch-item":
             ident,rows,index,total=data
@@ -4266,7 +4337,7 @@ class MainWindow(RotorUiMixin, QMainWindow):
             self.cat_diagnose.setEnabled(False)
             self.cat_indicator.setText("CAT")
             self.cat_indicator.setToolTip("CAT indisponível · "+message[:160])
-            self.cat_indicator.setStyleSheet("font-size:12px;font-weight:800;color:#ffe7e7;background:#783437;border:1px solid #db565e")
+            self.cat_indicator.setStyleSheet(top_button_style("color:#ffe7e7;background:#783437;border:1px solid #db565e"))
             from .cat import port_error_text
             friendly,advice=port_error_text(message,str(self.config.values.get("port","") or ""))
             friendly+=". "+("Confira COM, cabo, driver e Configurações." if "indisponível" in friendly else "Veja LOGs / CAT.")
@@ -4330,7 +4401,7 @@ class MainWindow(RotorUiMixin, QMainWindow):
                 self.last_cat_success=None
                 self.cat_indicator.setText("CAT")
                 self.cat_indicator.setToolTip("CAT desconectado · clique para conectar")
-                self.cat_indicator.setStyleSheet("font-size:12px;font-weight:800;color:#ffe7e7;background:#783437;border:1px solid #db565e")
+                self.cat_indicator.setStyleSheet(top_button_style("color:#ffe7e7;background:#783437;border:1px solid #db565e"))
             if was_manual:
                 QMessageBox.warning(self,"Falha ao sintonizar TS-2000",
                                     "O rádio não confirmou a sintonia solicitada. "
@@ -4355,7 +4426,7 @@ class MainWindow(RotorUiMixin, QMainWindow):
             self.cat_sat_orientation.setText("SAT: sem resposta atual")
             self.cat_indicator.setText("CAT")
             self.cat_indicator.setToolTip("CAT sem resposta atual · ver LOGs / CAT")
-            self.cat_indicator.setStyleSheet("font-size:12px;font-weight:800;color:#ffead3;background:#755225;border:1px solid #e0aa55")
+            self.cat_indicator.setStyleSheet(top_button_style("color:#ffead3;background:#755225;border:1px solid #e0aa55"))
             self.map_radio_label.setText("CAT erro de leitura · dados desatualizados")
             self.map_radio_label.setStyleSheet("color:#e98b81;font-weight:700")
             self.cat_status.setText("● Erro de leitura CAT")

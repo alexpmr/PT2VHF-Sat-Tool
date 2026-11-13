@@ -155,6 +155,69 @@
 
 ## Pendentes
 
+- **Versão 1.8.0 publicada em 13/11/2026** (registrado em 12/11/2026)
+  - Pedido do operador: "próxima versão deverá ser 1.0", corrigido em seguida para "1.8".
+  - Os itens marcados "Feito (1.8.0)" entram nela; a troca de número acontece quando o operador pedir o lançamento.
+- **Usuários do app por indicativo no site (ranking por país)** (registrado em 13/11/2026)
+  - Pedido do operador: ao checar versão nova, registrar o indicativo de quem usa o app; na página do Sat Tool no site,
+    ranking de indicativos por país e a lista de cada país (como no APRS World). Decisão do operador: ligado por
+    padrão, junto com a consulta de versão, enviando só o indicativo; o país é descoberto no site pelo prefixo.
+  - **Feito no app (1.8.0):** `update.php?product=sat&call=<INDICATIVO>` (maiúsculas, barra como %2F, validado no
+    app). Não envia se a opção "Informar meu indicativo…" (Configurações → Atualizações, ligada por padrão) estiver
+    desmarcada ou se a estação não tiver lat/lon (evita mandar o indicativo de exemplo). Teste
+    `tests/test_v180_callsign_users.py`.
+  - Site (repositório alexpmr/PT2VHF-Site, outra thread): gravar e deduplicar, país pela tabela DXCC, ranking e lista
+    na página /sat, e aviso na política de privacidade.
+- **AOS no display com segundos** (registrado em 12/11/2026)
+  - Pedido do operador: "no painel, indicação de aos, adicione segundos também. XXh:xxm:xxs".
+  - **Feito (1.8.0):** acima de 1 h a contagem do display passa de "1H05" para "01:05:42" (horas:minutos:segundos),
+    na contagem grande em segmentos e nas etiquetas AOS/LOS de todos os modelos; abaixo de 1 h continua "5:42".
+    Teste em `tests/test_v170_display_rotor_ota.py`.
+  - Ajuste pedido em seguida: "deixe o H, M e S com a metade do tamanho dos números". **Feito (1.8.0):** a contagem
+    grande (matriz, LED/LCD 7 seg. e Digital) mostra 01H05M42S (abaixo de 1 h, 05M42S) com as letras na metade da
+    altura, alinhadas embaixo; na matriz as letras são de pontos, nos 7 segmentos são letras sólidas (segmentos não
+    formam "M"). As etiquetas pequenas (Clássico e estilos de rádio) seguem 01:05:42.
+    Teste em `tests/test_v172_display_countdown.py`.
+
+- **Medidor de CPU e RAM** (registrado em 12/11/2026)
+  - Pedido do operador: "adicione um medidor de uso de memória e cpu", como o do PT2VHF APRS Client, na barra do topo.
+  - **Feito (1.8.0):** bloco compacto à esquerda de CAT/SDR/ROTOR com "CPU x,x%" e "RAM nnn MB" do próprio programa,
+    cada um com uma barrinha (verde, âmbar acima de 60%, vermelha acima de 85%); atualiza a cada 2 s. CPU em % da
+    máquina toda; a barra da RAM é a fração da memória física. `sat_tool/resource_meter.py` usa psutil (adicionado aos
+    requirements) e, sem ele, a biblioteca padrão. Teste `tests/test_v180_resource_meter.py`.
+
+- **Menus e campos do tamanho do conteúdo na tela principal** (registrado em 12/11/2026)
+  - Pedido do operador: "ajuste o tamanho dos menus pulldown e campos de inserção, para o tamanho suficiente para mostrar
+    a informação" (print: Satélite e Serviço/modo esticados na linha toda).
+  - **Feito (1.8.0):** Satélite e Serviço/modo acompanham o texto escolhido (reajustam ao trocar a opção, a lista, a
+    fonte ou o tema); a lista aberta fica larga o bastante para a opção mais longa; sobra fica à direita. Na aba
+    Satélites, pesquisa (48 caracteres), Categorias e botões de ação com a largura do conteúdo. As Configurações já
+    eram assim desde a 1.7.1. Teste `tests/test_v180_sizing_top_buttons.py`.
+
+- **Botões CAT, SDR e ROTOR com tamanhos diferentes** (registrado em 12/11/2026)
+  - **Feito (1.8.0):** os três com a mesma largura e altura (`TOP_BUTTON_WIDTH`) e o mesmo estilo base
+    (`top_button_style`, só as cores mudam com o estado); seletor de idioma e relógio UTC na mesma altura. Mesmo teste.
+
+- **Pacote .deb para Ubuntu/Linux Mint** (registrado em 12/11/2026)
+  - Pedido do operador: "versão .deb Linux ubuntu/mint".
+  - **Feito (1.8.0):** o job Linux gera também `PT2VHF-Sat-Tool-v<versão>-Linux-x64.deb` (`scripts/build_deb.py`,
+    amd64, glibc 2.35+: Ubuntu 22.04+ / Mint 21+). Instala em `/opt/pt2vhf-sat-tool`, comando `pt2vhf-sat-tool`,
+    atalho no menu (categoria Radioamador), ícone, regra udev do RTL-SDR (sem root) e bloqueio do driver
+    dvb_usb_rtl28xxu; dependências do Qt declaradas (o apt instala o que faltar). Configurações seguem em
+    `~/.config/PT2VHF/SatTool`. O CI instala o .deb com `apt`, roda o autoteste pelo comando do sistema e remove;
+    a validação da release e a publicação no site (updates.json, edição "Linux — .deb") incluem o arquivo.
+    Instalação: `sudo apt install ./PT2VHF-Sat-Tool-v<versão>-Linux-x64.deb`. Teste `tests/test_v173_deb_package.py`.
+  - Atenção: a página de downloads do site precisa exibir a nova edição `linux-deb` (contador `linux-deb-x64`).
+
+- **TLE atualizado em segundo plano ao abrir** (registrado em 12/11/2026)
+  - Pedido do operador: "ao abrir, atualizar o tle em background, enquanto o usuário usa o app".
+  - Antes: na abertura, se o cache tivesse mais que o intervalo configurado (4 h), abria a janela modal "Atualização
+    TLE / OMM", que travava o uso até terminar.
+  - **Feito (1.8.0):** 1,5 s depois de abrir, o app baixa os TLE/OMM em segundo plano, sem janela; o progresso aparece
+    na linha de resumo ("Atualizando TLE em segundo plano… 3/7") e o catálogo é recarregado ao final, mantendo o satélite
+    selecionado. Cache com menos de 2 h é reaproveitado (limite de download do CelesTrak). O botão manual nas
+    Configurações continua com a janela de progresso. Teste `tests/test_v172_tle_background.py`.
+
 - **Abertura com o banner "Powered by www.PT2VHF.com"** (registrado em 12/11/2026)
   - Pedido do operador: usar o banner da rede PT2VHF na abertura, no lugar da janela "Feito por radioamadores, para
     radioamadores".
