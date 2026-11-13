@@ -3,7 +3,7 @@
 param([ValidateSet('Win11-x64')][string]$Target = 'Win11-x64')
 $ErrorActionPreference = 'Stop'
 Set-Location (Split-Path -Parent $PSScriptRoot)
-$Version = '1.7.2'
+$Version = '1.8.0'
 $PythonSelector = '-3.11-64'
 $Deps = 'requirements-win11.txt'
 $PyInstaller = '6.13.0'

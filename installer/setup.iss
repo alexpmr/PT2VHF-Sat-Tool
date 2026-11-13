@@ -1,5 +1,5 @@
 #define AppName "PT2VHF Sat Tool"
-#define AppVersion "1.7.2"
+#define AppVersion "1.8.0"
 ; v1.7.2: o executavel instalado leva a versao no nome (PT2VHF-Sat-Tool-v1.7.2.exe)
 #define AppExe "PT2VHF-Sat-Tool-v" + AppVersion + ".exe"
 #ifndef BuildFlavor

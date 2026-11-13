@@ -155,7 +155,7 @@
 
 ## Pendentes
 
-- **Próxima versão: 1.8.0** (registrado em 12/11/2026)
+- **Versão 1.8.0 publicada em 13/11/2026** (registrado em 12/11/2026)
   - Pedido do operador: "próxima versão deverá ser 1.0", corrigido em seguida para "1.8".
   - Os itens marcados "Feito (1.8.0)" entram nela; a troca de número acontece quando o operador pedir o lançamento.
 - **Usuários do app por indicativo no site (ranking por país)** (registrado em 13/11/2026)
