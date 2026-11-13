@@ -158,18 +158,16 @@
 - **Próxima versão: 1.8.0** (registrado em 12/11/2026)
   - Pedido do operador: "próxima versão deverá ser 1.0", corrigido em seguida para "1.8".
   - Os itens marcados "Feito (1.8.0)" entram nela; a troca de número acontece quando o operador pedir o lançamento.
-- **Usuários do app por indicativo no site (ranking por país)** (registrado em 13/11/2026) — proposta, aguardando o operador
+- **Usuários do app por indicativo no site (ranking por país)** (registrado em 13/11/2026)
   - Pedido do operador: ao checar versão nova, registrar o indicativo de quem usa o app; na página do Sat Tool no site,
-    ranking de indicativos por país e, para cada país, a lista (como no APRS World).
-  - Proposta (app): na consulta de versão já existente, enviar `call`, `country` (ISO, calculado pelo prefixo ITU do
-    indicativo com tabela embutida), `v` (versão) e `os`, só para quem autorizou; nunca enviar o indicativo padrão sem
-    confirmação; ao desligar a opção, uma consulta com `optout=1` pede a remoção. Lat/lon e locator não são enviados.
-  - Proposta (site, repositório fora do alcance deste projeto): `update.php` valida o formato, grava callsign, país,
-    versão, SO, primeira e última consulta (sem IP), limita por IP, remove no opt-out; a página /sat mostra o ranking
-    por país e a lista por país dos ativos nos últimos 12 meses.
-  - LGPD: indicativo identifica uma pessoa; base legal por consentimento (opção desmarcada até o usuário escolher),
-    texto claro na pergunta e nas Configurações e trecho na política de privacidade do site.
-
+    ranking de indicativos por país e a lista de cada país (como no APRS World). Decisão do operador: ligado por
+    padrão, junto com a consulta de versão, enviando só o indicativo; o país é descoberto no site pelo prefixo.
+  - **Feito no app (1.8.0):** `update.php?product=sat&call=<INDICATIVO>` (maiúsculas, barra como %2F, validado no
+    app). Não envia se a opção "Informar meu indicativo…" (Configurações → Atualizações, ligada por padrão) estiver
+    desmarcada ou se a estação não tiver lat/lon (evita mandar o indicativo de exemplo). Teste
+    `tests/test_v180_callsign_users.py`.
+  - Site (repositório alexpmr/PT2VHF-Site, outra thread): gravar e deduplicar, país pela tabela DXCC, ranking e lista
+    na página /sat, e aviso na política de privacidade.
 - **AOS no display com segundos** (registrado em 12/11/2026)
   - Pedido do operador: "no painel, indicação de aos, adicione segundos também. XXh:xxm:xxs".
   - **Feito (1.8.0):** acima de 1 h a contagem do display passa de "1H05" para "01:05:42" (horas:minutos:segundos),

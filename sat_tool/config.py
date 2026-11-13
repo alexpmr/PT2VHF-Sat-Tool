@@ -20,7 +20,7 @@ DEFAULTS = {
     "min_elevation": 10, "port": "", "baud": 9600, "stopbits": 1,
     "update_interval_s": 1, "tune_threshold_hz": 1,
     "auto_doppler": False, "selected_norad": "",
-    "version_check_minutes": 15, "include_prereleases": True,
+    "version_check_minutes": 15, "include_prereleases": True, "share_callsign": True,
     # Versão adiada pelo botão "Depois" do aviso de nova versão: {"version", "at"}.
     "update_prompt_snooze": {},
     "last_update_notice": "",

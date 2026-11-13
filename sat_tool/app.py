@@ -1197,6 +1197,10 @@ class MainWindow(RotorUiMixin, QMainWindow):
         ug.addWidget(self.update_minutes)
         self.include_prerelease=QCheckBox("Incluir versões de testes / pré-lançamentos")
         ug.addWidget(self.include_prerelease)
+        self.share_callsign=QCheckBox("Informar meu indicativo ao consultar versão nova (lista de usuários em www.pt2vhf.com/sat)")
+        self.share_callsign.setToolTip("Envia apenas o indicativo da estação, junto com a consulta de versão. O país vem do "
+                                       "prefixo. Desmarque para não aparecer na lista.")
+        ug.addWidget(self.share_callsign)
         self.auto_update_check=QCheckBox("Atualizar automaticamente, sem perguntar (recomendado)")
         self.auto_update_check.setChecked(bool(self.config.values.get("auto_update",True)))
         self.auto_update_check.setToolTip("Ao detectar versão nova em www.pt2vhf.com: baixa, confere SHA-256 e instala. "
@@ -1331,6 +1335,7 @@ class MainWindow(RotorUiMixin, QMainWindow):
         self.threshold.setValue(float(c['tune_threshold_hz']))
         self.update_minutes.setValue(float(c.get('version_check_minutes',15)))
         self.include_prerelease.setChecked(bool(c.get('include_prereleases', True)))
+        self.share_callsign.setChecked(bool(c.get('share_callsign', True)))
         self.language_combo.blockSignals(True)
         self.language_combo.setCurrentIndex(max(0,self.language_combo.findData(self.ui_language())))
         self.language_combo.blockSignals(False)
@@ -1463,6 +1468,7 @@ class MainWindow(RotorUiMixin, QMainWindow):
     def save_update_preferences(self):
         self.config.values['version_check_minutes']=int(self.update_minutes.value())
         self.config.values['include_prereleases']=self.include_prerelease.isChecked()
+        self.config.values['share_callsign']=self.share_callsign.isChecked()
         self.config.values['auto_update']=self.auto_update_check.isChecked()
         self.config.save()
         self.log('Preferências de atualizações salvas')
@@ -1485,7 +1491,18 @@ class MainWindow(RotorUiMixin, QMainWindow):
         self.version_btn.setText('Verificando…')
         self.background('update-check', lambda: check_for_update(
             __version__,variant,kind,
-            include_prereleases=bool(self.config.values.get('include_prereleases',True))))
+            include_prereleases=bool(self.config.values.get('include_prereleases',True)),
+            callsign=self.update_callsign()))
+
+    def update_callsign(self):
+        """v1.8.0: indicativo informado ao site na consulta de versão (só ele), se a opção estiver ligada e a
+        estação configurada (evita mandar o indicativo de exemplo de quem nunca preencheu a estação)."""
+        c=self.config.values
+        if not c.get('share_callsign',True):
+            return None
+        if not str(c.get('lat','')).strip() or not str(c.get('lon','')).strip():
+            return None
+        return str(c.get('callsign','')).strip().upper() or None
 
     def request_update(self,manual=False,silent=False):
         if not self.update_distribution:

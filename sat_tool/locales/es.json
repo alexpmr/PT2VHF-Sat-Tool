@@ -376,5 +376,7 @@
 "Rotor detenido · sigue solo cuando el satélite seleccionado está sobre el horizonte",
 "Seguimiento automático pausado por el operador · haga clic para reanudar",
 "Actualizando TLE en segundo plano…",
-"Uso de CPU y memoria de PT2VHF Sat Tool"
+"Uso de CPU y memoria de PT2VHF Sat Tool",
+"Enviar mi indicativo al buscar una versión nueva (lista de usuarios en www.pt2vhf.com/sat)",
+"Envía solo el indicativo de la estación junto con la consulta de versión. El país sale del prefijo. Desmarque para no aparecer en la lista."
 ]

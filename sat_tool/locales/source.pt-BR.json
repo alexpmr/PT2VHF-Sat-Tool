@@ -376,5 +376,7 @@
 "Rotor parado · rastreia sozinho quando o satélite selecionado estiver acima do horizonte",
 "Rastreamento automático pausado pelo operador · clique para retomar",
 "Atualizando TLE em segundo plano…",
-"Uso de CPU e memória do PT2VHF Sat Tool"
+"Uso de CPU e memória do PT2VHF Sat Tool",
+"Informar meu indicativo ao consultar versão nova (lista de usuários em www.pt2vhf.com/sat)",
+"Envia apenas o indicativo da estação, junto com a consulta de versão. O país vem do prefixo. Desmarque para não aparecer na lista."
 ]

@@ -376,5 +376,7 @@
 "Rotor gestopt · volgt zelf als de gekozen satelliet boven de horizon staat",
 "Automatisch volgen gepauzeerd door de operator · klik om te hervatten",
 "TLE's worden op de achtergrond bijgewerkt…",
-"CPU- en geheugengebruik van PT2VHF Sat Tool"
+"CPU- en geheugengebruik van PT2VHF Sat Tool",
+"Mijn roepnaam meesturen bij het zoeken naar een nieuwe versie (gebruikerslijst op www.pt2vhf.com/sat)",
+"Stuurt alleen de roepnaam van het station mee met de versiecontrole. Het land volgt uit het prefix. Uitvinken om niet in de lijst te staan."
 ]
