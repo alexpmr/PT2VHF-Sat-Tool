@@ -198,6 +198,10 @@
 - **Avaliar integração com WiSpDDE** (registrado em 13/11/2026)
   - Sugestão do PU2MUS: o WiSpDDE controla CAT de vários rádios e SDRplay via DDE, o que evitaria escrever um
     driver por rádio. Avaliar junto com o item ICOM/Kenwood. Pendente.
+- **SSTV: receber e decodificar com Doppler, salvar a imagem e transmitir imagens** (registrado em 13/11/2026)
+  - Pedido do Alex: decodificar SSTV recebido (RTL-SDR ou áudio do rádio) com correção de Doppler durante a
+    passagem, salvar a imagem e também enviar imagens em SSTV (TX pelo rádio, com PTT). Liga-se ao LUČA-1 e
+    às passagens de SSTV da ISS. Pendente.
 - **Versão 1.8.0 publicada em 13/11/2026** (registrado em 12/11/2026)
   - Pedido do operador: "próxima versão deverá ser 1.0", corrigido em seguida para "1.8".
   - Os itens marcados "Feito (1.8.0)" entram nela; a troca de número acontece quando o operador pedir o lançamento.
