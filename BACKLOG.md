@@ -157,22 +157,22 @@
 
 - **TLE em segundo plano totalmente transparente** (registrado em 13/11/2026)
   - Pedido: "baixar os TLEs em background, sem mostrar na tela ao iniciar, de forma transparente".
-  - **Feito (próxima versão):** o download da abertura não escreve mais nada na linha de resumo (nem progresso,
+  - **Feito (1.9.0):** o download da abertura não escreve mais nada na linha de resumo (nem progresso,
     nem o aviso de cache recente, nem falha); tudo vai só para o log. O botão manual continua com a janela de progresso.
 - **Tirar o aviso "OMM em cache há 0.1 h; aguarde o intervalo de 2 h"** (registrado em 13/11/2026)
-  - **Feito (próxima versão):** o aviso não aparece mais na linha de resumo (nem na abertura nem no botão manual);
+  - **Feito (1.9.0):** o aviso não aparece mais na linha de resumo (nem na abertura nem no botão manual);
     fica só no log.
 - **Bug: ao atualizar, baixa e fecha o programa; nada mais acontece** (registrado em 13/11/2026)
   - Contexto: OTA 1.7.2 → 1.8.0, o primeiro em que o EXE instalado tem a versão no nome. O atualizador da 1.7.2
     deixa o Setup (/OTA) reabrir o programa e não reabre nada quando o Setup termina bem.
-  - **Feito (próxima versão):** o atualizador grava cada etapa em %TEMP%\\PT2VHF-Sat-Tool-update-helper.log e,
+  - **Feito (1.9.0):** o atualizador grava cada etapa em %TEMP%\\PT2VHF-Sat-Tool-update-helper.log e,
     se em 15 s nenhum EXE do programa estiver rodando na pasta, abre o mais novo. CI do Windows simula o OTA
     (atualizador + Setup /OTA) e falha se o programa não reabrir.
   - Pendente: edição usada pelo Alex (Setup/Portátil) e os arquivos de resultado/log do %TEMP%.
 - **Revisar todas as traduções: muitos textos em idioma errado** (registrado em 13/11/2026)
   - Causa: só os textos fixos da abertura eram traduzidos; tudo que o programa escreve depois (estados, dicas,
     mensagens, tabelas, menus, mapa, foto) ficava em português.
-  - **Feito (próxima versão):** tradutor central (sat_tool/i18n_runtime.py) intercepta setText/setToolTip/
+  - **Feito (1.9.0):** tradutor central (sat_tool/i18n_runtime.py) intercepta setText/setToolTip/
     mensagens/menus/tabelas e traduz pelo catálogo novo locales/dynamic (815 trechos × 9 idiomas, com modelos
     "{}" para valores); troca de idioma retraduz janelas já abertas. Mapa, foto do satélite, menu do rastro e
     rosa dos ventos do rotor (L/O → E/W, O/W em alemão/holandês) também seguem o idioma. 24 textos que só
@@ -180,7 +180,7 @@
 - **Novas fontes de TLE: AMSAT nasabare.txt e R4UAB satonline.txt** (registrado em 13/11/2026)
   - Pedido do Alex e do PU2MUS ("o CelesTrak não contempla todos os satélites russos"); inclui poder escolher
     o fornecedor de TLE.
-  - **Feito (próxima versão):** https://www.amsat.org/amsat/ftp/keps/current/nasabare.txt e
+  - **Feito (1.9.0):** https://www.amsat.org/amsat/ftp/keps/current/nasabare.txt e
     https://www.r4uab.ru/satonline.txt entram como categorias AMSAT e R4UAB (ligadas por padrão; instalações
     antigas recebem uma única vez). Cada fonte pode ser ligada/desligada em Configurações → categorias orbitais
     e no filtro do catálogo. O TLE vira campos OMM; no mesmo NORAD vence a época mais nova, o nome da CelesTrak
@@ -190,18 +190,24 @@
     esses sites para conferir). Pendente: confirmar no programa e, se o Alex quiser, deixá-lo marcado por padrão.
 - **Botão PREVER: passagens das próximas 24 h de todos os satélites selecionados** (registrado em 13/11/2026)
   - Pedido do PU2MUS: lista única das passagens de 24 h, com elevação mínima configurável, sem ter que
-    consultar satélite por satélite. Pendente.
+    consultar satélite por satélite. **Feito (1.9.0):** botão PREVER ao lado de "Mostrar no mapa": 1 a 72 h,
+    elevação mínima, CSV, duplo clique seleciona o satélite (sat_tool/forecast.py).
 - **Rádios ICOM (IC-746 e outros) e mais modelos Kenwood além do TS-2000** (registrado em 13/11/2026)
   - Pedido do PU2MUS. Exemplo de CAT do IC-746 (CI-V) para 50.950 USB:
     `FE FE xx E0 05 00 00 95 50 FD` (frequência, BCD invertido) e `FE FE xx E0 26 00 01 01 01 FD` (modo/filtro),
-    onde xx é o endereço CI-V do rádio. Pendente.
+    onde xx é o endereço CI-V do rádio. **Feito (1.9.0):** drivers ICOM CI-V (18 modelos com endereço de
+    fábrica, eco do barramento descartado, split no mesmo rádio) e Kenwood CAT texto (FA/FB/MD/FR/FT/IF) em
+    Equipamentos RX/TX, sem PTT. Falta testar com rádio real.
 - **Avaliar integração com WiSpDDE** (registrado em 13/11/2026)
   - Sugestão do PU2MUS: o WiSpDDE controla CAT de vários rádios e SDRplay via DDE, o que evitaria escrever um
-    driver por rádio. Avaliar junto com o item ICOM/Kenwood. Pendente.
+    driver por rádio. **Feito (1.9.0):** servidor DDE (Orbitron · Tracking · TrackingData, formato da
+    especificação do Orbitron) em Equipamentos RX/TX; no WiSpDDE: Receive DDE from Orbitron. Só Windows; o CI
+    do Windows testa uma conversa DDE real. Falta testar com o WiSpDDE.
 - **SSTV: receber e decodificar com Doppler, salvar a imagem e transmitir imagens** (registrado em 13/11/2026)
   - Pedido do Alex: decodificar SSTV recebido (RTL-SDR ou áudio do rádio) com correção de Doppler durante a
     passagem, salvar a imagem e também enviar imagens em SSTV (TX pelo rádio, com PTT). Liga-se ao LUČA-1 e
-    às passagens de SSTV da ISS. Pendente.
+    às passagens de SSTV da ISS. **Feito (1.9.0):** aba SSTV (sat_tool/sstv.py e sstv_panel.py), 14 modos,
+    VIS automático, correção de inclinação e de desvio de tom, PNG automático, transmissão por VOX.
 - **Versão 1.8.0 publicada em 13/11/2026** (registrado em 12/11/2026)
   - Pedido do operador: "próxima versão deverá ser 1.0", corrigido em seguida para "1.8".
   - Os itens marcados "Feito (1.8.0)" entram nela; a troca de número acontece quando o operador pedir o lançamento.

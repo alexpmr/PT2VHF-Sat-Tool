@@ -4,17 +4,17 @@
 
 ## Downloads — Windows, Linux e macOS
 
-**PT2VHF Sat Tool v1.8.0 — Windows 10/11 x64, Linux x64 e macOS Apple Silicon**.
+**PT2VHF Sat Tool v1.9.0 — Windows 10/11 x64, Linux x64 e macOS Apple Silicon**.
 
 **Novo site oficial: [www.PT2VHF.com](https://www.pt2vhf.com/sat)** — downloads (Setup e Portátil), novas versões e somas SHA-256 ficam no site. A partir da v1.3.14 o atualizador consulta exclusivamente `https://www.pt2vhf.com/update.php?product=sat`.
 
 | Edição | Download direto |
 | --- | --- |
-| **Instalável x64** | [Setup (.exe)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.8.0-Win11-x64-Setup.exe) |
-| **Portátil x64** | [Portable (.exe)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.8.0-Win11-x64-Portable.exe) |
-| **Linux x64** | [Pacote (.tar.gz)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.8.0-Linux-x64.tar.gz) |
-| **Ubuntu/Mint x64** | [Pacote (.deb)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.8.0-Linux-x64.deb) |
-| **macOS ARM64** | [Imagem (.dmg)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.8.0-macOS-arm64.dmg) |
+| **Instalável x64** | [Setup (.exe)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.9.0-Win11-x64-Setup.exe) |
+| **Portátil x64** | [Portable (.exe)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.9.0-Win11-x64-Portable.exe) |
+| **Linux x64** | [Pacote (.tar.gz)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.9.0-Linux-x64.tar.gz) |
+| **Ubuntu/Mint x64** | [Pacote (.deb)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.9.0-Linux-x64.deb) |
+| **macOS ARM64** | [Imagem (.dmg)](https://www.pt2vhf.com/downloads/sat-tool/PT2VHF-Sat-Tool-v1.9.0-macOS-arm64.dmg) |
 
 O sufixo `Win11-x64` é mantido para compatibilidade com o atualizador e também atende ao Windows 10 1809+.
 
@@ -30,7 +30,25 @@ O sufixo `Win11-x64` é mantido para compatibilidade com o atualizador e também
 4. Se outro computador/celular não alcançar a página, use **Liberar no firewall do Windows** (regra só para a porta, perfil Privado, só a rede local; o Windows pede confirmação) e confira na lista **Endereços desta máquina** o IPv4 da mesma rede do outro aparelho. Não configure redirecionamento de porta no roteador.
 5. Opcional: **Permitir controle pela rede (sem PTT)** com **PIN da estação** (4 a 12 dígitos). O navegador passa a poder escolher satélite, ligar/desligar Auto CAT, A/B, RX ONLY e rastrear/estacionar/PARAR o rotor. Cada ação pede o PIN e vai para o log com o IP; PTT/TX nunca é acionado pela rede.
 
-**Escopo do painel Web v1.8.0:** satélite, frequências, display do rádio (mesmo modelo da janela), rotor, CAT, telemetria orbital e APRS decodificado, mapa vetorial offline e passagens, atualizados a cada 1,5 s. Só aparelhos da rede privada (IP público é recusado); **Renovar chave** derruba links e sessões antigos; diagnóstico mostra último acesso remoto e navegador remoto ativo. O desktop deve permanecer aberto. O HTTP na LAN não é criptografado; não divulgue a URL fora da rede.
+**Escopo do painel Web v1.9.0:** satélite, frequências, display do rádio (mesmo modelo da janela), rotor, CAT, telemetria orbital e APRS decodificado, mapa vetorial offline e passagens, atualizados a cada 1,5 s. Só aparelhos da rede privada (IP público é recusado); **Renovar chave** derruba links e sessões antigos; diagnóstico mostra último acesso remoto e navegador remoto ativo. O desktop deve permanecer aberto. O HTTP na LAN não é criptografado; não divulgue a URL fora da rede.
+
+## Novidades v1.9.0 — SSTV, PREVER, rádios ICOM/Kenwood, WiSpDDE e novas fontes de TLE
+
+- **SSTV:** aba SSTV no painel SDR. Recebe pelo RTL-SDR do programa ou pela placa de som ligada ao rádio,
+  reconhece o modo pelo VIS (Robot 36/72, Martin M1/M2, Scottie S1/S2/DX, PD 50/90/120/160/180/240/290),
+  corrige a inclinação da imagem e o desvio de tom, salva cada imagem em PNG e transmite imagens (com texto,
+  ex.: indicativo) pela saída de áudio. Doppler pelo RTL-SDR ou Auto CAT; PTT pelo VOX do rádio/interface.
+- **PREVER:** lista única com as passagens das próximas 24 h (1 a 72 h) de todos os satélites selecionados,
+  com elevação mínima configurável, exportação CSV e duplo clique para selecionar o satélite.
+- **Rádios ICOM (CI-V)** — IC-746, IC-746PRO, IC-706MKIIG, IC-7000, IC-7100, IC-7300, IC-705, IC-9100, IC-9700,
+  IC-910, IC-821 e outros — e **Kenwood CAT texto** (TS-480, TS-590, TS-890, TS-990, TS-2000 sem SAT) em
+  Equipamentos RX/TX, com Doppler automático e split no mesmo rádio, sem PTT.
+- **WiSpDDE:** servidor DDE no formato do Orbitron (Orbitron · Tracking · TrackingData) para o WiSpDDE e
+  outros drivers DDE controlarem rádios e rotores que eles suportam (Windows).
+- **Novas fontes de TLE:** AMSAT (nasabare.txt) e R4UAB (satonline.txt), como categorias que podem ser
+  ligadas ou desligadas; satélites que ainda não estão na CelesTrak aparecem por elas.
+- **Traduções revisadas:** mensagens, dicas, tabelas, mapa e rosa dos ventos do rotor no idioma escolhido.
+- **Atualização automática:** o atualizador registra cada etapa e reabre o programa se o instalador não o fizer.
 
 ## Novidades v1.8.0 — pacote .deb, TLE em segundo plano e medidor de CPU/RAM
 

@@ -335,15 +335,22 @@ class SdrPanel(QWidget):
         g.addWidget(QLabel("RX (downlink)"), 0, 0); g.addWidget(self.rx_dev, 0, 1, 1, 3)
         g.addWidget(QLabel("TX (uplink)"), 1, 0); g.addWidget(self.tx_dev, 1, 1, 1, 3)
         self.ft_port = QComboBox(); self.ft_port.setEditable(True)
-        self.ft_baud = QComboBox(); [self.ft_baud.addItem(b) for b in ("4800", "9600", "38400")]
+        self.ft_baud = QComboBox(); [self.ft_baud.addItem(b) for b in ("1200", "4800", "9600", "19200", "38400", "57600", "115200")]
         self.ft_baud.setCurrentText(str(self.cfg.get("ft817_baud", "9600")))
-        g.addWidget(QLabel("FT-817 porta / baud"), 2, 0); g.addWidget(self.ft_port, 2, 1); g.addWidget(self.ft_baud, 2, 2)
+        g.addWidget(QLabel("Porta serial / baud (FT-817, ICOM, Kenwood)"), 2, 0); g.addWidget(self.ft_port, 2, 1); g.addWidget(self.ft_baud, 2, 2)
+        # v1.9.0: ICOM CI-V — modelo define o endereço de fábrica (o mesmo xx da linha CAT do manual)
+        self.icom_model = QComboBox()
+        for model, address in rigs.ICOM_ADDRESSES.items():
+            self.icom_model.addItem(f"{model} · CI-V {address:02X}h", address)
+        self._select(self.icom_model, int(self.cfg.get("icom_address", rigs.ICOM_ADDRESSES["IC-746"])))
+        self.icom_model.setToolTip("Endereço CI-V do rádio ICOM (mude no rádio ou aqui se não for o de fábrica)")
+        g.addWidget(self.icom_model, 2, 3)
         self.rig_host = QLineEdit(str(self.cfg.get("rigctld_host", "127.0.0.1:4532")))
         g.addWidget(QLabel("rigctld host:porta"), 3, 0); g.addWidget(self.rig_host, 3, 1, 1, 2)
         self.rig_connect = QPushButton("Conectar equipamentos")
         self.rig_connect.clicked.connect(self.connect_rigs)
         g.addWidget(self.rig_connect, 4, 0)
-        self.rig_doppler = QCheckBox("Doppler automático nos equipamentos (FT-817/rigctld) — sem PTT")
+        self.rig_doppler = QCheckBox("Doppler automático nos equipamentos (FT-817/ICOM/Kenwood/rigctld) — sem PTT")
         self.rig_doppler.toggled.connect(self.arm_rig_doppler)
         g.addWidget(self.rig_doppler, 4, 1, 1, 3)
         self.rig_status = QLabel("TS-2000 continua com o Auto CAT da aba Operação. FT-817 sem modo SAT: "
@@ -380,6 +387,20 @@ class SdrPanel(QWidget):
         save = QPushButton("Salvar configurações")
         save.clicked.connect(self.save_settings)
         g.addWidget(save, 11, 0)
+        # v1.9.0: servidor DDE no formato do Orbitron para o WiSpDDE (CX6DD) e outros drivers DDE
+        from . import dde_server
+        self.dde = None
+        self.dde_enable = QCheckBox("Servidor DDE para WiSpDDE e drivers do Orbitron (Windows)")
+        self.dde_enable.setToolTip("Publica satélite, AZ/EL, frequências com Doppler e modos em Orbitron · Tracking · "
+                                   "TrackingData. No WiSpDDE: Receive DDE from Orbitron. Feche o Orbitron antes.")
+        self.dde_enable.setEnabled(dde_server.available())
+        self.dde_enable.toggled.connect(self.toggle_dde)
+        g.addWidget(self.dde_enable, 12, 0, 1, 4)
+        self.dde_status = QLabel("" if dde_server.available() else "Servidor DDE disponível só no Windows.")
+        self.dde_status.setWordWrap(True); self.dde_status.setStyleSheet("color:#a8cee0;font-size:11px")
+        g.addWidget(self.dde_status, 13, 0, 1, 4)
+        if dde_server.available() and self.cfg.get("dde_enabled", False):
+            QTimer.singleShot(1200, lambda: self.dde_enable.setChecked(True))
         tabs.addTab(self._scroll(eq), "Equipamentos RX/TX")
         self._fill_audio_devices()
         self._fill_ports()
@@ -443,6 +464,10 @@ class SdrPanel(QWidget):
         self.tlm_status.setStyleSheet("color:#a8cee0;font-size:11px")
         tv.addWidget(self.tlm_status)
         tabs.addTab(tl, "Telemetria")
+        # v1.9.0: SSTV (recepção com imagem salva e transmissão)
+        from .sstv_panel import SstvPanel
+        self.sstv = SstvPanel(self)
+        tabs.addTab(self._scroll(self.sstv), "SSTV")
         self._led(False)
 
     @staticmethod
@@ -505,6 +530,7 @@ class SdrPanel(QWidget):
         c = self.cfg
         c.update({"rx_device": self.rx_dev.currentData(), "tx_device": self.tx_dev.currentData(),
                   "ft817_port": self.ft_port.currentText().strip(), "ft817_baud": int(self.ft_baud.currentText()),
+                  "icom_address": int(self.icom_model.currentData() or rigs.ICOM_ADDRESSES["IC-746"]),
                   "rigctld_host": self.rig_host.text().strip(), "rtl_tcp": self.rtl_tcp.text().strip(),
                   "sdr_ppm": int(self.ppm.value()), "sdr_bias_tee": self.bias.isChecked(),
                   "sdr_gain_db": self.gain.currentData(), "sdr_audio_device": self.audio_dev.currentData() or "",
@@ -673,7 +699,7 @@ class SdrPanel(QWidget):
         settings = sdr.SdrSettings(gain_db=self.gain.currentData(), ppm=int(self.ppm.value()),
                                    bias_tee=self.bias.isChecked())
         self.receiver = sdr.SdrReceiver(lambda: sdr.RtlSource(dev, settings),
-                                        on_audio=self.ring.push,
+                                        on_audio=self._on_audio,
                                         on_spectrum=self._on_spectrum,
                                         on_frame=lambda f, s: self._frame_q.put((f, s)))
         self.receiver.set_volume(self.volume.value() / 100)
@@ -692,6 +718,12 @@ class SdrPanel(QWidget):
             self.w.log("SDR parado")
         self._close_audio()
         self._led(False, warn=bool(self.devices))
+
+    def _on_audio(self, audio):
+        self.ring.push(audio)
+        sstv_panel = getattr(self, "sstv", None)
+        if sstv_panel is not None:
+            sstv_panel.feed_sdr(audio)
 
     def _on_spectrum(self, spec, center):
         try:
@@ -841,6 +873,9 @@ class SdrPanel(QWidget):
         except Exception:
             snap = None
         self.last_snapshot = snap
+        if getattr(self, "dde", None) is not None:
+            from .dde_server import tracking_text
+            self.dde.update(tracking_text(snap))
         if not snap:
             return
         rx_hz, mode = snap["rx_hz"], snap["rx_mode"]
@@ -885,6 +920,12 @@ class SdrPanel(QWidget):
                 if kind == "FT-817":
                     rig = rigs.FT817(self.w.log)
                     rig.connect(self.cfg["ft817_port"], self.cfg["ft817_baud"])
+                elif kind == "ICOM":
+                    rig = rigs.Icom(self.w.log, int(self.cfg.get("icom_address", rigs.ICOM_ADDRESSES["IC-746"])))
+                    rig.connect(self.cfg["ft817_port"], self.cfg["ft817_baud"])
+                elif kind == "KENWOOD":
+                    rig = rigs.KenwoodText(self.w.log)
+                    rig.connect(self.cfg["ft817_port"], self.cfg["ft817_baud"])
                 elif kind == "RIGCTLD":
                     host, _, port = self.cfg["rigctld_host"].partition(":")
                     rig = rigs.Rigctld(self.w.log)
@@ -907,11 +948,30 @@ class SdrPanel(QWidget):
         self.rx_rig = self.tx_rig = None
         self.rig_doppler.setChecked(False)
 
+    def toggle_dde(self, enabled):
+        from . import dde_server
+        self.cfg["dde_enabled"] = bool(enabled)
+        self.w.config.save()
+        if enabled:
+            try:
+                self.dde = dde_server.DdeServer(self.w.log)
+                self.dde.start()
+                self.dde.update(dde_server.tracking_text(self.last_snapshot))
+                self.dde_status.setText("DDE ativo: Orbitron · Tracking · TrackingData (consulta a cada 1 s no WiSpDDE).")
+            except OSError as exc:
+                self.dde = None
+                self.dde_status.setText(f"DDE: {exc}")
+                self.dde_enable.blockSignals(True); self.dde_enable.setChecked(False); self.dde_enable.blockSignals(False)
+        elif self.dde is not None:
+            self.dde.stop()
+            self.dde = None
+            self.dde_status.setText("DDE desligado.")
+
     def arm_rig_doppler(self, enabled):
         if enabled:
             if not (self.rx_rig or self.tx_rig):
                 self.rig_doppler.setChecked(False)
-                QMessageBox.information(self.w, "Equipamentos", "Conecte FT-817 ou rigctld antes.")
+                QMessageBox.information(self.w, "Equipamentos", "Conecte FT-817, ICOM, Kenwood ou rigctld antes.")
                 return
             if QMessageBox.question(self.w, "Doppler nos equipamentos",
                                     "Permitir alterar periodicamente as frequências RX/TX dos equipamentos "
@@ -1143,6 +1203,11 @@ class SdrPanel(QWidget):
             self.receiver.stop()
         if self.kiss:
             self.kiss.stop()
+        if getattr(self, "sstv", None) is not None:
+            self.sstv.shutdown()
+        if getattr(self, "dde", None) is not None:
+            self.dde.stop()
+            self.dde = None
         self.disconnect_rigs()
         self._close_audio()
 

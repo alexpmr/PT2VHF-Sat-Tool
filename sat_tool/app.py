@@ -438,6 +438,11 @@ class MainWindow(RotorUiMixin, QMainWindow):
         upcoming_row.addWidget(self.next_event_label,4)
         upcoming_row.addWidget(self.next_countdown,1)
         upcoming_row.addWidget(self.next_select)
+        # v1.9.0: PREVER — passagens de todos os satélites selecionados numa lista só
+        self.forecast_button=QPushButton("PREVER")
+        self.forecast_button.setToolTip("Passagens das próximas horas de todos os satélites selecionados, com elevação mínima")
+        self.forecast_button.clicked.connect(self.open_forecast)
+        upcoming_row.addWidget(self.forecast_button)
         upcoming_layout.addLayout(upcoming_row)
         self.next_event_label.setWordWrap(False)
         self.next_times=label("AOS — · TCA — · LOS — · Elevação máxima —")
@@ -1297,6 +1302,7 @@ class MainWindow(RotorUiMixin, QMainWindow):
                 "rx_hz":int(calc["rx_hz"]),"tx_hz":int(calc["tx_hz"]) if calc["tx_hz"] else None,
                 "rx_offset_hz":int(calc["rx_offset_hz"]),"rx_mode":self.rx_mode.currentText(),
                 "tx_mode":self.tx_mode.currentText(),"visible":bool(pos["visible"]),
+                "azimuth":float(pos["azimuth"]),"elevation":float(pos["elevation"]),
                 "pipeline":pipeline_for(opt),"band":band}
 
     def retune_nominal_downlink(self,delta_hz):
@@ -3439,6 +3445,10 @@ class MainWindow(RotorUiMixin, QMainWindow):
             caption="Última passagem reconstruída" if last_pass is not None else "Histórico reconstruído + previsão por OMM"
             return key,past,future,caption
         self.background("trail",work)
+
+    def open_forecast(self):
+        from .forecast import open_forecast
+        return open_forecast(self)
 
     def select_next_candidate(self):
         event=self.next_candidate
