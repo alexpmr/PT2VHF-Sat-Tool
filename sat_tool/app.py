@@ -2197,10 +2197,8 @@ class MainWindow(RotorUiMixin, QMainWindow):
         age=age_hours(self.config.dir,"amateur_omm.json")
         missing=any(age_hours(self.config.dir,"group_"+g+".json") is None for g in groups)
         if age is not None and age<2 and not force and not missing:
-            if quiet:   # v1.8.1: na abertura, cache recente não mostra nada
-                self.log(f"TLE/OMM: cache de {age:.1f} h ainda válido; sem download")
-                return
-            self.summary.setText(f"OMM em cache há {age:.1f} h; aguarde o intervalo de 2 h")
+            # v1.8.1 (pedido do operador): cache recente não mostra aviso na tela, só no log
+            self.log(f"TLE/OMM: cache de {age:.1f} h ainda válido (intervalo de 2 h da CelesTrak); sem download")
             return
         if "omm" in self.pending_jobs:return
         self.orbit_started_at=time.monotonic()

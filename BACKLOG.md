@@ -159,6 +159,9 @@
   - Pedido: "baixar os TLEs em background, sem mostrar na tela ao iniciar, de forma transparente".
   - **Feito (próxima versão):** o download da abertura não escreve mais nada na linha de resumo (nem progresso,
     nem o aviso de cache recente, nem falha); tudo vai só para o log. O botão manual continua com a janela de progresso.
+- **Tirar o aviso "OMM em cache há 0.1 h; aguarde o intervalo de 2 h"** (registrado em 13/11/2026)
+  - **Feito (próxima versão):** o aviso não aparece mais na linha de resumo (nem na abertura nem no botão manual);
+    fica só no log.
 - **Bug: ao atualizar, baixa e fecha o programa; nada mais acontece** (registrado em 13/11/2026)
   - Contexto: OTA 1.7.2 → 1.8.0, o primeiro em que o EXE instalado tem a versão no nome. O atualizador da 1.7.2
     deixa o Setup (/OTA) reabrir o programa e não reabre nada quando o Setup termina bem.

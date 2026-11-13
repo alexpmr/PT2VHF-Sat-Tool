@@ -44,6 +44,8 @@ def test_startup_refreshes_tle_in_background_without_dialog():
             gui.age_hours=lambda *a:0.5
             w.startup_refresh_catalog()
             assert "cache" not in w.summary.text(), w.summary.text()
+            w.refresh_catalog()   # botão manual com cache recente: também sem aviso na tela
+            assert "cache" not in w.summary.text(), w.summary.text()
     ''')
     r = subprocess.run([sys.executable, "-c", source], capture_output=True, text=True, timeout=120,
                        env={**os.environ, "QT_QPA_PLATFORM": "offscreen", "LANG": "pt_BR.UTF-8"})
