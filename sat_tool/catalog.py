@@ -9,7 +9,10 @@ from .config import DEFAULT_SATELLITES
 
 # CelesTrak group feeds return batches; per-NORAD requests only for missing default satellites.
 DEFAULT_GROUPS = ("amateur", "stations", "cubesat", "starlink", "oneweb",
-                  "weather", "science", "visual")
+                  "weather", "science", "visual", "amsat", "r4uab")
+# v1.8.1: fontes extras em TLE texto (3 linhas), tratadas como categorias como as da CelesTrak
+TLE_SOURCES = {"amsat": "https://www.amsat.org/amsat/ftp/keps/current/nasabare.txt",
+               "r4uab": "https://www.r4uab.ru/satonline.txt"}
 ALL_GROUPS = DEFAULT_GROUPS + ("active",)
 CELESTRAK_OMM = "https://celestrak.org/NORAD/elements/gp.php?GROUP=amateur&FORMAT=json"
 CELESTRAK_TLE = "https://celestrak.org/NORAD/elements/gp.php?GROUP=amateur&FORMAT=tle"
@@ -33,6 +36,7 @@ def normalized_satellite_search(text):
 
 def satellite_search_text(ident, orbit):
     fields=[str(ident), str(orbit.get("OBJECT_NAME",""))]+list(ALIASES.get(str(ident),()))
+    fields+=[str(n) for n in orbit.get("ALT_NAMES",[])]
     return normalized_satellite_search(" ".join(fields))
 
 
@@ -52,6 +56,13 @@ def merge_orbits(groups):
             old_epoch=str(existing.get("EPOCH","")) if existing else ""
             winner=dict(row) if not existing or (current_epoch and current_epoch>=old_epoch) else dict(existing)
             winner["CATEGORIES"]=sorted(categories)
+            if existing:
+                # o primeiro nome (CelesTrak) fica; nomes de outras fontes (AMSAT, R4UAB) viram apelidos de busca
+                names=[existing.get("OBJECT_NAME"),row.get("OBJECT_NAME")]+list(existing.get("ALT_NAMES",[]))
+                names=[str(n) for n in dict.fromkeys(names) if n]
+                if names:
+                    winner["OBJECT_NAME"]=names[0]
+                    if names[1:]:winner["ALT_NAMES"]=names[1:]
             output[ident]=winner
     return list(output.values())
 
@@ -59,10 +70,15 @@ def merge_orbits(groups):
 def refresh_group_omm(data_dir, group):
     if group not in ALL_GROUPS:
         raise ValueError("Categoria orbital não reconhecida")
-    response=requests.get("https://celestrak.org/NORAD/elements/gp.php",
-                          params={"GROUP":group,"FORMAT":"json"},headers=HEADERS,timeout=45)
-    response.raise_for_status()
-    objects=response.json()
+    if group in TLE_SOURCES:
+        response=requests.get(TLE_SOURCES[group],headers={**HEADERS,"Accept":"text/plain"},timeout=45)
+        response.raise_for_status()
+        objects=[tle_to_omm(row) for row in parse_tle(response.text)]
+    else:
+        response=requests.get("https://celestrak.org/NORAD/elements/gp.php",
+                              params={"GROUP":group,"FORMAT":"json"},headers=HEADERS,timeout=45)
+        response.raise_for_status()
+        objects=response.json()
     if not isinstance(objects,list) or not objects or not all(
             isinstance(o,dict) and "NORAD_CAT_ID" in o for o in objects):
         raise ValueError("OMM inválido para "+group)
@@ -236,6 +252,44 @@ def parse_tle(text: str) -> list[dict]:
         else:
             i+=1
     return result
+
+
+def _tle_float(text):
+    """Campo TLE com ponto decimal implícito e expoente (" 12345-4" → 0.12345e-4, "-11606-4" → -0.11606e-4)."""
+    text=text.strip()
+    if not text:
+        return 0.0
+    if "." in text:
+        return float(text)
+    sign=-1.0 if text[0]=="-" else 1.0
+    body=text.lstrip("+-")
+    if len(body)>=2 and body[-2] in "+-":
+        return sign*float("0."+body[:-2]+"e"+body[-2:])
+    return sign*float("0."+body)
+
+
+def tle_to_omm(row):
+    """Linha TLE → campos OMM (mesmos nomes da CelesTrak); as linhas originais seguem para a propagação."""
+    from datetime import timedelta
+    one,two=row["TLE_LINE1"],row["TLE_LINE2"]
+    year=int(one[18:20]);year+=2000 if year<57 else 1900
+    epoch=datetime(year,1,1,tzinfo=timezone.utc)+timedelta(days=float(one[20:32])-1)
+    designator=one[9:17].strip()
+    object_id=""
+    if len(designator)>=5 and designator[:2].isdigit():
+        launch_year=int(designator[:2]);launch_year+=2000 if launch_year<57 else 1900
+        object_id=f"{launch_year}-{designator[2:]}"
+    return {**row,
+            "OBJECT_NAME":row.get("OBJECT_NAME") or f"NORAD {row['NORAD_CAT_ID']}",
+            "OBJECT_ID":object_id,"NORAD_CAT_ID":int(row["NORAD_CAT_ID"]),
+            "EPOCH":epoch.strftime("%Y-%m-%dT%H:%M:%S.%f"),
+            "MEAN_MOTION":float(two[52:63]),"ECCENTRICITY":float("0."+two[26:33].strip()),
+            "INCLINATION":float(two[8:16]),"RA_OF_ASC_NODE":float(two[17:25]),
+            "ARG_OF_PERICENTER":float(two[34:42]),"MEAN_ANOMALY":float(two[43:51]),
+            "EPHEMERIS_TYPE":0,"CLASSIFICATION_TYPE":one[7] if one[7].strip() else "U",
+            "ELEMENT_SET_NO":int(one[64:68] or 0),"REV_AT_EPOCH":int(two[63:68] or 0),
+            "BSTAR":_tle_float(one[53:61]),"MEAN_MOTION_DOT":float(one[33:43]),
+            "MEAN_MOTION_DDOT":_tle_float(one[44:52])}
 
 
 def refresh_tle(data_dir: Path) -> list[dict]:
