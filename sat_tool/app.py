@@ -28,6 +28,7 @@ from .qt_compat import (
 from .qt_compat import QWebEngineView, QGeoPositionInfoSource, qt_exec, QT_BINDING
 from skyfield.api import load
 from . import __version__
+from . import i18n_runtime
 from .passfmt import radial_kmh_text
 from .appearance import DEFAULTS as THEME_DEFAULTS
 from .rotor_ui import RotorUiMixin
@@ -117,6 +118,11 @@ def group(title):
 class MainWindow(RotorUiMixin, QMainWindow):
     def __init__(self):
         super().__init__()
+        # v1.8.1: textos dinâmicos também no idioma escolhido (criados em português; traduzidos em apply_language)
+        from . import qt_compat as _qt, i18n_runtime
+        i18n_runtime.install(_qt)
+        i18n_runtime.set_locale("pt-BR")
+        self._i18n_polish = i18n_runtime.PolishTranslator(QApplication.instance())
         self.setWindowTitle(f'PT2VHF Sat Tool  •  v{__version__}')
         icon_path=branding_asset('icon-256.png')
         if icon_path.exists():self.setWindowIcon(QIcon(str(icon_path)))
@@ -584,9 +590,9 @@ class MainWindow(RotorUiMixin, QMainWindow):
         trail_bar.setContentsMargins(4,1,4,2)
         trail_bar.addWidget(label("Trajetória:"))
         self.trail_period=QComboBox()
-        self.trail_period.addItems(["Última passagem","2 h","5 h","10 h","24 h","Personalizado"])
+        for _period in ["Última passagem","2 h","5 h","10 h","24 h","Personalizado"]:self.trail_period.addItem(_period,_period)
         self.trail_direction=QComboBox()
-        self.trail_direction.addItems(["Futuro","Passado","Ambos"])
+        for _direction in ["Futuro","Passado","Ambos"]:self.trail_direction.addItem(_direction,_direction)
         self.trail_custom=QDoubleSpinBox()
         self.trail_custom.setRange(0.5,48);self.trail_custom.setDecimals(1)
         self.trail_custom.setSuffix(" h")
@@ -635,9 +641,7 @@ class MainWindow(RotorUiMixin, QMainWindow):
         # A Chromium renderer crash may leave the GUI running, so record it.
         try:self.map.page().renderProcessTerminated.connect(self.web_renderer_terminated)
         except AttributeError:pass
-        map_file=Path(__file__).with_name("map.html")
-        self.map.setHtml(map_file.read_text(encoding="utf-8"),
-                         QUrl.fromLocalFile(str(map_file.resolve())))
+        self.load_map_page()
         # The built-in browser asks for geolocation only when the operator
         # explicitly clicks Solicitar coordenadas ao navegador.
         try:
@@ -1346,12 +1350,12 @@ class MainWindow(RotorUiMixin, QMainWindow):
         self.trail_period.blockSignals(True)
         self.trail_direction.blockSignals(True)
         period=str(c.get("trail_period","2 h"))
-        self.trail_period.setCurrentText(period if period in ["Última passagem","2 h","5 h","10 h","24 h","Personalizado"] else "2 h")
-        self.trail_direction.setCurrentText(str(c.get("trail_direction","Futuro")))
+        self.trail_period.setCurrentIndex(max(0,self.trail_period.findData(period if period in ["Última passagem","2 h","5 h","10 h","24 h","Personalizado"] else "2 h")))
+        self.trail_direction.setCurrentIndex(max(0,self.trail_direction.findData(str(c.get("trail_direction","Futuro")))))
         self.trail_custom.blockSignals(True)
         self.trail_custom.setValue(float(c.get("trail_custom_hours",3)))
         self.trail_custom.blockSignals(False)
-        self.trail_custom.setVisible(self.trail_period.currentText()=="Personalizado")
+        self.trail_custom.setVisible(self.trail_period.currentData()=="Personalizado")
         self.trail_period.blockSignals(False)
         self.trail_direction.blockSignals(False)
         # Always require an explicit enable on each launch to avoid surprise CAT writes.
@@ -1390,14 +1394,17 @@ class MainWindow(RotorUiMixin, QMainWindow):
             self._language_tables.append((widget,labels))
 
     def apply_language(self):
+        from . import i18n_runtime
         locale=self.ui_language()
         old=getattr(self,"_language_active","pt-BR")
+        i18n_runtime.set_locale(locale)
+        i18n_runtime.tr.cache_clear()
         if hasattr(self,"rotor_set_state_button"):  # botão RASTREANDO/PARADO muda em tempo de execução
             self.rotor_set_state_button(bool(getattr(self,"rotor_tracking",False) and getattr(self,"rotor_auto",True)))
         for widget,kind,original in self._language_texts:
             if kind=="items":
                 for i,text in enumerate(original):
-                    if i<widget.count():widget.setItemText(i,translated(text,locale))
+                    if i<widget.count():widget.setItemText(i,text)   # v1.8.1: o gancho traduz e guarda o original
                 continue
             names={"group":("title","setTitle"),"text":("text","setText"),"tooltip":("toolTip","setToolTip"),
                    "placeholder":("placeholderText","setPlaceholderText")}[kind]
@@ -1405,10 +1412,10 @@ class MainWindow(RotorUiMixin, QMainWindow):
             old_value=translated(original,old)
             current=getter()
             if current in (old_value,original):  # não sobrescreve textos que mudaram em tempo de execução
-                setter(translated(original,locale))
+                setter(original)   # v1.8.1: o gancho traduz para o idioma atual e guarda o original
         for tabs,originals in self._language_tabs:
             for i,original in enumerate(originals):
-                if i<tabs.count():tabs.setTabText(i,translated(original,locale))
+                if i<tabs.count():tabs.setTabText(i,original)
         for widget,originals in self._language_tables:
             for i,original in enumerate(originals):
                 item=widget.horizontalHeaderItem(i)
@@ -1424,6 +1431,13 @@ class MainWindow(RotorUiMixin, QMainWindow):
             self.language_combo.setCurrentIndex(max(0,self.language_combo.findData(locale)))
             self.language_combo.blockSignals(False)
         self._language_active=locale
+        # v1.8.1: textos escritos depois da abertura (estados, tooltips, janelas abertas) também mudam na hora
+        app=QApplication.instance()
+        if getattr(self,"_map_page_locale",locale)!=locale and hasattr(self,"map"):
+            self.load_map_page()
+            if getattr(self,"sat",None) is not None:QTimer.singleShot(400,self.update_map)
+        if app is not None:
+            i18n_runtime.retranslate_all(app, adopt=(old=="pt-BR"))
 
     def build_language_menu(self,header):
         """v1.7.1: seletor de idioma no topo (bandeira + nome nativo), sincronizado com Configurações."""
@@ -3387,18 +3401,18 @@ class MainWindow(RotorUiMixin, QMainWindow):
         return age<=7
 
     def trail_changed(self,*args):
-        period=self.trail_period.currentText()
+        period=self.trail_period.currentData()
         self.trail_custom.setVisible(period=="Personalizado")
         self.config.values.update({
-            "trail_period":period,"trail_direction":self.trail_direction.currentText(),
+            "trail_period":period,"trail_direction":self.trail_direction.currentData(),
             "trail_custom_hours":float(self.trail_custom.value())})
         self.config.save()
         self.track_cache_key=None
         self.update_map()
 
     def requested_track_period(self):
-        period=self.trail_period.currentText()
-        direction=self.trail_direction.currentText()
+        period=self.trail_period.currentData()
+        direction=self.trail_direction.currentData()
         hours=float(self.trail_custom.value()) if period=="Personalizado" else float(period.split()[0]) if period!="Última passagem" else 2.0
         return hours, ("Última passagem" if period=="Última passagem" else direction)
 
@@ -3831,6 +3845,14 @@ class MainWindow(RotorUiMixin, QMainWindow):
                 self.arm_cat_tracking()
 
     @Slot(object,int)
+    def load_map_page(self):
+        """map.html com os textos fixos no idioma da interface (recarregado quando o idioma muda)."""
+        from . import i18n_runtime
+        map_file=Path(__file__).with_name("map.html")
+        self._map_page_locale=i18n_runtime.locale()
+        self.map.setHtml(i18n_runtime.translate_page(map_file.read_text(encoding="utf-8")),
+                         QUrl.fromLocalFile(str(map_file.resolve())))
+
     def web_renderer_terminated(self,status,exit_code):
         report_event(f"QtWebEngine renderer terminated: status={status}, code={exit_code}")
         self.log("Falha no processo do mapa (QtWebEngine); a página será recarregada")
@@ -3851,8 +3873,8 @@ class MainWindow(RotorUiMixin, QMainWindow):
                      "track_past":self.track_cache["past"] if self.track_cache_key and self.track_cache_key[0]==str(self.sat_combo.currentData()) else [],
                      "track_future":self.track_cache["future"] if self.track_cache_key and self.track_cache_key[0]==str(self.sat_combo.currentData()) else [],
                      "footprint":circle,
-                     "label":f"{self.sat.name} · elevação {pos['elevation']:.1f}° · alcance {pos['range_km']:.0f} km · órbita TLE/OMM",
-                     "info":self.satinfo_html(str(self.sat_combo.currentData() or ""),for_qt=False),
+                     "label":i18n_runtime.tr(f"{self.sat.name} · elevação {pos['elevation']:.1f}° · alcance {pos['range_km']:.0f} km · órbita TLE/OMM"),
+                     "info":i18n_runtime.tr(self.satinfo_html(str(self.sat_combo.currentData() or ""),for_qt=False)),
                      "antenna":self.rotor_map_payload(station)}
             self.sat_combo.setToolTip(self.satinfo_html(str(self.sat_combo.currentData() or "")))
             self.map.page().runJavaScript('window.updateOrbit && window.updateOrbit('+json.dumps(payload)+');')

@@ -169,6 +169,14 @@
     se em 15 s nenhum EXE do programa estiver rodando na pasta, abre o mais novo. CI do Windows simula o OTA
     (atualizador + Setup /OTA) e falha se o programa não reabrir.
   - Pendente: edição usada pelo Alex (Setup/Portátil) e os arquivos de resultado/log do %TEMP%.
+- **Revisar todas as traduções: muitos textos em idioma errado** (registrado em 13/11/2026)
+  - Causa: só os textos fixos da abertura eram traduzidos; tudo que o programa escreve depois (estados, dicas,
+    mensagens, tabelas, menus, mapa, foto) ficava em português.
+  - **Feito (próxima versão):** tradutor central (sat_tool/i18n_runtime.py) intercepta setText/setToolTip/
+    mensagens/menus/tabelas e traduz pelo catálogo novo locales/dynamic (815 trechos × 9 idiomas, com modelos
+    "{}" para valores); troca de idioma retraduz janelas já abertas. Mapa, foto do satélite, menu do rastro e
+    rosa dos ventos do rotor (L/O → E/W, O/W em alemão/holandês) também seguem o idioma. 24 textos que só
+    existiam em 5 idiomas ganharam japonês, polonês, holandês e chinês. Testes em tests/test_v181_i18n_dynamic.py.
 - **Versão 1.8.0 publicada em 13/11/2026** (registrado em 12/11/2026)
   - Pedido do operador: "próxima versão deverá ser 1.0", corrigido em seguida para "1.8".
   - Os itens marcados "Feito (1.8.0)" entram nela; a troca de número acontece quando o operador pedir o lançamento.
