@@ -230,6 +230,9 @@
   - Testes: troca de modo sem movimento indesejado, passos e limites no manual, automático seguindo o satélite no
     simulador GS-232, desligado sem comandos de movimento, PARAR em todos os modos.
 
+- **Versão 1.9.0 publicada em 14/11/2026** (pedido "Gere nova versão completa com tudo do backlog resolvido")
+  - Itens "Feito (1.9.0)": fontes TLE AMSAT/R4UAB, LUČA-1, PREVER, ICOM/Kenwood, WiSpDDE, SSTV RX/TX, traduções.
+  - Ficou para a próxima: rotor AUTOMÁTICO/MANUAL/DESLIGADO (registrado depois do fechamento).
 - **Versão 1.8.0 publicada em 13/11/2026** (registrado em 12/11/2026)
   - Pedido do operador: "próxima versão deverá ser 1.0", corrigido em seguida para "1.8".
   - Os itens marcados "Feito (1.8.0)" entram nela; a troca de número acontece quando o operador pedir o lançamento.
