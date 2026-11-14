@@ -202,6 +202,7 @@ jobs:
           if ($exes.Count -ne 1 -or $exes[0] -ne 'PT2VHF-Sat-Tool-v1.9.0.exe') { throw "Esperado só PT2VHF-Sat-Tool-v1.9.0.exe: $($exes -join ', ')" }
       - name: Simular o OTA (atualizador externo + Setup /OTA) e conferir que o programa reabre
         if: matrix.target == 'Win11-x64'
+        timeout-minutes: 15
         shell: pwsh
         run: |
           # v1.8.1 (bug 13/11/2026): "ao atualizar, baixa e fecha o programa; nada mais acontece".
@@ -214,7 +215,9 @@ jobs:
           $fake = Start-Process -FilePath 'powershell.exe' -ArgumentList @('-NoProfile','-Command','Start-Sleep -Seconds 3') -PassThru
           $exe = Join-Path $dir 'PT2VHF-Sat-Tool-v1.9.0.exe'
           $h = Start-Process -FilePath 'powershell.exe' -ArgumentList @('-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',$helper,
-                '-WaitPid',$fake.Id,'-Package',$pkg,'-Destination',$dir,'-Executable',$exe,'-Mode','Setup','-Version','1.9.0') -Wait -PassThru
+                '-WaitPid',$fake.Id,'-Package',$pkg,'-Destination',$dir,'-Executable',$exe,'-Mode','Setup','-Version','1.9.0') -PassThru
+          # Start-Process -Wait esperaria também o programa reaberto (processo filho) e travaria o job: espera só o atualizador
+          if (-not $h.WaitForExit(600000)) { $h | Stop-Process -Force; throw 'OTA: o atualizador não terminou em 10 min' }
           $log = Join-Path $env:TEMP 'PT2VHF-Sat-Tool-update-helper.log'
           if (Test-Path $log) { Get-Content $log | ForEach-Object { Write-Host "helper: $_" } }
           $setupLog = Join-Path $env:TEMP 'PT2VHF-Sat-Tool-setup.log'
@@ -226,6 +229,8 @@ jobs:
           if (-not ((Get-Content $log -Raw) -match 'resultado: ok')) { throw 'OTA: o Setup não terminou com sucesso' }
           if ($procs.Count -eq 0) { throw 'OTA: o programa não reabriu depois da atualização' }
       - name: Remover a instalação de teste
+        if: always() && matrix.target == 'Win11-x64'
+        timeout-minutes: 5
         shell: pwsh
         run: |
           $dir = Join-Path $env:RUNNER_TEMP 'satinst'
