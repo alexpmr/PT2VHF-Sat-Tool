@@ -208,6 +208,28 @@
     passagem, salvar a imagem e também enviar imagens em SSTV (TX pelo rádio, com PTT). Liga-se ao LUČA-1 e
     às passagens de SSTV da ISS. **Feito (1.9.0):** aba SSTV (sat_tool/sstv.py e sstv_panel.py), 14 modos,
     VIS automático, correção de inclinação e de desvio de tom, PNG automático, transmissão por VOX.
+- **Rotor: modo AUTOMÁTICO / MANUAL / DESLIGADO junto dos gauges, com botões de ajuste manual** (registrado em 14/11/2026)
+  - Pedido do operador: "onde tem os gauges de elevação e azimute, botão automático/manual. Quando manual, botões para
+    ajuste de azimute e elevação manual, clicando nos botões. Automático irá acompanhar o satélite corrente. Botão
+    automático, manual e desligado."
+  - Na faixa do rotor (ao lado dos gauges de direção 0–360° e elevação 0–90° da v1.7.2), um seletor de **3 estados**
+    (botões tipo rádio, o ativo destacado): **AUTOMÁTICO**, **MANUAL**, **DESLIGADO**. Substitui/unifica o botão
+    RASTREANDO/PARADO atual.
+    - **AUTOMÁTICO:** acompanha o **satélite corrente** (pré-posição, rastreio com flip quando preciso, estacionar no
+      LOS), como o rastreio automático da v1.7.2.
+    - **MANUAL:** aparecem botões de ajuste ao lado dos gauges — **◀ / ▶ azimute** e **▲ / ▼ elevação** — cada clique
+      move um passo (passo selecionável 1° / 5° / 10°; segurar repete); o alvo manual aparece nos gauges junto da
+      posição real; respeita limites mecânicos (360/450°, 90/180°) e a tolerância; sair do automático não move a
+      antena até o operador clicar.
+    - **DESLIGADO:** nenhum comando de movimento é enviado (envia PARAR uma vez ao entrar); a leitura da posição pode
+      continuar se o controlador estiver conectado, para os gauges mostrarem onde a antena está.
+  - **PARAR** continua sempre visível e funciona em qualquer modo (Esc/F12); se pressionado em AUTOMÁTICO, passa a
+    MANUAL (não volta a mover sozinho).
+  - **Ao abrir o programa o rotor sempre começa em DESLIGADO** (confirmado pelo operador, 14/11/2026); o operador
+    escolhe AUTOMÁTICO ou MANUAL a cada sessão. (O passo do ajuste manual 1°/5°/10° fica salvo.)
+  - Testes: troca de modo sem movimento indesejado, passos e limites no manual, automático seguindo o satélite no
+    simulador GS-232, desligado sem comandos de movimento, PARAR em todos os modos.
+
 - **Versão 1.8.0 publicada em 13/11/2026** (registrado em 12/11/2026)
   - Pedido do operador: "próxima versão deverá ser 1.0", corrigido em seguida para "1.8".
   - Os itens marcados "Feito (1.8.0)" entram nela; a troca de número acontece quando o operador pedir o lançamento.
@@ -423,7 +445,7 @@
   - O display destacado continua funcional (A/B, RX ONLY, TIPO, LUZ, contagem LOS) e sincronizado com a janela
     principal; teste com 1 e 2 monitores e DPI diferentes em cada um.
 
-- **Display com moldura de rádio e etiqueta de marca/modelo (como um rádio real)** (registrado em 07/11/2026) — **aguardando aprovação do mockup da moldura/etiqueta**; não implementado
+- **Display com moldura de rádio e etiqueta de marca/modelo (como um rádio real)** (registrado em 07/11/2026) — **mockup v2 (painel realista) aprovado pelo operador em 07/11/2026 ("Gostei deste mockup")**; não implementado
   - Pedido do operador: mostrar marca e modelo no display, como num rádio real. **Decisão:** não reproduzir logotipos
     (marcas registradas; não sugerir produto oficial/endossado num programa distribuído). Em vez disso, **moldura de
     rádio opcional** ao redor do display, com **etiqueta preenchida pelo operador** em Configurações (texto livre:
