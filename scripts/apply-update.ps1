@@ -93,7 +93,11 @@ try {
         $code = -1
         for ($attempt = 1; $attempt -le 2; $attempt++) {
             Write-Step "instalador: tentativa $attempt"
-            $p = Start-Process -FilePath $Package -ArgumentList $setupArgs -Wait -PassThru
+            # Sem -Wait: ele espera tambem os processos filhos, e o Setup /OTA reabre o programa como filho;
+            # o atualizador ficava parado ate o programa ser fechado. Espera so o instalador.
+            $p = Start-Process -FilePath $Package -ArgumentList $setupArgs -PassThru
+            $null = $p.Handle   # guarda o handle para o ExitCode ficar disponivel
+            if (-not $p.WaitForExit(1800000)) { throw 'Instalador nao terminou em 30 minutos.' }
             $code = $p.ExitCode
             Write-Step "instalador: codigo $code"
             # 1 = Setup nao iniciou (ex.: AppMutex ainda presente); 5 = falha em "Preparando para instalar"
