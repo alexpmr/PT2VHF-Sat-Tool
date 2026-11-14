@@ -39,6 +39,7 @@ class RxAudioDebug:
         self._main_ident = threading.main_thread().ident
         self._beat = time.monotonic()
         self._stall_logged = 0.0
+        self._reported_beat = None
         self._watch: threading.Thread | None = None
         self._stop = threading.Event()
 
@@ -137,10 +138,14 @@ class RxAudioDebug:
     def heartbeat(self):
         """Chamado pelo laço da interface (timer de 40 ms)."""
         now = time.monotonic()
-        late = now - self._beat
+        previous = self._beat
+        late = now - previous
         self._beat = now
         if self.enabled:
             self.gui_late_max = max(self.gui_late_max, late)
+            # o vigia pode não ter recebido a vez (GIL) durante o travamento: registra ao voltar, sem a pilha
+            if late * 1000 >= STALL_MS and self._reported_beat != previous:
+                self.event(f"INTERFACE TRAVADA por {late * 1000:.0f} ms (detectado ao voltar, sem pilha)")
 
     def second(self, ring, sink_state: str = ""):
         """Resumo uma vez por segundo (interface)."""
@@ -167,6 +172,7 @@ class RxAudioDebug:
             if late * 1000 < STALL_MS or time.monotonic() - self._stall_logged < 1.0:
                 continue
             self._stall_logged = time.monotonic()
+            self._reported_beat = self._beat
             frame = sys._current_frames().get(self._main_ident)
             stack = "".join(traceback.format_stack(frame, limit=12)) if frame is not None else "(sem pilha)\n"
             self.event(f"INTERFACE TRAVADA há {late * 1000:.0f} ms; a placa de som não recebe áudio enquanto isso. "
