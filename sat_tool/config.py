@@ -30,8 +30,9 @@ DEFAULTS = {
     # RS-44 e SONATE-2. Instalações existentes recebem os mesmos uma única vez.
     "satellite_selection": list(DEFAULT_SATELLITES), "tle_update_hours": 4,
     "poll_interval_s": 1, "tle_source": "CelesTrak",
-    "orbit_groups": ["amateur","stations","cubesat","starlink","oneweb","weather","science","visual"],
-    "catalog_category_filter": ["amateur","stations","cubesat","starlink","oneweb","weather","science","visual"],
+    "orbit_groups": ["amateur","stations","cubesat","starlink","oneweb","weather","science","visual","amsat","r4uab"],
+    "catalog_category_filter": ["amateur","stations","cubesat","starlink","oneweb","weather","science","visual","amsat","r4uab"],
+    "tle_sources_v181_migrated": True,
     "cat_auto_select": True, "cat_auto_connect_startup": True,
     "cat_tracking_interval_s": 1, "cat_doppler_out_of_view": True,
     "cat_live_v137_migrated": True,
@@ -83,6 +84,14 @@ class Config:
                 if self.values.get("trail_direction") == "Futuro":
                     self.values["trail_direction"] = "Ambos"
                 self.values["trail_ambos_v160_migrated"] = True
+                self.save()
+            # v1.8.1: fontes AMSAT (nasabare.txt) e R4UAB (satonline.txt) entram ligadas uma única vez
+            if not data.get("tle_sources_v181_migrated", False):
+                for key in ("orbit_groups", "catalog_category_filter"):
+                    current = self.values.get(key)
+                    if isinstance(current, list):
+                        self.values[key] = current + [g for g in ("amsat", "r4uab") if g not in current]
+                self.values["tle_sources_v181_migrated"] = True
                 self.save()
             # v1.3.16: soma os satélites padrão à seleção existente uma única vez,
             # sem desmarcar nada; desmarcar depois não é revertido.

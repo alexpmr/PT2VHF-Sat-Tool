@@ -19,8 +19,10 @@ def test_installer_names_exe_with_version_and_removes_old_ones():
 
 def test_updater_relaunches_new_exe_only_when_needed():
     ps = (ROOT / "scripts" / "apply-update.ps1").read_text(encoding="utf-8")
-    assert "-not ($Mode -eq 'Setup' -and $status -eq 'ok')" in ps
+    assert "$Mode -eq 'Setup' -and $status -eq 'ok'" in ps
     assert "-Filter 'PT2VHF-Sat-Tool*.exe'" in ps
+    # v1.8.1: se o Setup não reabrir o programa, o atualizador abre o EXE mais novo da pasta
+    assert "programa aberto pelo instalador" in ps and "if (-not $running)" in ps
 
 
 def test_linux_and_macos_packages_carry_version():

@@ -28,6 +28,15 @@ TICK = QColor("#6f93b5")
 TEXT = QColor("#cfe6ff")
 
 CARDINALS = (("N", 0), ("L", 90), ("S", 180), ("O", 270))
+# leste/oeste no idioma da interface (N e S são iguais em todos)
+EAST_WEST = {"pt-BR": ("L", "O"), "es": ("E", "O"), "fr": ("E", "O"), "it": ("E", "O"),
+             "de": ("O", "W"), "nl": ("O", "W")}
+
+
+def cardinal(lab):
+    from . import i18n_runtime
+    east, west = EAST_WEST.get(i18n_runtime.locale(), ("E", "W"))
+    return {"L": east, "O": west}.get(lab, lab)
 
 
 def _fmt(v) -> str:
@@ -116,6 +125,7 @@ class AzimuthGauge(_Gauge):
         for lab, ang in CARDINALS:
             pt = at(ang, r - s * 0.19)
             p.setPen(TEXT if lab != "N" else QColor("#ff8a7a"))
+            lab = cardinal(lab)
             p.drawText(QPointF(pt.x() - fm.horizontalAdvance(lab) / 2, pt.y() + fm.ascent() / 2 - 1), lab)
 
         if self.target is not None:

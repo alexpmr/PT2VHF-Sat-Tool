@@ -61,11 +61,13 @@ def find_photo(cache_dir: Path, name: str, norad: str):
 
 
 def photo_html(photo):
+    from .i18n_runtime import tr
     if photo is None:
-        return "<html><body style='background:#0e1f34;color:#91aabc;font:12px Segoe UI'>Foto verificada indisponível; consultar operador/AMSAT.</body></html>"
+        return ("<html><body style='background:#0e1f34;color:#91aabc;font:12px Segoe UI'>"
+                + escape(tr("Foto verificada indisponível; consultar operador/AMSAT.")) + "</body></html>")
     image=escape(photo["url"],quote=True);source=escape(photo["source"],quote=True)
     credit=escape((photo.get("author") or "Wikimedia Commons")[:85])
     lic=escape(photo["license"])
     return ("<html><body style='background:#0e1f34;color:#c8dfec;font:11px Segoe UI;margin:4px'>"
             "<a href='"+source+"' target='_blank'><img style='height:110px;max-width:95%;object-fit:contain' src='"+image+"'></a>"
-            "<div>Foto: "+credit+" • "+lic+" (Commons)</div></body></html>")
+            "<div>"+escape(tr("Foto:"))+" "+credit+" • "+lic+" (Commons)</div></body></html>")
