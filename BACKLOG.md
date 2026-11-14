@@ -172,8 +172,8 @@
       continuar se o controlador estiver conectado, para os gauges mostrarem onde a antena está.
   - **PARAR** continua sempre visível e funciona em qualquer modo (Esc/F12); se pressionado em AUTOMÁTICO, passa a
     MANUAL (não volta a mover sozinho).
-  - O modo escolhido fica salvo; ao abrir o programa começa em **DESLIGADO** ou no último modo (confirmar com o
-    operador; padrão seguro = DESLIGADO).
+  - **Ao abrir o programa o rotor sempre começa em DESLIGADO** (confirmado pelo operador, 14/11/2026); o operador
+    escolhe AUTOMÁTICO ou MANUAL a cada sessão. (O passo do ajuste manual 1°/5°/10° fica salvo.)
   - Testes: troca de modo sem movimento indesejado, passos e limites no manual, automático seguindo o satélite no
     simulador GS-232, desligado sem comandos de movimento, PARAR em todos os modos.
 
