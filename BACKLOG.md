@@ -231,7 +231,7 @@
     simulador GS-232, desligado sem comandos de movimento, PARAR em todos os modos.
 
 - **SAT Tool fechando do nada** (registrado em 14/11/2026, relato do operador, provavelmente na 1.9.0)
-  - Aguardando o log: aba Logs → "Baixar log completo (ZIP)" depois de reabrir, ou a pasta
+  - Aguardando o log: aba "LOGs / CAT" → "Baixar log completo (ZIP)" depois de reabrir, ou a pasta
     %LOCALAPPDATA%\PT2VHF\SatTool\diagnostics (native-crash.log e events.log, com as versões .previous).
   - Pendente: analisar o log e corrigir.
 - **OTA: baixa, fecha o app e nada mais acontece** (registrado em 14/11/2026, relato do operador ao atualizar para 1.9.0)
