@@ -230,6 +230,8 @@
   - Testes: troca de modo sem movimento indesejado, passos e limites no manual, automático seguindo o satélite no
     simulador GS-232, desligado sem comandos de movimento, PARAR em todos os modos.
 
+- **Versão 1.9.1 publicada em 14/11/2026** (pedido "gere uma versão completa para windows e publique no site")
+  - Correção do OTA, áudio RX contínuo, debug do áudio RX e AFSK sem reinício.
 - **RX: interrupção do áudio a cada 2 segundos** (registrado em 14/11/2026, relato do operador)
   - Feito (1.9.1): debug do áudio RX em arquivo. Painel SDR → Equipamentos RX/TX → "Debug do áudio RX"
     (fica ligado entre sessões). Arquivo %LOCALAPPDATA%\PT2VHF\SatTool\diagnostics\rx-audio-debug.log, também no
