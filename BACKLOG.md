@@ -235,7 +235,8 @@
     processos do app para esperar o fechamento, ele se incluía, esperava a si mesmo 90 s e se encerrava com
     Stop-Process antes de rodar o Setup. O CI não pegava porque abria o atualizador fora da árvore do processo falso.
   - Correção (1.9.1): o atualizador se exclui da árvore; o CI abre o atualizador como filho do "app" e roda também
-    o atualizador da 1.9.0 para comprovar o defeito.
+    o atualizador da 1.9.0 para comprovar o defeito (CI 14/11: o da 1.9.0 parou em "app encerrado; restantes: …" sem instalar;
+    o corrigido instalou e reabriu o programa). A prova foi retirada do CI depois.
   - Quem está na 1.9.0 ou anterior precisa instalar a 1.9.1 manualmente uma vez (o atualizador que roda é o da versão instalada).
 - **Versão 1.9.0 publicada em 14/11/2026** (pedido "Gere nova versão completa com tudo do backlog resolvido")
   - Itens "Feito (1.9.0)": fontes TLE AMSAT/R4UAB, LUČA-1, PREVER, ICOM/Kenwood, WiSpDDE, SSTV RX/TX, traduções.

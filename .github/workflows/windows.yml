@@ -230,18 +230,6 @@ jobs:
             # Start-Process -Wait esperaria também o programa reaberto (processo filho) e travaria o job: espera só o atualizador
             if ($h -and -not $h.WaitForExit(600000)) { $h | Stop-Process -Force; throw 'OTA: o atualizador não terminou em 10 min' }
           }
-          # Prova temporária do defeito: o atualizador da 1.9.0 nesta mesma situação não instala nem reabre.
-          git fetch --depth=1 origin 'refs/tags/v1.9.0:refs/tags/v1.9.0' 2>$null
-          $oldHelper = Join-Path $pkgDir 'apply-update-v190.ps1'
-          git show 'v1.9.0:scripts/apply-update.ps1' | Set-Content -Path $oldHelper -Encoding UTF8
-          Remove-Item (Join-Path $env:TEMP 'PT2VHF-Sat-Tool-update-helper.log') -ErrorAction SilentlyContinue
-          Invoke-Ota $oldHelper
-          $oldLog = Join-Path $env:TEMP 'PT2VHF-Sat-Tool-update-helper.log'
-          if (Test-Path $oldLog) { Get-Content $oldLog | ForEach-Object { Write-Host "helper 1.9.0: $_" } }
-          $oldProcs = @(Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.Name -like 'PT2VHF-Sat-Tool*' -and $_.Path -and $_.Path.StartsWith($dir) })
-          Write-Host "Atualizador 1.9.0 — resultado registrado: $((Test-Path $oldLog) -and ((Get-Content $oldLog -Raw) -match 'resultado:')); programa reaberto: $($oldProcs.Count -gt 0)"
-          $oldProcs | Stop-Process -Force -ErrorAction SilentlyContinue
-          Remove-Item (Join-Path $env:TEMP 'PT2VHF-Sat-Tool-update-helper.log') -ErrorAction SilentlyContinue
           Invoke-Ota $helper
           $log = Join-Path $env:TEMP 'PT2VHF-Sat-Tool-update-helper.log'
           if (Test-Path $log) { Get-Content $log | ForEach-Object { Write-Host "helper: $_" } }
