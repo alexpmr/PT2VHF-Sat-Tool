@@ -230,6 +230,13 @@
   - Testes: troca de modo sem movimento indesejado, passos e limites no manual, automático seguindo o satélite no
     simulador GS-232, desligado sem comandos de movimento, PARAR em todos os modos.
 
+- **OTA: baixa, fecha o app e nada mais acontece** (registrado em 14/11/2026, relato do operador ao atualizar para 1.9.0)
+  - Causa: o atualizador (apply-update.ps1) é aberto pelo app, portanto é filho dele; ao listar a árvore de
+    processos do app para esperar o fechamento, ele se incluía, esperava a si mesmo 90 s e se encerrava com
+    Stop-Process antes de rodar o Setup. O CI não pegava porque abria o atualizador fora da árvore do processo falso.
+  - Correção (1.9.1): o atualizador se exclui da árvore; o CI abre o atualizador como filho do "app" e roda também
+    o atualizador da 1.9.0 para comprovar o defeito.
+  - Quem está na 1.9.0 ou anterior precisa instalar a 1.9.1 manualmente uma vez (o atualizador que roda é o da versão instalada).
 - **Versão 1.9.0 publicada em 14/11/2026** (pedido "Gere nova versão completa com tudo do backlog resolvido")
   - Itens "Feito (1.9.0)": fontes TLE AMSAT/R4UAB, LUČA-1, PREVER, ICOM/Kenwood, WiSpDDE, SSTV RX/TX, traduções.
   - Ficou para a próxima: rotor AUTOMÁTICO/MANUAL/DESLIGADO (registrado depois do fechamento).

@@ -32,6 +32,10 @@ function Get-Descendants([int]$root) {
     while ($queue.Count -gt 0) {
         $p = $queue.Dequeue()
         foreach ($c in $all) {
+            # v1.9.1: o proprio atualizador e filho do app (Popen); sem esta exclusao ele entrava na lista,
+            # "nao fechava" em 90 s e era encerrado por Stop-Process junto com os filhos do app: o OTA
+            # baixava, fechava o programa e nada mais acontecia.
+            if ([int]$c.ProcessId -eq $PID) { continue }
             if ($c.ParentProcessId -eq $p -and -not $found.Contains([int]$c.ProcessId)) {
                 $found.Add([int]$c.ProcessId); $queue.Enqueue([int]$c.ProcessId)
             }
@@ -65,12 +69,13 @@ function Get-InnoExitMeaning([int]$code) {
 
 try {
     $children = @(Get-Descendants $WaitPid)
+    Write-Step "processos do app a esperar: $((@($WaitPid) + $children) -join ',') (atualizador: $PID)"
     $left = Wait-Exit (@($WaitPid) + $children) 90
     Write-Step "app encerrado; restantes: $($left -join ',')"
     if ($left.Count -gt 0) {
         # Somente processos que eram filhos do Sat Tool (mapa/QtWebEngine); nunca de outros programas.
         foreach ($id in $left) {
-            if ($id -ne $WaitPid) { Stop-Process -Id $id -Force -ErrorAction SilentlyContinue }
+            if ($id -ne $WaitPid -and $id -ne $PID) { Stop-Process -Id $id -Force -ErrorAction SilentlyContinue }
         }
         $left = Wait-Exit $left 15
         if ($left -contains $WaitPid) { throw 'O PT2VHF Sat Tool nao fechou a tempo. Feche-o e instale manualmente.' }

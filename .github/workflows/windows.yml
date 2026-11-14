@@ -212,12 +212,37 @@ jobs:
           $pkg = Join-Path $pkgDir (Split-Path -Leaf $setup); Copy-Item $setup $pkg -Force
           $helper = Join-Path $pkgDir 'apply-update.ps1'; Copy-Item 'scripts/apply-update.ps1' $helper -Force
           Remove-Item (Join-Path $env:TEMP 'PT2VHF-Sat-Tool-update-helper.log') -ErrorAction SilentlyContinue
-          $fake = Start-Process -FilePath 'powershell.exe' -ArgumentList @('-NoProfile','-Command','Start-Sleep -Seconds 3') -PassThru
           $exe = Join-Path $dir 'PT2VHF-Sat-Tool-v1.9.0.exe'
-          $h = Start-Process -FilePath 'powershell.exe' -ArgumentList @('-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',$helper,
-                '-WaitPid',$fake.Id,'-Package',$pkg,'-Destination',$dir,'-Executable',$exe,'-Mode','Setup','-Version','1.9.0') -PassThru
-          # Start-Process -Wait esperaria também o programa reaberto (processo filho) e travaria o job: espera só o atualizador
-          if (-not $h.WaitForExit(600000)) { $h | Stop-Process -Force; throw 'OTA: o atualizador não terminou em 10 min' }
+          # v1.9.1: como no app, o atualizador é FILHO do processo que ele espera (o app o abre por Popen).
+          # Antes ele se achava na árvore do app, esperava a si mesmo 90 s e se encerrava com Stop-Process.
+          function Invoke-Ota([string]$script) {
+            $pidFile = Join-Path $pkgDir 'helper.pid'; Remove-Item $pidFile -ErrorAction SilentlyContinue
+            $launcher = Join-Path $pkgDir 'fake-app.ps1'
+            @"
+          `$h = Start-Process -FilePath 'powershell.exe' -ArgumentList @('-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File','$script',
+                '-WaitPid',`$PID,'-Package','$pkg','-Destination','$dir','-Executable','$exe','-Mode','Setup','-Version','1.9.0') -PassThru
+          Set-Content -Path '$pidFile' -Value `$h.Id
+          Start-Sleep -Seconds 3
+          "@ | Set-Content -Path $launcher -Encoding UTF8
+            $fake = Start-Process -FilePath 'powershell.exe' -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File',$launcher) -PassThru
+            $fake.WaitForExit(60000) | Out-Null
+            $h = Get-Process -Id ([int](Get-Content $pidFile)) -ErrorAction SilentlyContinue
+            # Start-Process -Wait esperaria também o programa reaberto (processo filho) e travaria o job: espera só o atualizador
+            if ($h -and -not $h.WaitForExit(600000)) { $h | Stop-Process -Force; throw 'OTA: o atualizador não terminou em 10 min' }
+          }
+          # Prova temporária do defeito: o atualizador da 1.9.0 nesta mesma situação não instala nem reabre.
+          git fetch --depth=1 origin 'refs/tags/v1.9.0:refs/tags/v1.9.0' 2>$null
+          $oldHelper = Join-Path $pkgDir 'apply-update-v190.ps1'
+          git show 'v1.9.0:scripts/apply-update.ps1' | Set-Content -Path $oldHelper -Encoding UTF8
+          Remove-Item (Join-Path $env:TEMP 'PT2VHF-Sat-Tool-update-helper.log') -ErrorAction SilentlyContinue
+          Invoke-Ota $oldHelper
+          $oldLog = Join-Path $env:TEMP 'PT2VHF-Sat-Tool-update-helper.log'
+          if (Test-Path $oldLog) { Get-Content $oldLog | ForEach-Object { Write-Host "helper 1.9.0: $_" } }
+          $oldProcs = @(Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.Name -like 'PT2VHF-Sat-Tool*' -and $_.Path -and $_.Path.StartsWith($dir) })
+          Write-Host "Atualizador 1.9.0 — resultado registrado: $((Test-Path $oldLog) -and ((Get-Content $oldLog -Raw) -match 'resultado:')); programa reaberto: $($oldProcs.Count -gt 0)"
+          $oldProcs | Stop-Process -Force -ErrorAction SilentlyContinue
+          Remove-Item (Join-Path $env:TEMP 'PT2VHF-Sat-Tool-update-helper.log') -ErrorAction SilentlyContinue
+          Invoke-Ota $helper
           $log = Join-Path $env:TEMP 'PT2VHF-Sat-Tool-update-helper.log'
           if (Test-Path $log) { Get-Content $log | ForEach-Object { Write-Host "helper: $_" } }
           $setupLog = Join-Path $env:TEMP 'PT2VHF-Sat-Tool-setup.log'
