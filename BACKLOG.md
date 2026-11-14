@@ -230,6 +230,10 @@
   - Testes: troca de modo sem movimento indesejado, passos e limites no manual, automático seguindo o satélite no
     simulador GS-232, desligado sem comandos de movimento, PARAR em todos os modos.
 
+- **SAT Tool fechando do nada** (registrado em 14/11/2026, relato do operador, provavelmente na 1.9.0)
+  - Aguardando o log: aba Logs → "Baixar log completo (ZIP)" depois de reabrir, ou a pasta
+    %LOCALAPPDATA%\PT2VHF\SatTool\diagnostics (native-crash.log e events.log, com as versões .previous).
+  - Pendente: analisar o log e corrigir.
 - **OTA: baixa, fecha o app e nada mais acontece** (registrado em 14/11/2026, relato do operador ao atualizar para 1.9.0)
   - Causa: o atualizador (apply-update.ps1) é aberto pelo app, portanto é filho dele; ao listar a árvore de
     processos do app para esperar o fechamento, ele se incluía, esperava a si mesmo 90 s e se encerrava com
