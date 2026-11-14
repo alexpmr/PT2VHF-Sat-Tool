@@ -392,7 +392,7 @@
   - O display destacado continua funcional (A/B, RX ONLY, TIPO, LUZ, contagem LOS) e sincronizado com a janela
     principal; teste com 1 e 2 monitores e DPI diferentes em cada um.
 
-- **Display com moldura de rádio e etiqueta de marca/modelo (como um rádio real)** (registrado em 07/11/2026) — **aguardando aprovação do mockup da moldura/etiqueta**; não implementado
+- **Display com moldura de rádio e etiqueta de marca/modelo (como um rádio real)** (registrado em 07/11/2026) — **mockup v2 (painel realista) aprovado pelo operador em 07/11/2026 ("Gostei deste mockup")**; não implementado
   - Pedido do operador: mostrar marca e modelo no display, como num rádio real. **Decisão:** não reproduzir logotipos
     (marcas registradas; não sugerir produto oficial/endossado num programa distribuído). Em vez disso, **moldura de
     rádio opcional** ao redor do display, com **etiqueta preenchida pelo operador** em Configurações (texto livre:
