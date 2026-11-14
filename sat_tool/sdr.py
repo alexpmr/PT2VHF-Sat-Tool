@@ -24,6 +24,7 @@ from . import ax25, dsp
 IF_OFFSET = 120_000          # canal a 120 kHz do centro (fora do pico de DC)
 RETUNE_MARGIN = 300_000      # reposiciona o centro se o canal passar disso
 BLOCK = 96_000               # 0,1 s a 960 kS/s
+ASYNC_QUEUE_BLOCKS = 20      # até 2 s de IQ esperando a demodulação
 RTL_IDS = {(0x0BDA, 0x2838), (0x0BDA, 0x2832)}
 
 ZADIG_HELP = ("O Windows não deixou abrir o RTL-SDR: a interface 0 provavelmente não usa o driver WinUSB. "
@@ -126,14 +127,67 @@ class RtlSource:
         self.sdr.gain = "auto" if settings.gain_db is None else float(settings.gain_db)
         if settings.bias_tee and hasattr(self.sdr, "set_bias_tee"):
             self.sdr.set_bias_tee(True)
+        self.streaming = not device.remote     # rtl_tcp: o TCP já guarda os dados; leitura síncrona basta
+        self._async_q: "queue.Queue | None" = None
+        self._async_thread: Optional[threading.Thread] = None
+        self._async_error: Optional[BaseException] = None
+        self.dropped_blocks = 0
 
     def set_center(self, hz: int):
         self.sdr.center_freq = int(hz)
 
+    # v1.9.1 (cortes de ~250 ms a cada ~2,4 s): a leitura síncrona (read_samples) só busca dados enquanto
+    # é chamada; no tempo de demodular um bloco o dongle descarta as amostras, o áudio sai mais lento que o
+    # tempo real e o buffer da placa de som esvazia em ciclos. Agora o librtlsdr lê sem parar em modo
+    # assíncrono (15 buffers USB) numa thread própria, e read() só pega o próximo bloco da fila.
+    def _start_async(self, n: int):
+        self._async_q = queue.Queue(maxsize=ASYNC_QUEUE_BLOCKS)
+
+        def got(samples, _context):
+            block = np.asarray(samples, dtype=np.complex64).copy()
+            q = self._async_q
+            while True:
+                try:
+                    q.put_nowait(block)
+                    return
+                except queue.Full:   # processamento atrasado demais: descarta o mais antigo
+                    try:
+                        q.get_nowait()
+                        self.dropped_blocks += 1
+                    except queue.Empty:
+                        pass
+
+        def run():
+            try:
+                self.sdr.read_samples_async(got, n)
+            except BaseException as exc:   # dongle removido, erro USB
+                self._async_error = exc
+
+        self._async_thread = threading.Thread(target=run, name="sdr-usb", daemon=True)
+        self._async_thread.start()
+
     def read(self, n: int) -> np.ndarray:
-        return np.asarray(self.sdr.read_samples(n), dtype=np.complex64)
+        if not self.streaming:
+            return np.asarray(self.sdr.read_samples(n), dtype=np.complex64)
+        if self._async_thread is None:
+            self._start_async(n)
+        deadline = time.monotonic() + 3.0
+        while True:
+            if self._async_error is not None:
+                raise self._async_error
+            try:
+                return self._async_q.get(timeout=0.25)
+            except queue.Empty:
+                if time.monotonic() > deadline or not self._async_thread.is_alive():
+                    raise self._async_error or RuntimeError("RTL-SDR parou de enviar amostras")
 
     def close(self):
+        if self._async_thread is not None:
+            try:
+                self.sdr.cancel_read_async()
+            except Exception:
+                pass
+            self._async_thread.join(timeout=2)
         try:
             if hasattr(self.sdr, "set_bias_tee"):
                 self.sdr.set_bias_tee(False)
@@ -241,6 +295,7 @@ class SdrReceiver:
         # v1.6.0: decodificação AFSK fora da thread de leitura (não atrasa o RTL-SDR → áudio contínuo).
         self._dec_q: "queue.Queue" = queue.Queue(maxsize=100)
         self._dec_thread: Optional[threading.Thread] = None
+        self.debug = None   # v1.9.1: rx_debug.RxAudioDebug (opcional)
 
     # --- controle (GUI) -------------------------------------------------
     def start(self):
@@ -280,7 +335,9 @@ class SdrReceiver:
 
     def set_decoder(self, pipeline: str):
         with self._lock:
-            self.afsk = ax25.AfskDemodulator() if pipeline == "afsk1200" else None
+            # chamado a cada 250 ms: recriar o demodulador perdia o quadro AX.25 em andamento
+            if (pipeline == "afsk1200") != (self.afsk is not None):
+                self.afsk = ax25.AfskDemodulator() if pipeline == "afsk1200" else None
 
     def set_squelch(self, db: float):
         self.demod.squelch_db = float(db)
@@ -325,9 +382,15 @@ class SdrReceiver:
                             abs(target - self._center) < IF_OFFSET / 2:
                         self._center = target - IF_OFFSET
                         source.set_center(self._center)
+                        if self.debug is not None:
+                            self.debug.retune(self._center, target)
                     self.demod.offset_hz = target - self._center
+                t0 = time.monotonic()
                 iq = source.read(BLOCK)
-                self._process(iq, target)
+                t1 = time.monotonic()
+                audio_len = self._process(iq, target)
+                if self.debug is not None:
+                    self.debug.sdr_block(t1 - t0, time.monotonic() - t1, len(iq), audio_len)
         except Exception as exc:
             self.status.error = open_error_help(exc)
         finally:
@@ -358,3 +421,4 @@ class SdrReceiver:
         if now - self._last_spec >= self.spectrum_period:
             self._last_spec = now
             self.on_spectrum(dsp.power_spectrum_db(iq, self.fft_size), self._center)
+        return len(audio)

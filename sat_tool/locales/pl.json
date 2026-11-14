@@ -464,5 +464,8 @@
 "DDE wyłączone.",
 "DDE: {}",
 "Nie można zarejestrować nazwy DDE Orbitron (czy Orbitron jest otwarty?)",
-"Tryb"
+"Tryb",
+"Debugowanie audio RX (zapisuje rx-audio-debug.log)",
+"Otwórz folder logu",
+"Co sekundę zapisuje przepływ RTL-SDR → bufor → karta dźwiękowa oraz każdy zanik audio, przestrojenie lub zawieszenie interfejsu. Plik w folderze diagnostyki; trafia też do ZIP z logami (karta LOGs / CAT)."
 ]

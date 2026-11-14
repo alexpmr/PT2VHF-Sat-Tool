@@ -464,5 +464,8 @@
 "DDE aus.",
 "DDE: {}",
 "Der DDE-Name Orbitron konnte nicht registriert werden (ist Orbitron geöffnet?)",
-"Modus"
+"Modus",
+"RX-Audio-Debug (schreibt rx-audio-debug.log)",
+"Log-Ordner öffnen",
+"Protokolliert jede Sekunde den Fluss RTL-SDR → Puffer → Soundkarte sowie jeden Audioaussetzer, jede Neuabstimmung oder jedes Einfrieren der Oberfläche. Datei im Diagnoseordner; auch im Log-ZIP (Reiter LOGs / CAT)."
 ]

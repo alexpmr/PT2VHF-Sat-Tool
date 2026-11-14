@@ -464,5 +464,8 @@
 "DDE desligado.",
 "DDE: {}",
 "O nome DDE Orbitron não pôde ser registrado (o Orbitron está aberto?)",
-"Modo"
+"Modo",
+"Debug do áudio RX (grava rx-audio-debug.log)",
+"Abrir pasta do log",
+"Grava a cada segundo o fluxo RTL-SDR → buffer → placa de som e cada falta de áudio, resintonia ou travamento da interface. Arquivo na pasta de diagnóstico; também vai no \"Baixar log completo (ZIP)\" da aba LOGs / CAT."
 ]

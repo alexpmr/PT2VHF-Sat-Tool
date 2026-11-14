@@ -23,6 +23,7 @@ class AudioRing:
         self.primed = False
         self.underruns = 0
         self.adjustments = 0
+        self.drops = 0
 
     @property
     def level_ms(self) -> float:
@@ -46,6 +47,7 @@ class AudioRing:
             self._buf = np.concatenate([self._buf, audio])
             if len(self._buf) > self.max:  # nunca acumula atraso: descarta o mais antigo
                 self._buf = self._buf[-self.target:]
+                self.drops += 1
             if not self.primed and len(self._buf) >= self.target:
                 self.primed = True
 

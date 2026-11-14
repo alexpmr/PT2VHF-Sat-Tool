@@ -230,6 +230,36 @@
   - Testes: troca de modo sem movimento indesejado, passos e limites no manual, automático seguindo o satélite no
     simulador GS-232, desligado sem comandos de movimento, PARAR em todos os modos.
 
+- **Versão 1.9.1 publicada em 14/11/2026** (pedido "gere uma versão completa para windows e publique no site")
+  - Correção do OTA, áudio RX contínuo, debug do áudio RX e AFSK sem reinício.
+- **RX: interrupção do áudio a cada 2 segundos** (registrado em 14/11/2026, relato do operador)
+  - Feito (1.9.1): debug do áudio RX em arquivo. Painel SDR → Equipamentos RX/TX → "Debug do áudio RX"
+    (fica ligado entre sessões). Arquivo %LOCALAPPDATA%\PT2VHF\SatTool\diagnostics\rx-audio-debug.log, também no
+    "Baixar log completo (ZIP)". Resumo por segundo (blocos do RTL-SDR, tempos de leitura/processamento, leituras
+    da placa de som e maior intervalo, nível do buffer, falhas, ajustes, descartes, atraso da interface, estado da
+    saída) e eventos na hora: falta de áudio, resintonia, leitura lenta, interface travada com a pilha da thread principal.
+  - Gravação do operador (14/11): ruído com cortes de ~150–250 ms a cada ~2,4 s (0,74 / 3,65 / 6,03 / 8,41 / 10,88 s).
+  - Causa (1.9.1): leitura síncrona do RTL-SDR (read_samples). O dongle só entrega amostras durante a chamada; enquanto
+    o bloco de 0,1 s é demodulado (~12 ms) as amostras se perdem, então o áudio sai ~11 % mais lento que o tempo real.
+    O buffer de 300 ms esvazia em ~2,4 s, falta áudio e ele espera reabastecer (o corte). Bate com a gravação.
+  - Correção (1.9.1): leitura assíncrona contínua do librtlsdr (15 buffers USB) numa thread própria; a demodulação
+    pega os blocos de uma fila. rtl_tcp continua síncrono (o TCP guarda os dados). De quebra: o demodulador AFSK
+    deixou de ser recriado a cada 250 ms. O debug fica para confirmar no equipamento real.
+- **SAT Tool fechando do nada** (registrado em 14/11/2026, relato do operador, provavelmente na 1.9.0)
+  - Aguardando o log: aba "LOGs / CAT" → "Baixar log completo (ZIP)" depois de reabrir, ou a pasta
+    %LOCALAPPDATA%\PT2VHF\SatTool\diagnostics (native-crash.log e events.log, com as versões .previous).
+  - Pendente: analisar o log e corrigir.
+- **OTA: baixa, fecha o app e nada mais acontece** (registrado em 14/11/2026, relato do operador ao atualizar para 1.9.0)
+  - Causa: o atualizador (apply-update.ps1) é aberto pelo app, portanto é filho dele; ao listar a árvore de
+    processos do app para esperar o fechamento, ele se incluía, esperava a si mesmo 90 s e se encerrava com
+    Stop-Process antes de rodar o Setup. O CI não pegava porque abria o atualizador fora da árvore do processo falso.
+  - Correção (1.9.1): o atualizador se exclui da árvore; o CI abre o atualizador como filho do "app" e roda também
+    o atualizador da 1.9.0 para comprovar o defeito (CI 14/11: o da 1.9.0 parou em "app encerrado; restantes: …" sem instalar;
+    o corrigido instalou e reabriu o programa). A prova foi retirada do CI depois.
+  - Quem está na 1.9.0 ou anterior precisa instalar a 1.9.1 manualmente uma vez (o atualizador que roda é o da versão instalada).
+- **Versão 1.9.0 publicada em 14/11/2026** (pedido "Gere nova versão completa com tudo do backlog resolvido")
+  - Itens "Feito (1.9.0)": fontes TLE AMSAT/R4UAB, LUČA-1, PREVER, ICOM/Kenwood, WiSpDDE, SSTV RX/TX, traduções.
+  - Ficou para a próxima: rotor AUTOMÁTICO/MANUAL/DESLIGADO (registrado depois do fechamento).
 - **Versão 1.8.0 publicada em 13/11/2026** (registrado em 12/11/2026)
   - Pedido do operador: "próxima versão deverá ser 1.0", corrigido em seguida para "1.8".
   - Os itens marcados "Feito (1.8.0)" entram nela; a troca de número acontece quando o operador pedir o lançamento.

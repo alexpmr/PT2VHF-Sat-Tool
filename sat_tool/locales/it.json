@@ -464,5 +464,8 @@
 "DDE spento.",
 "DDE: {}",
 "Impossibile registrare il nome DDE Orbitron (Orbitron è aperto?)",
-"Modo"
+"Modo",
+"Debug dell'audio RX (scrive rx-audio-debug.log)",
+"Apri cartella del log",
+"Registra ogni secondo il flusso RTL-SDR → buffer → scheda audio e ogni interruzione audio, risintonia o blocco dell'interfaccia. File nella cartella di diagnostica; incluso anche nello ZIP dei log (scheda LOGs / CAT)."
 ]
