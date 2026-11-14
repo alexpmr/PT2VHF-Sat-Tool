@@ -107,3 +107,63 @@ def test_sdr_panel_checkbox_turns_debug_on_and_is_remembered():
     result = subprocess.run([sys.executable, "-c", source], capture_output=True, text=True, timeout=120,
                             env={**os.environ, "QT_QPA_PLATFORM": "offscreen"})
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+class FakeDongle:
+    """Como o hardware: gera amostras em tempo real; na leitura síncrona perde o que chegou entre chamadas."""
+
+    def __init__(self):
+        self.cancel = None
+
+    def read_samples(self, n):
+        time.sleep(n / 960_000)
+        return np.zeros(n, np.complex64)
+
+    def read_samples_async(self, callback, n):
+        import threading
+        self.cancel = threading.Event()
+        while not self.cancel.is_set():
+            time.sleep(n / 960_000)
+            callback(np.zeros(n, np.complex64), None)
+
+    def cancel_read_async(self):
+        self.cancel.set()
+
+    def close(self):
+        pass
+
+
+def make_source(remote=False):
+    src = sdr.RtlSource.__new__(sdr.RtlSource)
+    src.sdr = FakeDongle()
+    src.streaming = not remote
+    src._async_q = src._async_thread = src._async_error = None
+    src.dropped_blocks = 0
+    return src
+
+
+def test_streaming_source_keeps_real_time_while_demodulation_takes_time():
+    """Antes: 0,1 s de leitura + tempo de processamento por bloco → áudio mais lento que o tempo real
+    (o buffer da placa esvaziava a cada ~2,4 s). Agora a leitura USB continua durante o processamento."""
+    for remote, minimum in ((True, None), (False, 0.97)):
+        src = make_source(remote)
+        t0, blocks = time.monotonic(), 0
+        while time.monotonic() - t0 < 1.5:
+            src.read(sdr.BLOCK)
+            time.sleep(0.03)        # "demodulação" de 30 ms por bloco
+            blocks += 1
+        rate = blocks * 0.1 / (time.monotonic() - t0)
+        src.close()
+        if minimum is None:
+            assert rate < 0.85      # leitura síncrona: perde ~23 %
+        else:
+            assert rate > minimum, rate
+
+
+def test_set_decoder_keeps_the_running_afsk_demodulator():
+    rx = sdr.SdrReceiver(lambda: None)
+    rx.set_decoder("afsk1200"); first = rx.afsk
+    rx.set_decoder("afsk1200")
+    assert rx.afsk is first
+    rx.set_decoder("none")
+    assert rx.afsk is None

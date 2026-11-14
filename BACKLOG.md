@@ -236,9 +236,13 @@
     "Baixar log completo (ZIP)". Resumo por segundo (blocos do RTL-SDR, tempos de leitura/processamento, leituras
     da placa de som e maior intervalo, nível do buffer, falhas, ajustes, descartes, atraso da interface, estado da
     saída) e eventos na hora: falta de áudio, resintonia, leitura lenta, interface travada com a pilha da thread principal.
-  - Hipóteses: a placa de som puxa o áudio pela thread da interface (modo pull do QAudioSink); uma rotina periódica
-    que segure a interface por mais de ~200 ms esvazia o buffer do dispositivo. Também: resintonia do centro e
-    deriva entre relógios. Pendente: analisar o log do operador e corrigir.
+  - Gravação do operador (14/11): ruído com cortes de ~150–250 ms a cada ~2,4 s (0,74 / 3,65 / 6,03 / 8,41 / 10,88 s).
+  - Causa (1.9.1): leitura síncrona do RTL-SDR (read_samples). O dongle só entrega amostras durante a chamada; enquanto
+    o bloco de 0,1 s é demodulado (~12 ms) as amostras se perdem, então o áudio sai ~11 % mais lento que o tempo real.
+    O buffer de 300 ms esvazia em ~2,4 s, falta áudio e ele espera reabastecer (o corte). Bate com a gravação.
+  - Correção (1.9.1): leitura assíncrona contínua do librtlsdr (15 buffers USB) numa thread própria; a demodulação
+    pega os blocos de uma fila. rtl_tcp continua síncrono (o TCP guarda os dados). De quebra: o demodulador AFSK
+    deixou de ser recriado a cada 250 ms. O debug fica para confirmar no equipamento real.
 - **SAT Tool fechando do nada** (registrado em 14/11/2026, relato do operador, provavelmente na 1.9.0)
   - Aguardando o log: aba "LOGs / CAT" → "Baixar log completo (ZIP)" depois de reabrir, ou a pasta
     %LOCALAPPDATA%\PT2VHF\SatTool\diagnostics (native-crash.log e events.log, com as versões .previous).
