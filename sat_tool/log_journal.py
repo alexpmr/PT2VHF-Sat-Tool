@@ -41,7 +41,8 @@ class EventJournal:
             source_files=[]
             source_files.extend(sorted(self.directory.glob("cat-session.log*")))
             if diagnostics_dir and Path(diagnostics_dir).is_dir():
-                for name in ("events.log","events.log.previous","native-crash.log","native-crash.log.previous"):
+                for name in ("events.log","events.log.previous","native-crash.log","native-crash.log.previous",
+                             "rx-audio-debug.log","rx-audio-debug.log.previous"):
                     p=Path(diagnostics_dir)/name
                     if p.is_file():source_files.append(p)
             metadata={"created_utc":datetime.now(timezone.utc).isoformat(),

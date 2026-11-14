@@ -230,6 +230,15 @@
   - Testes: troca de modo sem movimento indesejado, passos e limites no manual, automático seguindo o satélite no
     simulador GS-232, desligado sem comandos de movimento, PARAR em todos os modos.
 
+- **RX: interrupção do áudio a cada 2 segundos** (registrado em 14/11/2026, relato do operador)
+  - Feito (1.9.1): debug do áudio RX em arquivo. Painel SDR → Equipamentos RX/TX → "Debug do áudio RX"
+    (fica ligado entre sessões). Arquivo %LOCALAPPDATA%\PT2VHF\SatTool\diagnostics\rx-audio-debug.log, também no
+    "Baixar log completo (ZIP)". Resumo por segundo (blocos do RTL-SDR, tempos de leitura/processamento, leituras
+    da placa de som e maior intervalo, nível do buffer, falhas, ajustes, descartes, atraso da interface, estado da
+    saída) e eventos na hora: falta de áudio, resintonia, leitura lenta, interface travada com a pilha da thread principal.
+  - Hipóteses: a placa de som puxa o áudio pela thread da interface (modo pull do QAudioSink); uma rotina periódica
+    que segure a interface por mais de ~200 ms esvazia o buffer do dispositivo. Também: resintonia do centro e
+    deriva entre relógios. Pendente: analisar o log do operador e corrigir.
 - **SAT Tool fechando do nada** (registrado em 14/11/2026, relato do operador, provavelmente na 1.9.0)
   - Aguardando o log: aba "LOGs / CAT" → "Baixar log completo (ZIP)" depois de reabrir, ou a pasta
     %LOCALAPPDATA%\PT2VHF\SatTool\diagnostics (native-crash.log e events.log, com as versões .previous).

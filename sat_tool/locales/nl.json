@@ -464,5 +464,8 @@
 "DDE uit.",
 "DDE: {}",
 "De DDE-naam Orbitron kon niet worden geregistreerd (is Orbitron open?)",
-"Modus"
+"Modus",
+"RX-audio debuggen (schrijft rx-audio-debug.log)",
+"Logmap openen",
+"Legt elke seconde de stroom RTL-SDR → buffer → geluidskaart vast, plus elke audio-onderbreking, herafstemming of bevriezing van de interface. Bestand in de diagnosemap; ook in de log-ZIP (tabblad LOGs / CAT)."
 ]

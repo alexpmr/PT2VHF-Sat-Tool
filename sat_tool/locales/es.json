@@ -464,5 +464,8 @@
 "DDE desactivado.",
 "DDE: {}",
 "No se pudo registrar el nombre DDE Orbitron (¿Orbitron está abierto?)",
-"Modo"
+"Modo",
+"Depuración del audio RX (graba rx-audio-debug.log)",
+"Abrir carpeta del registro",
+"Graba cada segundo el flujo RTL-SDR → búfer → tarjeta de sonido y cada corte de audio, resintonía o bloqueo de la interfaz. Archivo en la carpeta de diagnóstico; también va en el ZIP de logs de la pestaña LOGs / CAT."
 ]

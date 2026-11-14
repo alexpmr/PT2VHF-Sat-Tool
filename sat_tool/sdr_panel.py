@@ -20,16 +20,16 @@ import numpy as np
 from .qt_compat import (Qt, QTimer, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, QScrollArea,
                         QPushButton, QLineEdit, QComboBox, QGroupBox, QTabWidget, QCheckBox,
                         QTableWidget, QTableWidgetItem, QHeaderView, QDoubleSpinBox,
-                        QAbstractItemView, QMessageBox, QProgressBar)
+                        QAbstractItemView, QMessageBox, QProgressBar, QUrl)
 from . import aprs_info, ax25, dsp, rigs, rtl_driver, sdr, telemetry
 from .audio_ring import AudioRing
 
 try:  # PySide6
-    from PySide6.QtGui import QImage, QPainter, QColor, QPen
+    from PySide6.QtGui import QImage, QPainter, QColor, QPen, QDesktopServices
     from PySide6.QtWidgets import QDockWidget, QSlider, QPlainTextEdit, QSplitter
     from PySide6.QtCore import QIODevice
 except ImportError:  # PySide2
-    from PySide2.QtGui import QImage, QPainter, QColor, QPen
+    from PySide2.QtGui import QImage, QPainter, QColor, QPen, QDesktopServices
     from PySide2.QtWidgets import QDockWidget, QSlider, QPlainTextEdit, QSplitter
     from PySide2.QtCore import QIODevice
 
@@ -37,14 +37,23 @@ except ImportError:  # PySide2
 class RingDevice(QIODevice):
     """v1.6.0: a placa de som puxa o áudio (modo pull) direto do AudioRing, sem depender do timer da GUI."""
 
-    def __init__(self, ring: AudioRing, parent=None):
+    def __init__(self, ring: AudioRing, parent=None, debug=None):
         super().__init__(parent)
         self.ring = ring
+        self.debug = debug
         self.open(QIODevice.ReadOnly)
 
     def readData(self, maxlen):
         n = max(0, int(maxlen) // 2)
-        return dsp.float_to_pcm16(self.ring.pull(n)) if n else b""
+        if not n:
+            return b""
+        debug = self.debug
+        if debug is not None and debug.enabled:
+            level, before = self.ring.level_ms, self.ring.underruns
+            data = self.ring.pull(n)
+            debug.pull(n, level, self.ring.underruns != before)
+            return dsp.float_to_pcm16(data)
+        return dsp.float_to_pcm16(self.ring.pull(n))
 
     def writeData(self, data):
         return 0
@@ -213,6 +222,10 @@ class SdrPanel(QWidget):
         self.tlm_log = telemetry.TelemetryLog(window.config.dir / "telemetria")
         self.last_snapshot: dict | None = None
         self._was_visible = False
+        from .crash_diagnostics import diagnostic_dir
+        from .rx_debug import RxAudioDebug
+        self.rx_debug = RxAudioDebug(diagnostic_dir())
+        self._sink_state = ""
         self._build()
         self.fast = QTimer(self)
         self.fast.timeout.connect(self.fast_tick)
@@ -401,6 +414,18 @@ class SdrPanel(QWidget):
         g.addWidget(self.dde_status, 13, 0, 1, 4)
         if dde_server.available() and self.cfg.get("dde_enabled", False):
             QTimer.singleShot(1200, lambda: self.dde_enable.setChecked(True))
+        # v1.9.1: debug do caminho de áudio RX (cortes/interrupções) em arquivo
+        self.rx_debug_enable = QCheckBox("Debug do áudio RX (grava rx-audio-debug.log)")
+        self.rx_debug_enable.setToolTip("Grava a cada segundo o fluxo RTL-SDR → buffer → placa de som e cada falta de áudio, "
+                                        "resintonia ou travamento da interface. Arquivo na pasta de diagnóstico; também vai "
+                                        "no \"Baixar log completo (ZIP)\" da aba LOGs / CAT.")
+        self.rx_debug_enable.toggled.connect(self.toggle_rx_debug)
+        g.addWidget(self.rx_debug_enable, 14, 0, 1, 3)
+        open_diag = QPushButton("Abrir pasta do log")
+        open_diag.clicked.connect(lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(str(self.rx_debug.path.parent))))
+        g.addWidget(open_diag, 14, 3)
+        if self.cfg.get("rx_audio_debug", False):
+            QTimer.singleShot(0, lambda: self.rx_debug_enable.setChecked(True))
         tabs.addTab(self._scroll(eq), "Equipamentos RX/TX")
         self._fill_audio_devices()
         self._fill_ports()
@@ -702,6 +727,8 @@ class SdrPanel(QWidget):
                                         on_audio=self._on_audio,
                                         on_spectrum=self._on_spectrum,
                                         on_frame=lambda f, s: self._frame_q.put((f, s)))
+        self.receiver.debug = self.rx_debug if self.rx_debug.enabled else None
+        self.rx_debug.event(f"SDR iniciado: {dev.label} · ganho {settings.gain_db} · ppm {settings.ppm}")
         self.receiver.set_volume(self.volume.value() / 100)
         self.receiver.set_squelch_pct(self.squelch.value())
         self.receiver.set_spectrum_rate(int(self.wf_speed.currentData() or 20))
@@ -750,7 +777,9 @@ class SdrPanel(QWidget):
         self.sink = QAudioSink(device, fmt, self)
         self.sink.setBufferSize(dsp.AUDIO_RATE * 2 // 5)  # ~200 ms no dispositivo + jitter buffer no AudioRing
         self.ring.clear()
-        self.ring_dev = RingDevice(self.ring, self)
+        self.ring_dev = RingDevice(self.ring, self, debug=self.rx_debug)
+        self.rx_debug.event(f"saída de áudio aberta: {device.description()} · buffer do dispositivo "
+                            f"{self.sink.bufferSize() * 1000 // (2 * dsp.AUDIO_RATE)} ms")
         self.sink.start(self.ring_dev)   # modo pull: a placa de som busca o áudio quando precisa
         self.sink_io = None
 
@@ -947,6 +976,20 @@ class SdrPanel(QWidget):
                 pass
         self.rx_rig = self.tx_rig = None
         self.rig_doppler.setChecked(False)
+
+    def toggle_rx_debug(self, enabled):
+        self.cfg["rx_audio_debug"] = bool(enabled)
+        self.w.config.save()
+        if enabled:
+            from . import __version__
+            dev = self.audio_dev.currentText() or "padrão"
+            self.rx_debug.start(f"versão {__version__} · saída de áudio: {dev}")
+            self.w.log(f"Debug do áudio RX ligado: {self.rx_debug.path}")
+        else:
+            self.rx_debug.stop()
+            self.w.log("Debug do áudio RX desligado")
+        if self.receiver is not None:
+            self.receiver.debug = self.rx_debug if enabled else None
 
     def toggle_dde(self, enabled):
         from . import dde_server
@@ -1148,6 +1191,19 @@ class SdrPanel(QWidget):
 
     # -------------------------------------------------------- drenagem GUI
     def drain(self):
+        debug = self.rx_debug
+        debug.heartbeat()
+        if debug.enabled:
+            state = ""
+            if self.sink is not None:
+                try:
+                    state = f"{self.sink.state().name}/{self.sink.error().name}"
+                except Exception:
+                    state = str(self.sink.state())
+            if state != self._sink_state:
+                debug.event(f"saída de áudio: estado {self._sink_state or '—'} → {state or 'fechada'}")
+                self._sink_state = state
+            debug.second(self.ring, state)
         rec = self.receiver
         if rec is not None:
             st = rec.status
@@ -1210,6 +1266,7 @@ class SdrPanel(QWidget):
             self.dde = None
         self.disconnect_rigs()
         self._close_audio()
+        self.rx_debug.stop()
 
 
 def make_dock(window) -> tuple[QDockWidget, SdrPanel]:

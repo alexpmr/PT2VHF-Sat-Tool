@@ -464,5 +464,8 @@
 "DDE off.",
 "DDE: {}",
 "The Orbitron DDE name could not be registered (is Orbitron open?)",
-"Mode"
+"Mode",
+"RX audio debug (writes rx-audio-debug.log)",
+"Open log folder",
+"Logs the RTL-SDR → buffer → sound card flow every second, plus every audio dropout, retune or interface freeze. File in the diagnostics folder; also included in \"Baixar log completo (ZIP)\" on the LOGs / CAT tab."
 ]

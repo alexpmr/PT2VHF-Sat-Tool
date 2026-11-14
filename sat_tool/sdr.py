@@ -241,6 +241,7 @@ class SdrReceiver:
         # v1.6.0: decodificação AFSK fora da thread de leitura (não atrasa o RTL-SDR → áudio contínuo).
         self._dec_q: "queue.Queue" = queue.Queue(maxsize=100)
         self._dec_thread: Optional[threading.Thread] = None
+        self.debug = None   # v1.9.1: rx_debug.RxAudioDebug (opcional)
 
     # --- controle (GUI) -------------------------------------------------
     def start(self):
@@ -325,9 +326,15 @@ class SdrReceiver:
                             abs(target - self._center) < IF_OFFSET / 2:
                         self._center = target - IF_OFFSET
                         source.set_center(self._center)
+                        if self.debug is not None:
+                            self.debug.retune(self._center, target)
                     self.demod.offset_hz = target - self._center
+                t0 = time.monotonic()
                 iq = source.read(BLOCK)
-                self._process(iq, target)
+                t1 = time.monotonic()
+                audio_len = self._process(iq, target)
+                if self.debug is not None:
+                    self.debug.sdr_block(t1 - t0, time.monotonic() - t1, len(iq), audio_len)
         except Exception as exc:
             self.status.error = open_error_help(exc)
         finally:
@@ -358,3 +365,4 @@ class SdrReceiver:
         if now - self._last_spec >= self.spectrum_period:
             self._last_spec = now
             self.on_spectrum(dsp.power_spectrum_db(iq, self.fft_size), self._center)
+        return len(audio)
