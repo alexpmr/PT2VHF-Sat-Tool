@@ -230,6 +230,10 @@
   - Testes: troca de modo sem movimento indesejado, passos e limites no manual, automático seguindo o satélite no
     simulador GS-232, desligado sem comandos de movimento, PARAR em todos os modos.
 
+- **Splash como parte do programa, não uma segunda janela** (registrado em 15/11/2026, pedido do operador)
+  - O banner "Powered by www.PT2VHF.com" abria num QDialog próprio (barra de título, parecia outro aplicativo por cima).
+  - Feito (próxima versão): camada dentro da janela principal, com fundo escurecido e o cartão no centro; acompanha
+    a janela ao redimensionar, não bloqueia o programa e fecha sozinha em 10 s (ou Fechar, Esc, clique fora).
 - **Versão 1.9.1 publicada em 14/11/2026** (pedido "gere uma versão completa para windows e publique no site")
   - Correção do OTA, áudio RX contínuo, debug do áudio RX e AFSK sem reinício.
 - **RX: interrupção do áudio a cada 2 segundos** (registrado em 14/11/2026, relato do operador)
