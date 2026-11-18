@@ -168,12 +168,19 @@ class RxAudioDebug:
     # ------------------------------------------------------- vigia da interface
     def _watchdog(self):
         while not self._stop.wait(0.05):
-            late = time.monotonic() - self._beat
-            if late * 1000 < STALL_MS or time.monotonic() - self._stall_logged < 1.0:
+            try:
+                beat = self._beat
+                late = time.monotonic() - beat
+                if late * 1000 < STALL_MS or time.monotonic() - self._stall_logged < 1.0:
+                    continue
+                self._stall_logged = time.monotonic()
+                try:
+                    frame = sys._current_frames().get(self._main_ident)
+                    stack = "".join(traceback.format_stack(frame, limit=12)) if frame is not None else "(sem pilha)\n"
+                except Exception as exc:   # pilha de uma thread em execução pode falhar ao formatar (Python 3.11/macOS)
+                    stack = f"(pilha indisponível: {exc!r})\n"
+                self.event(f"INTERFACE TRAVADA há {late * 1000:.0f} ms; a placa de som não recebe áudio enquanto isso. "
+                           f"Pilha da thread principal:\n{stack.rstrip()}")
+                self._reported_beat = beat   # só depois de gravado: senão o registro ao voltar também se perderia
+            except Exception:
                 continue
-            self._stall_logged = time.monotonic()
-            self._reported_beat = self._beat
-            frame = sys._current_frames().get(self._main_ident)
-            stack = "".join(traceback.format_stack(frame, limit=12)) if frame is not None else "(sem pilha)\n"
-            self.event(f"INTERFACE TRAVADA há {late * 1000:.0f} ms; a placa de som não recebe áudio enquanto isso. "
-                       f"Pilha da thread principal:\n{stack.rstrip()}")
