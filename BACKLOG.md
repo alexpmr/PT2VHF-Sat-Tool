@@ -234,18 +234,14 @@
   - Relato: "os problemas de resolução continuam, é necessário rolar a tela para as informações mais importantes":
     mapa-múndi, lista de passagens e telemetria. A réplica do painel do rádio é boa porque mostra as frequências mudando.
   - Situação atual (1366×768): o display ocupa ~190 px, o mapa fica sem altura e a telemetria sai da tela (barra de rolagem).
-  - Proposta (mockup em project-files/sat-tool/mockup-layout-1366x768-proposto.png), aguardando aprovação do operador:
-    1. Satélite e modo sobem para a barra do topo (uma linha só com CAT/SDR/ROTOR, idioma e UTC).
-    2. Display compacto (~46 px, uma linha: MAIN/RX e SUB/TX em dígitos grandes + contagem AOS/LOS + teclas) quando a
-       altura da janela for menor que ~900 px; display completo acima disso; F8 continua destacando o display.
-    3. Sem barra de rolagem na aba Operação: o mapa ocupa toda a altura que sobra (mínimo ~300 px); à direita,
-       passagens (tabela rolável por dentro) e telemetria em grade de 3×2 cartões (com Doppler).
-    4. Linha "CAT desconectado…" e trajetória vão para a barra de status.
-  - Variante pedida pelo operador (18/11): manter o layout atual e só ajustar proporcionalmente. Em 1366×768 o conteúdo
-    precisa de 787 px e cabem 677 → escala de ~86 % (mockup project-files/sat-tool/mockup-layout-atual-proporcional-1366x768.png).
-    Viável: fontes, display e espaçamentos escalam com a altura da janela; o mapa fica com ~918×455 px. Limite: abaixo
-    de ~80 % (ex.: 1280×720) o texto fica pequeno demais; aí volta a rolagem.
- (registrado em 15/11/2026, pedido do operador)
+  - Decisão do operador (18/11): manter o layout atual e fazer ajuste proporcional (mockups descartados).
+  - Feito (próxima versão): sat_tool/ui_scale.py. Antes de abrir, o programa mede a altura útil da tela (Windows) e
+    reduz tudo na mesma proporção com QT_SCALE_FACTOR (fontes, display, botões, mapa), entre 80 % e 100 %;
+    a aba Operação precisa de ~880 px a 100 %. Em 1366×768 com barra de tarefas: 82 %, sem rolagem.
+    Se a janela maximizada ainda rolar (outros sistemas, fonte diferente), guarda o fator que cabe e usa na próxima
+    abertura. Configurações → Tema → "Escala da interface": Automática / 100 / 95 / 90 / 85 / 80 % (vale ao reabrir).
+    A janela abre maximizada quando a tela é menor que o tamanho padrão. Teste tests/test_v192_ui_scale.py.
+- **Splash como parte do programa, não uma segunda janela** (registrado em 15/11/2026, pedido do operador)
   - O banner "Powered by www.PT2VHF.com" abria num QDialog próprio (barra de título, parecia outro aplicativo por cima).
   - Feito (próxima versão): camada dentro da janela principal, com fundo escurecido e o cartão no centro; acompanha
     a janela ao redimensionar, não bloqueia o programa e fecha sozinha em 10 s (ou Fechar, Esc, clique fora).
