@@ -230,7 +230,18 @@
   - Testes: troca de modo sem movimento indesejado, passos e limites no manual, automático seguindo o satélite no
     simulador GS-232, desligado sem comandos de movimento, PARAR em todos os modos.
 
-- **Splash como parte do programa, não uma segunda janela** (registrado em 15/11/2026, pedido do operador)
+- **Tela principal sem rolagem em resoluções menores (PU2MUS)** (registrado em 18/11/2026)
+  - Relato: "os problemas de resolução continuam, é necessário rolar a tela para as informações mais importantes":
+    mapa-múndi, lista de passagens e telemetria. A réplica do painel do rádio é boa porque mostra as frequências mudando.
+  - Situação atual (1366×768): o display ocupa ~190 px, o mapa fica sem altura e a telemetria sai da tela (barra de rolagem).
+  - Proposta (mockup em project-files/sat-tool/mockup-layout-1366x768-proposto.png), aguardando aprovação do operador:
+    1. Satélite e modo sobem para a barra do topo (uma linha só com CAT/SDR/ROTOR, idioma e UTC).
+    2. Display compacto (~46 px, uma linha: MAIN/RX e SUB/TX em dígitos grandes + contagem AOS/LOS + teclas) quando a
+       altura da janela for menor que ~900 px; display completo acima disso; F8 continua destacando o display.
+    3. Sem barra de rolagem na aba Operação: o mapa ocupa toda a altura que sobra (mínimo ~300 px); à direita,
+       passagens (tabela rolável por dentro) e telemetria em grade de 3×2 cartões (com Doppler).
+    4. Linha "CAT desconectado…" e trajetória vão para a barra de status.
+ (registrado em 15/11/2026, pedido do operador)
   - O banner "Powered by www.PT2VHF.com" abria num QDialog próprio (barra de título, parecia outro aplicativo por cima).
   - Feito (próxima versão): camada dentro da janela principal, com fundo escurecido e o cartão no centro; acompanha
     a janela ao redimensionar, não bloqueia o programa e fecha sozinha em 10 s (ou Fechar, Esc, clique fora).
