@@ -467,5 +467,8 @@
 "Modus",
 "RX-audio debuggen (schrijft rx-audio-debug.log)",
 "Logmap openen",
-"Legt elke seconde de stroom RTL-SDR → buffer → geluidskaart vast, plus elke audio-onderbreking, herafstemming of bevriezing van de interface. Bestand in de diagnosemap; ook in de log-ZIP (tabblad LOGs / CAT)."
+"Legt elke seconde de stroom RTL-SDR → buffer → geluidskaart vast, plus elke audio-onderbreking, herafstemming of bevriezing van de interface. Bestand in de diagnosemap; ook in de log-ZIP (tabblad LOGs / CAT).",
+"Schaal van de interface",
+"Automatisch",
+"Verkleint het hele programma evenredig zodat het op lage schermen past zonder scrollen. Automatisch: op basis van de schermhoogte, nooit onder 80 %. Werkt na het opnieuw openen van het programma."
 ]

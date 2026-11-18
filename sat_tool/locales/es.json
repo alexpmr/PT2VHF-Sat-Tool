@@ -467,5 +467,8 @@
 "Modo",
 "Depuración del audio RX (graba rx-audio-debug.log)",
 "Abrir carpeta del registro",
-"Graba cada segundo el flujo RTL-SDR → búfer → tarjeta de sonido y cada corte de audio, resintonía o bloqueo de la interfaz. Archivo en la carpeta de diagnóstico; también va en el ZIP de logs de la pestaña LOGs / CAT."
+"Graba cada segundo el flujo RTL-SDR → búfer → tarjeta de sonido y cada corte de audio, resintonía o bloqueo de la interfaz. Archivo en la carpeta de diagnóstico; también va en el ZIP de logs de la pestaña LOGs / CAT.",
+"Escala de la interfaz",
+"Automática",
+"Reduce todo el programa en la misma proporción para caber en pantallas bajas sin desplazamiento. Automática: según la altura de la pantalla, nunca por debajo del 80 %. Se aplica al reabrir el programa."
 ]

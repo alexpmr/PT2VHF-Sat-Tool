@@ -271,6 +271,32 @@ class MainWindow(RotorUiMixin, QMainWindow):
             sc.activated.connect(func)
             self.display_shortcuts.append(sc)
 
+    def show_fitted(self):
+        """v1.9.2: abre do tamanho da tela quando ela é menor que o tamanho padrão (antes passava da borda)."""
+        screen=QApplication.primaryScreen()
+        avail=screen.availableGeometry() if screen is not None else None
+        if avail is not None and (avail.width()<self.width()+16 or avail.height()<self.height()+40):
+            self.showMaximized()
+        else:
+            self.show()
+        QTimer.singleShot(2500,self.check_ui_scale)
+
+    def check_ui_scale(self):
+        """Se a aba Operação ainda rola com a janela maximizada, guarda o fator que faz caber (vale ao reabrir)."""
+        from . import ui_scale
+        c=self.config.values
+        if c.get("ui_scale","auto") not in ("auto","",None):
+            return
+        screen=self.screen() if hasattr(self,"screen") else QApplication.primaryScreen()
+        if screen is None or not hasattr(self,"operation_scroll"):
+            return
+        learned=ui_scale.learn_from_window(self,self.operation_scroll,screen.availableGeometry().height())
+        if learned:
+            c["ui_scale_learned"]=learned
+            self.config.save()
+            self.log(f"Escala da interface: a tela pede {learned['scale']*100:.0f} % para caber sem rolar; "
+                     "vale na próxima abertura (Configurações → Tema → Escala da interface)")
+
     def show_official_site_notice(self):
         """Boas-vindas: banner "Powered by www.PT2VHF.com" (v1.7.2), clicável, com link e botão Fechar.
 
@@ -2815,10 +2841,22 @@ class MainWindow(RotorUiMixin, QMainWindow):
             w=QDoubleSpinBox();w.setRange(lo,hi);w.setDecimals(0);w.setSingleStep(5 if hi>50 else 1);w.setSuffix(suffix);return w
         self.theme_brightness=spin(50,150," %");self.theme_contrast=spin(50,160," %")
         self.theme_saturation=spin(0,150," %");self.theme_font=spin(9,18," px")
+        from . import ui_scale
+        self.ui_scale_combo=QComboBox()
+        for value,name in ui_scale.CHOICES:
+            self.ui_scale_combo.addItem(name,value)
+        current=c.get("ui_scale","auto")
+        idx=next((i for i in range(self.ui_scale_combo.count())
+                  if str(self.ui_scale_combo.itemData(i))==str(current)),0)
+        self.ui_scale_combo.setCurrentIndex(idx)
+        self.ui_scale_combo.setToolTip("Reduz o programa inteiro na mesma proporção para caber em telas baixas sem rolar. "
+                                       "Automática: pela altura da tela, nunca abaixo de 80 %. Vale ao reabrir o programa.")
+        self.ui_scale_combo.currentIndexChanged.connect(self.change_ui_scale)
         self.theme_follow_display=QCheckBox("Display acompanha o brilho")
         self.theme_follow_map=QCheckBox("Mapa acompanha o brilho")
         rows=(("Tema",self.theme_preset),("Cor de destaque",self.theme_accent),("Brilho",self.theme_brightness),
-              ("Contraste",self.theme_contrast),("Saturação",self.theme_saturation),("Tamanho da fonte",self.theme_font))
+              ("Contraste",self.theme_contrast),("Saturação",self.theme_saturation),("Tamanho da fonte",self.theme_font),
+              ("Escala da interface",self.ui_scale_combo))
         for i,(txt,w) in enumerate(rows):
             grid.addWidget(label(txt),i,0);grid.addWidget(w,i,1)
         bv.addLayout(grid)
@@ -2838,6 +2876,16 @@ class MainWindow(RotorUiMixin, QMainWindow):
         for w in (self.theme_follow_display,self.theme_follow_map):
             w.toggled.connect(self.change_theme)
         self.theme_reset.clicked.connect(self.reset_theme)
+
+    def change_ui_scale(self,*_):
+        from . import ui_scale
+        value=self.ui_scale_combo.currentData()
+        self.config.values["ui_scale"]=value
+        if value!="auto":
+            self.config.values["ui_scale_learned"]={}
+        self.config.save()
+        self.theme_status.setText(f"Escala da interface: {self.ui_scale_combo.currentText()} (agora "
+                                  f"{ui_scale.current_scale()*100:.0f} %). Vale ao reabrir o programa.")
 
     def theme_options(self):
         from .appearance import DEFAULTS
@@ -5053,6 +5101,12 @@ def _single_instance_mutex():
 
 
 def main():
+    # v1.9.2: ajuste proporcional (telas baixas sem rolagem) precisa ser definido antes da QApplication
+    try:
+        from . import ui_scale
+        ui_scale.apply_before_qt(Config().values)
+    except Exception:
+        pass
     app=QApplication(sys.argv)
     app.setStyle('Fusion')
     app.setStyleSheet(STYLE)
@@ -5065,7 +5119,7 @@ def main():
     except Exception:
         pass
     window=MainWindow()
-    window.show()
+    window.show_fitted()
     QTimer.singleShot(2500,window.show_last_update_result)
     code=qt_exec(app)
     del mutex

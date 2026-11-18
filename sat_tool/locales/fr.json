@@ -467,5 +467,8 @@
 "Mode",
 "Débogage de l'audio RX (écrit rx-audio-debug.log)",
 "Ouvrir le dossier du journal",
-"Enregistre chaque seconde le flux RTL-SDR → tampon → carte son et chaque coupure audio, recalage ou blocage de l'interface. Fichier dans le dossier de diagnostic ; inclus aussi dans le ZIP des journaux (onglet LOGs / CAT)."
+"Enregistre chaque seconde le flux RTL-SDR → tampon → carte son et chaque coupure audio, recalage ou blocage de l'interface. Fichier dans le dossier de diagnostic ; inclus aussi dans le ZIP des journaux (onglet LOGs / CAT).",
+"Échelle de l'interface",
+"Automatique",
+"Réduit tout le programme proportionnellement pour tenir sur les écrans bas sans défilement. Automatique : selon la hauteur de l'écran, jamais sous 80 %. Prend effet à la réouverture du programme."
 ]

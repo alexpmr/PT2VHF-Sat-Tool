@@ -467,5 +467,8 @@
 "Modus",
 "RX-Audio-Debug (schreibt rx-audio-debug.log)",
 "Log-Ordner öffnen",
-"Protokolliert jede Sekunde den Fluss RTL-SDR → Puffer → Soundkarte sowie jeden Audioaussetzer, jede Neuabstimmung oder jedes Einfrieren der Oberfläche. Datei im Diagnoseordner; auch im Log-ZIP (Reiter LOGs / CAT)."
+"Protokolliert jede Sekunde den Fluss RTL-SDR → Puffer → Soundkarte sowie jeden Audioaussetzer, jede Neuabstimmung oder jedes Einfrieren der Oberfläche. Datei im Diagnoseordner; auch im Log-ZIP (Reiter LOGs / CAT).",
+"Oberflächenskalierung",
+"Automatisch",
+"Verkleinert das ganze Programm proportional, damit es auf niedrige Bildschirme ohne Scrollen passt. Automatisch: nach Bildschirmhöhe, nie unter 80 %. Wirkt nach dem Neustart des Programms."
 ]

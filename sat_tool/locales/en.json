@@ -467,5 +467,8 @@
 "Mode",
 "RX audio debug (writes rx-audio-debug.log)",
 "Open log folder",
-"Logs the RTL-SDR → buffer → sound card flow every second, plus every audio dropout, retune or interface freeze. File in the diagnostics folder; also included in \"Baixar log completo (ZIP)\" on the LOGs / CAT tab."
+"Logs the RTL-SDR → buffer → sound card flow every second, plus every audio dropout, retune or interface freeze. File in the diagnostics folder; also included in \"Baixar log completo (ZIP)\" on the LOGs / CAT tab.",
+"Interface scale",
+"Automatic",
+"Shrinks the whole program proportionally to fit short screens without scrolling. Automatic: by screen height, never below 80%. Takes effect when the program is reopened."
 ]

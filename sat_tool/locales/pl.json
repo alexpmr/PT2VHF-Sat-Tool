@@ -467,5 +467,8 @@
 "Tryb",
 "Debugowanie audio RX (zapisuje rx-audio-debug.log)",
 "Otwórz folder logu",
-"Co sekundę zapisuje przepływ RTL-SDR → bufor → karta dźwiękowa oraz każdy zanik audio, przestrojenie lub zawieszenie interfejsu. Plik w folderze diagnostyki; trafia też do ZIP z logami (karta LOGs / CAT)."
+"Co sekundę zapisuje przepływ RTL-SDR → bufor → karta dźwiękowa oraz każdy zanik audio, przestrojenie lub zawieszenie interfejsu. Plik w folderze diagnostyki; trafia też do ZIP z logami (karta LOGs / CAT).",
+"Skala interfejsu",
+"Automatyczna",
+"Zmniejsza cały program proporcjonalnie, aby mieścił się na niskich ekranach bez przewijania. Automatyczna: według wysokości ekranu, nigdy poniżej 80 %. Działa po ponownym uruchomieniu programu."
 ]

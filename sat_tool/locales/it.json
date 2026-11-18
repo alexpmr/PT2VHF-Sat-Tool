@@ -467,5 +467,8 @@
 "Modo",
 "Debug dell'audio RX (scrive rx-audio-debug.log)",
 "Apri cartella del log",
-"Registra ogni secondo il flusso RTL-SDR → buffer → scheda audio e ogni interruzione audio, risintonia o blocco dell'interfaccia. File nella cartella di diagnostica; incluso anche nello ZIP dei log (scheda LOGs / CAT)."
+"Registra ogni secondo il flusso RTL-SDR → buffer → scheda audio e ogni interruzione audio, risintonia o blocco dell'interfaccia. File nella cartella di diagnostica; incluso anche nello ZIP dei log (scheda LOGs / CAT).",
+"Scala dell'interfaccia",
+"Automatica",
+"Riduce l'intero programma in proporzione per stare negli schermi bassi senza scorrere. Automatica: in base all'altezza dello schermo, mai sotto l'80 %. Vale alla riapertura del programma."
 ]
