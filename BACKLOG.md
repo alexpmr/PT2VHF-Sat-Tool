@@ -241,6 +241,10 @@
     3. Sem barra de rolagem na aba Operação: o mapa ocupa toda a altura que sobra (mínimo ~300 px); à direita,
        passagens (tabela rolável por dentro) e telemetria em grade de 3×2 cartões (com Doppler).
     4. Linha "CAT desconectado…" e trajetória vão para a barra de status.
+  - Variante pedida pelo operador (18/11): manter o layout atual e só ajustar proporcionalmente. Em 1366×768 o conteúdo
+    precisa de 787 px e cabem 677 → escala de ~86 % (mockup project-files/sat-tool/mockup-layout-atual-proporcional-1366x768.png).
+    Viável: fontes, display e espaçamentos escalam com a altura da janela; o mapa fica com ~918×455 px. Limite: abaixo
+    de ~80 % (ex.: 1280×720) o texto fica pequeno demais; aí volta a rolagem.
  (registrado em 15/11/2026, pedido do operador)
   - O banner "Powered by www.PT2VHF.com" abria num QDialog próprio (barra de título, parecia outro aplicativo por cima).
   - Feito (próxima versão): camada dentro da janela principal, com fundo escurecido e o cartão no centro; acompanha
