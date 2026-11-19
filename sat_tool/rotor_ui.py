@@ -2,7 +2,8 @@
 
 Mixin da janela principal. Toda comunicação serial roda em segundo plano (self.background);
 a interface só agenda e mostra resultados. Movimento automático somente após o operador clicar
-"Rastrear passagem"; PARAR sempre visível enquanto o rotor estiver habilitado.
+o operador escolher AUTOMÁTICO (v1.9.2: AUTOMÁTICO / MANUAL / DESLIGADO, sempre DESLIGADO ao abrir);
+PARAR sempre visível enquanto o rotor estiver habilitado.
 """
 from __future__ import annotations
 
@@ -18,12 +19,7 @@ PREFERENCES = {"auto": "Automático (normal se couber, senão flip)", "normal": 
                "flip": "Preferir flip (passa por cima)"}
 ROTOR_LOG_LINES = 400
 
-ROTOR_DEFAULTS = {
-    "rotor_enabled": False, "rotor_port": "", "rotor_baud": 9600, "rotor_profile": "g5400b",
-    "rotor_az_max": 450.0, "rotor_el_max": 180.0, "rotor_north_offset": 0.0, "rotor_park_az": 0.0,
-    "rotor_park_el": 0.0, "rotor_tolerance": 4.0, "rotor_min_interval": 2.0, "rotor_prepos_s": 180.0,
-    "rotor_min_el": 0.0, "rotor_preference": "auto", "rotor_jog_step": 5.0,
-}
+from .config import ROTOR_DEFAULTS  # noqa: E402  (v1.9.2: persistidos pelo Config)
 
 
 class RotorUiMixin:
@@ -32,12 +28,27 @@ class RotorUiMixin:
         self.rotor_log_lines = []
         self.rotor = GS232Rotor(self.rotor_log)
         self.rotor_tracking = False
-        self.rotor_auto = True          # v1.7.2: rastreamento automático armado (pausado pelo PARADO/Esc/F12)
+        # v1.9.2: modo do rotor AUTOMÁTICO / MANUAL / DESLIGADO; ao abrir o programa sempre DESLIGADO
+        # (decisão do operador, 14/11/2026). rotor_auto (propriedade) = modo automático.
+        self.rotor_mode = "off"
+        self.rotor_manual_target = None
         self.rotor_parked_pass = None
         self.rotor_plan = None
         self.rotor_plan_pass = None
         self.rotor_target = None
         self.rotor_last_read = 0.0
+
+    ROTOR_MODES = ("auto", "manual", "off")
+    ROTOR_MODE_LABELS = {"auto": "AUTOMÁTICO", "manual": "MANUAL", "off": "DESLIGADO"}
+
+    @property
+    def rotor_auto(self):
+        return getattr(self, "rotor_mode", "off") == "auto"
+
+    @rotor_auto.setter
+    def rotor_auto(self, value):   # compatibilidade com código/testes até a v1.9.1
+        mode = getattr(self, "rotor_mode", "off")
+        self.rotor_mode = "auto" if value else ("manual" if mode == "auto" else mode)
 
     def rotor_cfg(self, key):
         return self.config.values.get(key, ROTOR_DEFAULTS[key])
@@ -221,7 +232,11 @@ class RotorUiMixin:
         if not self.rotor.connected:
             QMessageBox.information(self, "Rotor", "Conecte o rotor antes de movê-lo.")
             return
-        self.rotor_stop("ajuste manual")
+        if self.rotor_mode != "manual":   # v1.9.2: ajuste explícito do operador passa o rotor para MANUAL
+            self.rotor_set_mode("manual", "ajuste manual em Configurações → Rotores")
+        else:
+            self.rotor_stop("ajuste manual")
+        self.rotor_manual_target = (az, el)
         prof = self.rotor_profile()
         self.rotor_log(f"Rotor: ajuste manual → AZ {az:.0f}° EL {el:.0f}°")
         self.background("rotor-move", lambda: self.rotor.move(az, el, prof))
@@ -254,6 +269,8 @@ class RotorUiMixin:
         prof = self.rotor_profile()
         start = pos
         there = jog_target(pos, 10 if pos[0] + 10 <= prof.az_max else -10, 0, prof)
+        if self.rotor_mode != "manual":
+            self.rotor_set_mode("manual", "teste curto")
         self.rotor_stop("teste curto")
         self.rotor_log(f"Rotor: teste curto AZ {start[0]:.0f}° → {there[0]:.0f}° → {start[0]:.0f}°")
 
@@ -414,13 +431,37 @@ class RotorUiMixin:
         self.rotor_label.setStyleSheet("font-size:11px;color:#c5dbe7")
         st_col.addWidget(self.rotor_label)
         row.addLayout(st_col, 1)
+        # v1.9.2: setas do ajuste manual ao lado dos gauges (só no modo MANUAL)
+        self.rotor_manual_box = QWidget()
+        mg = QGridLayout(self.rotor_manual_box); mg.setContentsMargins(0, 0, 0, 0); mg.setSpacing(2)
+        self.rotor_bar_jog = {}
+        for key, txt, tip, r_, c_ in (("up", "▲", "Elevação + (levanta)", 0, 1), ("left", "◀", "Azimute − (esquerda)", 1, 0),
+                                      ("right", "▶", "Azimute + (direita)", 1, 2), ("down", "▼", "Elevação − (abaixa)", 2, 1)):
+            b = QPushButton(txt); b.setToolTip(tip); b.setFixedSize(30, 22)
+            b.setAutoRepeat(True); b.setAutoRepeatDelay(700); b.setAutoRepeatInterval(700)   # segurar repete
+            self.rotor_bar_jog[key] = b; mg.addWidget(b, r_, c_)
+        self.rotor_bar_step = QComboBox()
+        for v in (1, 5, 10):
+            self.rotor_bar_step.addItem(f"{v}°", float(v))
+        self.rotor_bar_step.setToolTip("Passo do ajuste manual (salvo)")
+        self.rotor_bar_step.setCurrentIndex(max(0, self.rotor_bar_step.findData(float(self.rotor_cfg("rotor_jog_step")))))
+        mg.addWidget(self.rotor_bar_step, 1, 1)
+        row.insertWidget(1, self.rotor_manual_box)
         btn_col = QVBoxLayout(); btn_col.setSpacing(2)
+        modes = QHBoxLayout(); modes.setSpacing(2)
+        self.rotor_mode_btns = {}
+        for code in self.ROTOR_MODES:
+            b = QPushButton(self.ROTOR_MODE_LABELS[code]); b.setCheckable(True)
+            b.setToolTip({"auto": "Acompanha o satélite selecionado (pré-posição, flip e estacionar no LOS)",
+                          "manual": "Ajuste pelas setas ao lado dos gauges",
+                          "off": "Nenhum comando de movimento; os gauges continuam mostrando a posição"}[code])
+            self.rotor_mode_btns[code] = b; modes.addWidget(b)
+        btn_col.addLayout(modes)
         buttons = QHBoxLayout()
         self.rotor_park_btn = QPushButton("Estacionar")
-        # v1.7.2: sem "Rastrear passagem"; o rotor rastreia sozinho o satélite selecionado acima do horizonte.
-        # PARAR virou o estado: verde RASTREANDO / vermelho PARADO; o clique para (ou retoma) o automático.
-        self.rotor_stop_btn = QPushButton("PARADO")
-        self.rotor_stop_btn.setMinimumWidth(118)
+        # v1.9.2: PARAR sempre visível e vermelho; em AUTOMÁTICO passa a MANUAL (não volta a mover sozinho)
+        self.rotor_stop_btn = QPushButton("PARAR")
+        self.rotor_stop_btn.setMinimumWidth(96)
         self.rotor_config_btn = QPushButton("Configurar…")
         self.rotor_config_btn.setToolTip("Configurações → Rotores")
         for w in (self.rotor_park_btn, self.rotor_stop_btn, self.rotor_config_btn):
@@ -443,6 +484,11 @@ class RotorUiMixin:
         self.rotor_bar.setVisible(bool(self.rotor_cfg("rotor_enabled")))
         self.rotor_park_btn.clicked.connect(self.rotor_park_manual)
         self.rotor_stop_btn.clicked.connect(self.rotor_state_clicked)
+        for code, b in self.rotor_mode_btns.items():
+            b.clicked.connect(lambda _=False, c=code: self.rotor_set_mode(c))
+        for key, (daz, delv) in {"left": (-1, 0), "right": (1, 0), "down": (0, -1), "up": (0, 1)}.items():
+            self.rotor_bar_jog[key].clicked.connect(lambda _=False, a=daz, e=delv: self.rotor_bar_jog_move(a, e))
+        self.rotor_bar_step.currentIndexChanged.connect(self.rotor_bar_step_changed)
         self.rotor_set_state_button(False)
         self.rotor_config_btn.clicked.connect(lambda: self.open_settings("Rotores"))
         self.rotor_active.currentIndexChanged.connect(self.rotor_change_active)
@@ -484,6 +530,7 @@ class RotorUiMixin:
     CHIP_STYLES = {
         "RASTREANDO": "#1d6b3a", "PRÉ-POSICIONANDO": "#6b5a1d", "ESTACIONADO": "#2c4f6b", "PARADO": "#33414f",
         "DESCONECTADO": "#5a2a2a", "ERRO": "#a32626", "AGUARDANDO AOS": "#2c4f6b",
+        "MANUAL": "#6b5a1d", "DESLIGADO": "#4a2a2a",
     }
 
     def rotor_set_chips(self, state, mode):
@@ -515,39 +562,86 @@ class RotorUiMixin:
 
     # ------------------------------------------------------------------ rastreamento automático (v1.7.2)
     def rotor_set_state_button(self, tracking):
+        """v1.9.2: destaca o modo ativo (AUTOMÁTICO/MANUAL/DESLIGADO); PARAR fica sempre vermelho."""
         btn = getattr(self, "rotor_stop_btn", None)
         if btn is None:
             return
-        from .i18n import translated
-        loc = self.ui_language() if hasattr(self, "ui_language") else "pt-BR"
-        tr = lambda t: translated(t, loc)
-        if tracking:
-            btn.setText(tr("RASTREANDO"))
-            btn.setStyleSheet("font-weight:900;color:#ddfff0;background:#12533f;border:1px solid #36b88a;padding:4px 14px")
-            btn.setToolTip(tr("Rastreando o satélite selecionado · clique (ou Esc/F12) para parar o rotor"))
-        else:
-            btn.setText(tr("PARADO"))
-            btn.setStyleSheet("font-weight:900;color:#ffe7e7;background:#783437;border:1px solid #db565e;padding:4px 14px")
-            btn.setToolTip(tr("Rotor parado · rastreia sozinho quando o satélite selecionado estiver acima do horizonte"
-                              if self.rotor_auto else
-                              "Rastreamento automático pausado pelo operador · clique para retomar"))
+        btn.setText("PARAR")
+        btn.setStyleSheet("font-weight:900;color:#ffffff;background:#a32626;border:1px solid #e05656;padding:4px 14px")
+        btn.setToolTip("Rotor parado na hora (Esc/F12) · em AUTOMÁTICO passa a MANUAL" if self.rotor_auto else
+                       "Rotor parado na hora (Esc/F12)")
+        colors = {"auto": ("#12533f", "#36b88a", "#ddfff0"), "manual": ("#5a4a12", "#d6b240", "#fff3cc"),
+                  "off": ("#4a2a2a", "#a35a5a", "#ffe0e0")}
+        for code, b in getattr(self, "rotor_mode_btns", {}).items():
+            on = code == self.rotor_mode
+            b.setChecked(on)
+            bg, bd, fg = colors[code] if on else ("#1d2b3a", "#34506a", "#a9bccc")
+            b.setStyleSheet(f"font-weight:{900 if on else 600};color:{fg};background:{bg};border:1px solid {bd};padding:3px 8px")
+        box = getattr(self, "rotor_manual_box", None)
+        if box is not None:
+            box.setVisible(self.rotor_mode == "manual")
+        if getattr(self, "rotor_park_btn", None) is not None:
+            self.rotor_park_btn.setEnabled(self.rotor_mode != "off")
+            self.rotor_park_btn.setToolTip("Estacionar (modo DESLIGADO não move a antena)" if self.rotor_mode == "off"
+                                           else "Estaciona na posição de Configurações → Rotores")
 
     def rotor_state_clicked(self):
-        """RASTREANDO → para o rotor e pausa o automático; PARADO pausado → retoma o automático."""
-        if self.rotor_auto:
-            self.rotor_set_auto(False, "parado pelo operador")
-        else:
-            self.rotor_set_auto(True)
+        """PARAR: para na hora; em AUTOMÁTICO passa a MANUAL (não volta a mover sozinho)."""
+        self.rotor_set_auto(False, "PARAR pelo operador")
 
-    def rotor_set_auto(self, on, reason=""):
-        self.rotor_auto = bool(on)
-        if on:
+    def rotor_set_mode(self, mode, reason=""):
+        """v1.9.2: AUTOMÁTICO acompanha o satélite; MANUAL só pelas setas; DESLIGADO não envia movimento."""
+        if mode not in self.ROTOR_MODES:
+            return
+        old = self.rotor_mode
+        self.rotor_mode = mode
+        if mode == "auto":
             self.rotor_plan = None
             self.rotor_plan_pass = None
-            self.log("Rotor: rastreamento automático retomado")
+            self.rotor_parked_pass = None
+        else:
+            self.rotor_manual_target = None
+            self.rotor_stop(reason or ("modo " + self.ROTOR_MODE_LABELS[mode].lower()))
+        if old != mode:
+            self.rotor_log("Rotor: modo " + self.ROTOR_MODE_LABELS[mode] + (f" ({reason})" if reason else ""))
+        self.rotor_set_state_button(self.rotor_tracking and self.rotor_auto)
+
+    def rotor_set_auto(self, on, reason=""):
+        """Compatibilidade (rede, atalhos, watchdog): ligar = AUTOMÁTICO; parar = MANUAL se estava no automático."""
+        if on:
+            self.rotor_set_mode("auto")
+        elif self.rotor_mode == "auto":
+            self.rotor_set_mode("manual", reason or "PARAR pelo operador")
         else:
             self.rotor_stop(reason or "PARAR pelo operador")
-        self.rotor_set_state_button(self.rotor_tracking and self.rotor_auto)
+            self.rotor_set_state_button(False)
+
+    def rotor_bar_step_changed(self, *_):
+        step = float(self.rotor_bar_step.currentData() or 5.0)
+        self.config.values["rotor_jog_step"] = step
+        self.config.save()
+        if getattr(self, "rotor_jog_step", None) is not None and hasattr(self.rotor_jog_step, "setValue"):
+            self.rotor_jog_step.setValue(step)
+
+    def rotor_bar_jog_move(self, d_az, d_el):
+        """Setas da faixa do rotor (modo MANUAL): cada clique move um passo a partir do último alvo manual."""
+        if self.rotor_mode != "manual":
+            return
+        if not self.rotor.connected:
+            self.rotor_label.setText("Conecte o rotor para usar o ajuste manual")
+            return
+        step = float(self.rotor_bar_step.currentData() or 5.0)
+        base = self.rotor_manual_target or self.rotor.position
+        target = jog_target(base, d_az * step, d_el * step, self.rotor_profile())
+        if target is None:
+            self.rotor_label.setText("Aguardando a leitura da posição do rotor…")
+            return
+        self.rotor_manual_target = target
+        self.rotor_target = target
+        prof = self.rotor_profile()
+        self.rotor_log(f"Rotor: manual → AZ {target[0]:.0f}° EL {target[1]:.0f}°")
+        self.pending_jobs.discard("rotor-move")
+        self.background("rotor-move", lambda: self.rotor.move(target[0], target[1], prof))
 
     def rotor_toggle_tracking(self, on):
         """Compatibilidade (controle pela rede 'rotor_track'): liga/pausa o rastreamento automático."""
@@ -571,7 +665,7 @@ class RotorUiMixin:
         self.rotor_park()
 
     def rotor_park(self):
-        if not self.rotor.connected:
+        if not self.rotor.connected or self.rotor_mode == "off":
             return
         self.rotor_stop("estacionar")
         prof = self.rotor_profile()
@@ -609,8 +703,17 @@ class RotorUiMixin:
         if not self.rotor_auto or self.sat is None:
             self.rotor_tracking = False
             self.rotor_set_state_button(False)
-            self.rotor_label.setText(text + (" · rastreamento automático pausado (clique em PARADO para retomar)"
-                                             if not self.rotor_auto else " · nenhum satélite selecionado"))
+            if self.rotor_mode == "off":
+                self.rotor_label.setText(text + " · DESLIGADO: nenhum comando de movimento é enviado")
+                self.rotor_set_chips("DESLIGADO", "")
+                return
+            if self.rotor_mode == "manual":
+                tgt = self.rotor_manual_target
+                self.rotor_label.setText(text + (f" · MANUAL → AZ {tgt[0]:.0f}° EL {tgt[1]:.0f}°" if tgt
+                                                 else " · MANUAL: use as setas ◀ ▶ ▲ ▼"))
+                self.rotor_set_chips("MANUAL", "")
+                return
+            self.rotor_label.setText(text + " · nenhum satélite selecionado")
             parked = pos is not None and abs(pos[0] - self.rotor_profile().park_az) <= 2 and abs(pos[1] - self.rotor_profile().park_el) <= 2
             self.rotor_set_chips("ESTACIONADO" if parked else "PARADO", "")
             return
