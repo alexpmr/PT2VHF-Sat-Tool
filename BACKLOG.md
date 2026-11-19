@@ -153,6 +153,18 @@
   2 monitores e DPI diferentes, RTL-SDR real no escopo do display, acesso de celular/notebook pela LAN e regra de
   firewall no Windows, fontes CJK no Windows/macOS.
 
+## v1.9.2 — modos do rotor, moldura de rádio e configurações salvas (19/11/2026)
+
+- Rotor AUTOMÁTICO / MANUAL / DESLIGADO com setas manuais junto dos gauges (detalhes no item em Pendentes).
+- Moldura de rádio realista com etiqueta do operador (item "Display com moldura…").
+- **Correção encontrada ao fazer a versão:** configurações do rotor (porta, perfil, limites, estacionamento…), do tema
+  (Configurações → Aparência), do display destacado (monitor, posição, tela cheia) e do painel SDR oculto eram
+  descartadas ao reabrir o programa, porque o carregador só aceitava chaves conhecidas. Agora ficam salvas
+  (tests/test_v192_rotor_modes.py::test_newer_settings_survive_reopening).
+- Continuam pendentes por depender do operador: mais estilos de rádio (FT-847, IC-705, TS-790, FT-817/818: fotos de
+  referência e mockup), "SAT Tool fechando do nada" (aguardando o log), LUČA-1 (confirmar no programa) e os testes
+  com equipamento real (ERC-M sem cabo, ICOM/Kenwood, WiSpDDE, 2 monitores).
+
 ## Pendentes
 
 - **TLE em segundo plano totalmente transparente** (registrado em 13/11/2026)
@@ -229,6 +241,10 @@
     escolhe AUTOMÁTICO ou MANUAL a cada sessão. (O passo do ajuste manual 1°/5°/10° fica salvo.)
   - Testes: troca de modo sem movimento indesejado, passos e limites no manual, automático seguindo o satélite no
     simulador GS-232, desligado sem comandos de movimento, PARAR em todos os modos.
+  - **Feito (1.9.2):** botões AUTOMÁTICO / MANUAL / DESLIGADO acima da bússola; em MANUAL as setas ▲ ◀ ▶ ▼ e o passo
+    1°/5°/10° (salvo) aparecem ao lado dos gauges, segurar repete, limites mecânicos respeitados; DESLIGADO não envia
+    movimento (nem estacionar) e os gauges seguem lendo a posição; PARAR (Esc/F12) em qualquer modo, em AUTOMÁTICO
+    passa a MANUAL; sempre DESLIGADO ao abrir. Testes em tests/test_v192_rotor_modes.py.
 
 - **Versão 1.9.1 publicada em 14/11/2026** (pedido "gere uma versão completa para windows e publique no site")
   - Correção do OTA, áudio RX contínuo, debug do áudio RX e AFSK sem reinício.
@@ -475,7 +491,7 @@
   - O display destacado continua funcional (A/B, RX ONLY, TIPO, LUZ, contagem LOS) e sincronizado com a janela
     principal; teste com 1 e 2 monitores e DPI diferentes em cada um.
 
-- **Display com moldura de rádio e etiqueta de marca/modelo (como um rádio real)** (registrado em 07/11/2026) — **mockup v2 (painel realista) aprovado pelo operador em 07/11/2026 ("Gostei deste mockup")**; não implementado
+- **Display com moldura de rádio e etiqueta de marca/modelo (como um rádio real)** (registrado em 07/11/2026) — **mockup v2 (painel realista) aprovado pelo operador em 07/11/2026 ("Gostei deste mockup")**; **implementado na v1.9.2**
   - Pedido do operador: mostrar marca e modelo no display, como num rádio real. **Decisão:** não reproduzir logotipos
     (marcas registradas; não sugerir produto oficial/endossado num programa distribuído). Em vez disso, **moldura de
     rádio opcional** ao redor do display, com **etiqueta preenchida pelo operador** em Configurações (texto livre:
@@ -491,6 +507,12 @@
     (TS-2000 / PT2VHF / vazia). Elementos decorativos sem função ficam inertes; teclas com função são clicáveis.
   - Correção observada no mockup: no modelo matriz de pontos com display largo o texto "SWR 1.2" do lado SUB é
     cortado na borda — medir o texto e reduzir/ajustar a barra PO.
+  - **Feito (1.9.2):** Configurações → Aparência → "Moldura de rádio (painel realista)" com "Etiqueta da moldura"
+    (até 24 caracteres) e "Subtítulo da moldura" (até 40), texto livre, sem logotipos. Painel metálico escovado com
+    parafusos, LCD rebaixado com reflexo, PWR, AF·SQL, dial MAIN e teclas A/B (MAIN↔SUB), RX ONLY, TIPO (display) e
+    LUZ (dimmer) clicáveis, LEDs CAT LINK / AUTO DOPPLER / SAT TRACE pelo estado real. Vale para todos os modelos de
+    display, na janela principal, na prévia e no display destacado (sat_tool/lcd_bezel.py). "SWR 1.2" não é mais
+    cortado. Moldura no formato de cada rádio (706 compacto, 7100 inclinado) continua dependendo de referências.
 
 - **Displays inspirados em rádios VHF/UHF (144/440 MHz, FM e SSB) de Yaesu, Icom e Kenwood** (registrado em 07/11/2026) — **6 estilos implementados na v1.7.1** (IC-706MKIIG, IC-7100, FT-897/857, IC-910H, FT-991A, IC-9700); FT-847, IC-705, TS-790 e FT-817/818 ainda dependem de referências e mockup; o painel metálico (moldura) segue o item da moldura
   - **Aprovado pelo operador (07/11/2026):** o painel realista (`docs/backlog/display-painel-realista-mockup.png`)

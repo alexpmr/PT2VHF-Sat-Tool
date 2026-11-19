@@ -56,6 +56,26 @@ def application_dir() -> Path:
     return Path(base) / "PT2VHF" / "SatTool" if base else Path.home() / ".config" / "PT2VHF" / "SatTool"
 
 
+# v1.9.2: configurações gravadas por telas mais novas (rotor, aparência, display destacado, painel SDR)
+# eram descartadas ao reabrir porque não estavam em DEFAULTS. Ficam aqui, com o mesmo padrão de antes.
+ROTOR_DEFAULTS = {
+    "rotor_enabled": False, "rotor_port": "", "rotor_baud": 9600, "rotor_profile": "g5400b",
+    "rotor_az_max": 450.0, "rotor_el_max": 180.0, "rotor_north_offset": 0.0, "rotor_park_az": 0.0,
+    "rotor_park_el": 0.0, "rotor_tolerance": 4.0, "rotor_min_interval": 2.0, "rotor_prepos_s": 180.0,
+    "rotor_min_el": 0.0, "rotor_preference": "auto", "rotor_jog_step": 5.0,
+}
+DEFAULTS.update(ROTOR_DEFAULTS)
+DEFAULTS.update({"display_detached": False, "display_window_aspect": None, "display_window_fullscreen": False,
+                 "display_window_rect": None, "display_window_screen": "", "sdr_dock_user_hidden": False,
+                 # v1.9.2: moldura de rádio realista com etiqueta do operador
+                 "display_bezel": False, "display_label": "", "display_sublabel": ""})
+try:
+    from .appearance import DEFAULTS as _THEME_DEFAULTS
+    DEFAULTS.update(_THEME_DEFAULTS)
+except Exception:  # pragma: no cover - appearance é puro Python; só por segurança
+    pass
+
+
 class Config:
     def __init__(self, path: Path | None = None):
         self.dir = path or application_dir()

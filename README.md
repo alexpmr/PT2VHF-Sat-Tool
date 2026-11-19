@@ -30,7 +30,16 @@ O sufixo `Win11-x64` é mantido para compatibilidade com o atualizador e também
 4. Se outro computador/celular não alcançar a página, use **Liberar no firewall do Windows** (regra só para a porta, perfil Privado, só a rede local; o Windows pede confirmação) e confira na lista **Endereços desta máquina** o IPv4 da mesma rede do outro aparelho. Não configure redirecionamento de porta no roteador.
 5. Opcional: **Permitir controle pela rede (sem PTT)** com **PIN da estação** (4 a 12 dígitos). O navegador passa a poder escolher satélite, ligar/desligar Auto CAT, A/B, RX ONLY e rastrear/estacionar/PARAR o rotor. Cada ação pede o PIN e vai para o log com o IP; PTT/TX nunca é acionado pela rede.
 
-**Escopo do painel Web v1.9.1:** satélite, frequências, display do rádio (mesmo modelo da janela), rotor, CAT, telemetria orbital e APRS decodificado, mapa vetorial offline e passagens, atualizados a cada 1,5 s. Só aparelhos da rede privada (IP público é recusado); **Renovar chave** derruba links e sessões antigos; diagnóstico mostra último acesso remoto e navegador remoto ativo. O desktop deve permanecer aberto. O HTTP na LAN não é criptografado; não divulgue a URL fora da rede.
+**Escopo do painel Web v1.9.2:** satélite, frequências, display do rádio (mesmo modelo da janela), rotor, CAT, telemetria orbital e APRS decodificado, mapa vetorial offline e passagens, atualizados a cada 1,5 s. Só aparelhos da rede privada (IP público é recusado); **Renovar chave** derruba links e sessões antigos; diagnóstico mostra último acesso remoto e navegador remoto ativo. O desktop deve permanecer aberto. O HTTP na LAN não é criptografado; não divulgue a URL fora da rede.
+
+## Novidades v1.9.2 — modos do rotor e moldura de rádio
+
+- **Rotor AUTOMÁTICO / MANUAL / DESLIGADO** na faixa do rotor. Em MANUAL, setas ◀ ▶ ▲ ▼ ao lado dos gauges com passo
+  1°/5°/10° (segurar repete). DESLIGADO não envia nenhum movimento. O programa sempre abre em DESLIGADO; PARAR (Esc/F12)
+  funciona em qualquer modo e, em AUTOMÁTICO, passa a MANUAL.
+- **Moldura de rádio realista** em volta do display (Configurações → Aparência), com etiqueta e subtítulo escritos
+  pelo operador e teclas A/B, RX ONLY, TIPO e LUZ clicáveis.
+- **Correção:** configurações do rotor, do tema, do display destacado e do painel SDR agora ficam salvas ao reabrir.
 
 ## Novidades v1.9.1 — correções
 

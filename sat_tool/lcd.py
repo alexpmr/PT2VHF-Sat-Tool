@@ -815,6 +815,10 @@ class LcdDisplay(QWidget):
         self.setCursor(Qt.ArrowCursor)
         self.detached = False
         self.extra_menu = None
+        self.bezel = False               # v1.9.2: moldura de rádio realista (Aparência)
+        self.bezel_label = ""
+        self.bezel_sublabel = ""
+        self._bezel_cache = None
         self.dim = 1.0                   # v1.7.1: acompanha o brilho do tema (Aparência)           # janela destacada acrescenta tela cheia/sempre visível/sem bordas
         self.setToolTip("A/B inverte MAIN↔SUB (TX/RX) · RX ONLY opera só em recepção · TIPO troca o modelo (F6) · "
                         "LUZ troca a cor do backlight (F7) · clique direito: escolher modelo/cor ou destacar o display")
@@ -844,6 +848,25 @@ class LcdDisplay(QWidget):
             self._scope_paint = now
             self.update()
 
+    def docked_heights(self) -> tuple[int, int]:
+        """Altura mínima/máxima com o display na janela principal (a moldura precisa de mais altura)."""
+        if self.bezel:
+            from .lcd_bezel import DOCKED_MIN, DOCKED_MAX
+            return DOCKED_MIN, DOCKED_MAX
+        return 118, 170
+
+    def set_bezel(self, on: bool, label: str = "", sublabel: str = ""):
+        """v1.9.2: liga/desliga a moldura de rádio e define a etiqueta (texto livre do operador)."""
+        self.bezel = bool(on)
+        self.bezel_label = (label or "").strip()[:24]
+        self.bezel_sublabel = (sublabel or "").strip()[:40]
+        self._bezel_cache = None
+        if not self.detached:
+            lo, hi = self.docked_heights()
+            self.setMinimumHeight(lo)
+            self.setMaximumHeight(hi)
+        self.update()
+
     def set_dim(self, dim: float):
         self.dim = max(0.3, min(1.0, float(dim)))
         self.update()
@@ -869,7 +892,39 @@ class LcdDisplay(QWidget):
         return f"{rx} · {tx}{extra}"
 
     def render_image(self, width: int, height: int, dpr: float = 1.0) -> tuple[QImage, dict]:
-        """Desenha o display em pixels físicos (usado pelo paintEvent, testes e prévia das Configurações)."""
+        """Desenha o display em pixels físicos (usado pelo paintEvent, testes e prévia das Configurações).
+        v1.9.2: com a moldura ligada, o display vai no LCD rebaixado do painel e as teclas da moldura somam-se."""
+        if not self.bezel:
+            return self._render_core(width, height, dpr)
+        from .lcd_bezel import layout, paint_background, paint_overlay, glass
+        w, h = float(width), float(height)
+        key = (int(width), int(height), round(dpr, 3), self.bezel_label, self.bezel_sublabel)
+        if self._bezel_cache is None or self._bezel_cache[0] != key:
+            self._bezel_cache = (key, paint_background(w, h, self.bezel_label, self.bezel_sublabel, dpr))
+        lay = layout(w, h)
+        r = lay["lcd"]
+        inner, inner_keys = self._render_core(int(r.width()), int(r.height()), dpr)
+        scope = getattr(self, "_last_scope", None)
+        img = QImage(max(1, int(round(w * dpr))), max(1, int(round(h * dpr))), QImage.Format_ARGB32_Premultiplied)
+        img.fill(QColor("#1d2024"))
+        p = QPainter(img)
+        p.setRenderHint(QPainter.Antialiasing, True)
+        p.setRenderHint(QPainter.TextAntialiasing, True)
+        p.scale(dpr, dpr)
+        p.drawImage(QRectF(0, 0, w, h), self._bezel_cache[1])
+        p.drawImage(QRectF(r.x(), r.y(), r.width(), r.height()), inner)
+        glass(p, r)
+        active = {"RX ONLY"} if self.state.rx_only else set()
+        keys = {k: v.translated(r.x(), r.y()) for k, v in inner_keys.items()}
+        keys.update(paint_overlay(p, w, h, self.state, active))
+        if self.dim < 0.999:
+            p.fillRect(QRectF(0, 0, w, h), QColor(0, 0, 0, int(round((1.0 - self.dim) * 200))))
+        p.end()
+        img.setDevicePixelRatio(dpr)
+        self._last_scope = None if scope is None else scope.translated(r.x(), r.y())
+        return img, keys
+
+    def _render_core(self, width: int, height: int, dpr: float = 1.0) -> tuple[QImage, dict]:
         pw, ph = max(1, int(round(width * dpr))), max(1, int(round(height * dpr)))
         img = QImage(pw, ph, QImage.Format_ARGB32_Premultiplied)
         img.fill(QColor("#000000"))
@@ -931,7 +986,9 @@ class LcdDisplay(QWidget):
             return
         if key:
             {"swap": self.swap_clicked, "swap2": self.swap_clicked, "rxonly": self.rx_only_clicked,
-             "type": self.type_clicked, "light": self.light_clicked}[key].emit()
+             "type": self.type_clicked, "light": self.light_clicked,
+             "bz_swap": self.swap_clicked, "bz_rxonly": self.rx_only_clicked, "bz_type": self.type_clicked,
+             "bz_light": self.light_clicked}[key].emit()
             event.accept()
             return
         super().mousePressEvent(event)
