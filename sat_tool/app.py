@@ -2807,6 +2807,26 @@ class MainWindow(RotorUiMixin, QMainWindow):
                                            ("Fonte (matriz de pontos)",self.display_font),
                                            ("Cor",self.display_theme))):
             grid.addWidget(label(txt),row,0);grid.addWidget(widget,row,1)
+        # v1.9.2: moldura de rádio realista; a etiqueta é texto livre do operador (sem logotipos de fabricantes)
+        self.display_bezel=QCheckBox("Moldura de rádio (painel realista)")
+        self.display_bezel.setToolTip("Desenha o display dentro de um painel de rádio com teclas, LEDs e botões")
+        self.display_label=QLineEdit();self.display_label.setMaxLength(24)
+        self.display_label.setPlaceholderText("ex.: PT2VHF")
+        self.display_sublabel=QLineEdit();self.display_sublabel.setMaxLength(40)
+        self.display_sublabel.setPlaceholderText("ex.: 144 / 440 MHz · SATELLITE")
+        for w in (self.display_label,self.display_sublabel):
+            w.setMaximumWidth(260)
+        base=grid.rowCount()
+        grid.addWidget(self.display_bezel,base,0,1,2)
+        for i,(txt,widget) in enumerate((("Etiqueta da moldura",self.display_label),("Subtítulo da moldura",self.display_sublabel))):
+            grid.addWidget(label(txt),base+1+i,0);grid.addWidget(widget,base+1+i,1)
+        c=self.config.values
+        self.display_bezel.setChecked(bool(c.get("display_bezel",False)))
+        self.display_label.setText(str(c.get("display_label","") or ""))
+        self.display_sublabel.setText(str(c.get("display_sublabel","") or ""))
+        self.display_bezel.toggled.connect(self.change_display_settings)
+        self.display_label.textChanged.connect(self.change_display_settings)
+        self.display_sublabel.textChanged.connect(self.change_display_settings)
         bv.addLayout(grid)
         self.display_preview=LcdDisplay()
         self.display_preview.setMinimumHeight(132)
@@ -2962,12 +2982,21 @@ class MainWindow(RotorUiMixin, QMainWindow):
         model=self.display_model.currentData() or "matriz"
         font=self.display_font.currentData() or "normal"
         theme=self.display_theme.currentData() or "âmbar"
+        bezel=self.display_bezel.isChecked()
+        tag=self.display_label.text().strip();sub=self.display_sublabel.text().strip()
         self.display_font.setEnabled(model=="matriz")
+        for w in (self.display_label,self.display_sublabel):
+            w.setEnabled(bezel)
         for widget in (getattr(self,"lcd",None),getattr(self,"display_preview",None)):
             if widget is not None:
                 widget.set_model(model);widget.set_font_style(font);widget.set_theme(theme)
+                widget.set_bezel(bezel,tag,sub)
+        if getattr(self,"display_preview",None) is not None:
+            self.display_preview.setMinimumHeight(self.display_preview.docked_heights()[0])
+            self.display_preview.setMaximumHeight(16777215)
         if save:
-            self.config.values.update(display_model=model,display_font=font,lcd_theme=theme)
+            self.config.values.update(display_model=model,display_font=font,lcd_theme=theme,
+                                      display_bezel=bezel,display_label=tag,display_sublabel=sub)
             self.config.save()
 
     def toggle_display_detached(self):
@@ -2987,11 +3016,11 @@ class MainWindow(RotorUiMixin, QMainWindow):
             self.display_window.close()
 
     def _dock_display(self):
-        from .display_window import MAX_HEIGHT_DOCKED
         window,self.display_window=self.display_window,None
         self.lcd.detached=False
-        self.lcd.setMinimumHeight(118)
-        self.lcd.setMaximumHeight(MAX_HEIGHT_DOCKED)
+        lo,hi=self.lcd.docked_heights()
+        self.lcd.setMinimumHeight(lo)
+        self.lcd.setMaximumHeight(hi)
         self.display_cards.insertWidget(0,self.lcd,1)
         self.lcd.show()
         self.display_placeholder.setVisible(False)
