@@ -64,6 +64,8 @@ ROTOR_DEFAULTS = {
     "rotor_az_max": 450.0, "rotor_el_max": 180.0, "rotor_north_offset": 0.0, "rotor_park_az": 0.0,
     "rotor_park_el": 0.0, "rotor_tolerance": 4.0, "rotor_min_interval": 2.0, "rotor_prepos_s": 180.0,
     "rotor_min_el": 0.0, "rotor_preference": "auto", "rotor_jog_step": 5.0,
+    # v1.9.4: bloco do rotor aberto/fechado pelo ícone ROTOR (None = segue "rotor habilitado", instalações antigas)
+    "rotor_bar_visible": None,
 }
 DEFAULTS.update(ROTOR_DEFAULTS)
 DEFAULTS.update({"display_detached": False, "display_window_aspect": None, "display_window_fullscreen": False,

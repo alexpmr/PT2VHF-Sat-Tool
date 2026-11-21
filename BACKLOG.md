@@ -171,10 +171,14 @@
   - Causa: o ícone só alternava a conexão. Sem cabo (conexão falhando) ou desconectado, o 2º clique tentava conectar
     de novo e o bloco continuava aberto, porque o rotor seguia habilitado. Além disso, conectar armava o AUTOMÁTICO,
     contrariando "o rotor começa em DESLIGADO".
-  - **Corrigido (branch fix/tle-alpha5, entra na próxima versão):** o ícone ROTOR é liga/desliga. Ligar abre o bloco
-    e conecta; desligar põe o modo em DESLIGADO, fecha a porta e esconde o bloco, mesmo com a conexão falhando.
-    Conectar mantém o modo escolhido (DESLIGADO ao abrir). Conectar/Desconectar de Configurações → Rotores continua
-    só conectando/desconectando. Teste tests/test_v172_top_buttons.py::test_rotor_icon_hides_block_even_when_connection_failed.
+  - **Pedido do operador (21/11/2026):** "clicar abre e esconde o bloco. Uma vez dentro do bloco, adicione um botão
+    ativar/desativar controle do rotor."
+  - **Feito (branch fix/tle-alpha5, entra na próxima versão):** o ícone ROTOR do topo só abre e esconde o bloco (a cor
+    continua mostrando o estado: vermelho desligado, âmbar conectando, verde conectado); aberto/fechado fica salvo.
+    Dentro do bloco, botão **ATIVAR CONTROLE** (habilita e conecta) / **DESATIVAR CONTROLE** (modo DESLIGADO, para e
+    desconecta, sem esconder o bloco). Conectar mantém o modo escolhido (não arma mais o AUTOMÁTICO). Habilitar o
+    rotor em Configurações → Rotores abre o bloco. Teste
+    tests/test_v172_top_buttons.py::test_rotor_icon_shows_and_hides_block_control_button_inside.
 
 - **Roteiro de homologação em campo** (registrado em 21/11/2026, pedido "faça o que puder e eu depois irei indicar o
   que funcionou de fato"): docs/homologacao-campo.md reúne os testes que dependem do equipamento real (OTA, rotor

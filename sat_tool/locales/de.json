@@ -489,5 +489,12 @@
 "Rahmen-Untertitel",
 "Oberflächenskalierung",
 "Automatisch",
-"Verkleinert das ganze Programm proportional, damit es auf niedrige Bildschirme ohne Scrollen passt. Automatisch: nach Bildschirmhöhe, nie unter 80 %. Wirkt nach dem Neustart des Programms."
+"Verkleinert das ganze Programm proportional, damit es auf niedrige Bildschirme ohne Scrollen passt. Automatisch: nach Bildschirmhöhe, nie unter 80 %. Wirkt nach dem Neustart des Programms.",
+"Rotor aus · klicken, um den Rotor-Block ein- oder auszublenden",
+"STEUERUNG EIN",
+"STEUERUNG AUS",
+"VERBINDE…",
+"Verbindet mit dem Rotor-Steuergerät (Port aus Einstellungen → Rotoren)",
+"Verbinde mit dem Rotor-Steuergerät",
+"Stoppt den Rotor, trennt das Steuergerät und wechselt in den Modus AUS"
 ]

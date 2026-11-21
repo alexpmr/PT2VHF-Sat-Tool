@@ -489,5 +489,12 @@
 "Podtytuł ramki",
 "Skala interfejsu",
 "Automatyczna",
-"Zmniejsza cały program proporcjonalnie, aby mieścił się na niskich ekranach bez przewijania. Automatyczna: według wysokości ekranu, nigdy poniżej 80 %. Działa po ponownym uruchomieniu programu."
+"Zmniejsza cały program proporcjonalnie, aby mieścił się na niskich ekranach bez przewijania. Automatyczna: według wysokości ekranu, nigdy poniżej 80 %. Działa po ponownym uruchomieniu programu.",
+"Rotor wyłączony · kliknij, aby pokazać lub ukryć panel rotora",
+"WŁĄCZ STEROWANIE",
+"WYŁĄCZ STEROWANIE",
+"ŁĄCZENIE…",
+"Łączy ze sterownikiem rotora (port z Ustawienia → Rotory)",
+"Łączenie ze sterownikiem rotora",
+"Zatrzymuje rotor, rozłącza sterownik i wraca do trybu WYŁ."
 ]

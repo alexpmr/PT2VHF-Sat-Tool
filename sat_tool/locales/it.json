@@ -489,5 +489,12 @@
 "Sottotitolo della cornice",
 "Scala dell'interfaccia",
 "Automatica",
-"Riduce l'intero programma in proporzione per stare negli schermi bassi senza scorrere. Automatica: in base all'altezza dello schermo, mai sotto l'80 %. Vale alla riapertura del programma."
+"Riduce l'intero programma in proporzione per stare negli schermi bassi senza scorrere. Automatica: in base all'altezza dello schermo, mai sotto l'80 %. Vale alla riapertura del programma.",
+"Rotore spento · clic per mostrare o nascondere il blocco del rotore",
+"ATTIVA CONTROLLO",
+"DISATTIVA CONTROLLO",
+"CONNESSIONE…",
+"Si collega al controller del rotore (porta da Impostazioni → Rotori)",
+"Connessione al controller del rotore",
+"Ferma il rotore, scollega il controller e torna alla modalità SPENTO"
 ]

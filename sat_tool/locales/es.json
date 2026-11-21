@@ -489,5 +489,12 @@
 "Subtítulo del marco",
 "Escala de la interfaz",
 "Automática",
-"Reduce todo el programa en la misma proporción para caber en pantallas bajas sin desplazamiento. Automática: según la altura de la pantalla, nunca por debajo del 80 %. Se aplica al reabrir el programa."
+"Reduce todo el programa en la misma proporción para caber en pantallas bajas sin desplazamiento. Automática: según la altura de la pantalla, nunca por debajo del 80 %. Se aplica al reabrir el programa.",
+"Rotor apagado · clic para mostrar u ocultar el bloque del rotor",
+"ACTIVAR CONTROL",
+"DESACTIVAR CONTROL",
+"CONECTANDO…",
+"Conecta al controlador del rotor (puerto de Configuración → Rotores)",
+"Conectando al controlador del rotor",
+"Detiene el rotor, desconecta el controlador y vuelve al modo APAGADO"
 ]

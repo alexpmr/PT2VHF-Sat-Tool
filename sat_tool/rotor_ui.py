@@ -306,6 +306,7 @@ class RotorUiMixin:
 
     def rotor_save(self):
         v = self.config.values
+        was_enabled = bool(v.get("rotor_enabled"))
         v.update(rotor_enabled=self.rotor_enable.isChecked(), rotor_port=self.rotor_port.currentText().strip(),
                  rotor_baud=int(self.rotor_baud.currentText()), rotor_profile=self.rotor_model.currentData() or "g5400b",
                  rotor_az_max=self.rotor_az_max.value(), rotor_el_max=self.rotor_el_max.value(),
@@ -315,7 +316,8 @@ class RotorUiMixin:
                  rotor_min_el=self.rotor_min_el.value(), rotor_preference=self.rotor_pref.currentData() or "auto",
                  rotor_jog_step=self.rotor_jog_step.value())
         self.config.save()
-        self.rotor_bar.setVisible(bool(v["rotor_enabled"]))
+        if v["rotor_enabled"] and not was_enabled:
+            self.rotor_show_bar(True)       # habilitar o rotor abre o bloco; esconder é pelo ícone ROTOR
         for sc in getattr(self, "rotor_shortcuts", []):
             sc.setEnabled(bool(v["rotor_enabled"]))
         self.rotor_refresh_bar_title()
@@ -359,33 +361,55 @@ class RotorUiMixin:
         self.rotor_set_top("off")
 
     def rotor_set_top(self, state):
-        btn = getattr(self, "rotor_top_btn", None)
-        if btn is None:
-            return
         from .app import top_button_style
-        btn.setStyleSheet(top_button_style(self.TOP_STYLES[state]))
+        self.rotor_top_state = state
+        btn = getattr(self, "rotor_top_btn", None)
         port = str(self.rotor_cfg("rotor_port")) or "sem porta"
-        btn.setToolTip({"off": "Rotor desligado · clique para conectar o controlador",
-                        "busy": "Rotor conectando · " + port,
-                        "on": "Rotor conectado · " + port + " · clique para desconectar"}[state])
-        btn.setEnabled(state != "busy")
+        if btn is not None:
+            btn.setStyleSheet(top_button_style(self.TOP_STYLES[state]))
+            btn.setToolTip({"off": "Rotor desligado · clique para mostrar ou esconder o bloco do rotor",
+                            "busy": "Rotor conectando · " + port + " · clique para mostrar ou esconder o bloco do rotor",
+                            "on": "Rotor conectado · " + port + " · clique para mostrar ou esconder o bloco do rotor"}[state])
+        ctl = getattr(self, "rotor_control_btn", None)
+        if ctl is not None:
+            # v1.9.4: ATIVAR/DESATIVAR o controle do rotor fica dentro do bloco
+            ctl.setText({"off": "ATIVAR CONTROLE", "busy": "CONECTANDO…", "on": "DESATIVAR CONTROLE"}[state])
+            ctl.setToolTip({"off": "Conecta ao controlador do rotor (porta de Configurações → Rotores)",
+                            "busy": "Conectando ao controlador do rotor",
+                            "on": "Para o rotor, desconecta o controlador e volta ao modo DESLIGADO"}[state])
+            ctl.setStyleSheet(top_button_style(self.TOP_STYLES["on" if state == "off" else "off"])
+                              if state != "busy" else top_button_style(self.TOP_STYLES["busy"]))
+            ctl.setEnabled(state != "busy")
 
     def rotor_top_clicked(self):
-        """v1.9.4 (relato 21/11): o ícone ROTOR é liga/desliga. Com o bloco do rotor aberto, desligar fecha a
-        porta e esconde o bloco, mesmo que a conexão tenha falhado (antes, sem cabo, o 2º clique tentava conectar
-        de novo e o bloco não sumia). Desligado: liga, mostra o bloco e conecta."""
-        if self.rotor_cfg("rotor_enabled") or self.rotor.connected:
+        """v1.9.4 (pedido do operador, 21/11): o ícone ROTOR só mostra/esconde o bloco do rotor. Ativar ou
+        desativar o controle é pelo botão ATIVAR/DESATIVAR CONTROLE dentro do bloco."""
+        self.rotor_show_bar(self.rotor_bar.isHidden())
+
+    def rotor_bar_shown(self) -> bool:
+        value = self.rotor_cfg("rotor_bar_visible")
+        return bool(self.rotor_cfg("rotor_enabled")) if value is None else bool(value)
+
+    def rotor_show_bar(self, on: bool):
+        self.rotor_bar.setVisible(bool(on))
+        if self.config.values.get("rotor_bar_visible") != bool(on):
+            self.config.values["rotor_bar_visible"] = bool(on)
+            self.config.save()
+
+    def rotor_control_clicked(self):
+        """ATIVAR CONTROLE conecta (e habilita) o rotor; DESATIVAR CONTROLE para, desconecta e volta a DESLIGADO."""
+        if self.rotor.connected:
             self.rotor_set_enabled(False)
         else:
             self.rotor_toggle_connection()
 
     def rotor_set_enabled(self, on: bool):
-        """Habilita/desabilita o rotor como o "Habilitar" de Configurações → Rotores (salva e mostra/esconde a faixa)."""
+        """Habilita/desabilita o rotor como o "Habilitar" de Configurações → Rotores (o bloco continua como está)."""
         self.rotor_enable.blockSignals(True)
         self.rotor_enable.setChecked(bool(on))
         self.rotor_enable.blockSignals(False)
         if not on:
-            self.rotor_set_mode("off", "rotor desligado pelo ícone ROTOR")
+            self.rotor_set_mode("off", "controle do rotor desativado")
         self.rotor_save()
         if not on:
             self.rotor_set_top("busy" if self.rotor.connected else "off")
@@ -481,6 +505,9 @@ class RotorUiMixin:
         self.rotor_stop_btn.setMinimumWidth(96)
         self.rotor_config_btn = QPushButton("Configurar…")
         self.rotor_config_btn.setToolTip("Configurações → Rotores")
+        self.rotor_control_btn = QPushButton("ATIVAR CONTROLE")
+        self.rotor_control_btn.setMinimumWidth(150)
+        buttons.addWidget(self.rotor_control_btn)
         for w in (self.rotor_park_btn, self.rotor_stop_btn, self.rotor_config_btn):
             buttons.addWidget(w)
         btn_col.addLayout(buttons)
@@ -498,7 +525,9 @@ class RotorUiMixin:
         row.addLayout(btn_col)
         outer.addLayout(row)
         layout.addWidget(self.rotor_bar)
-        self.rotor_bar.setVisible(bool(self.rotor_cfg("rotor_enabled")))
+        self.rotor_bar.setVisible(self.rotor_bar_shown())
+        self.rotor_control_btn.clicked.connect(self.rotor_control_clicked)
+        self.rotor_set_top(getattr(self, "rotor_top_state", "off"))
         self.rotor_park_btn.clicked.connect(self.rotor_park_manual)
         self.rotor_stop_btn.clicked.connect(self.rotor_state_clicked)
         for code, b in self.rotor_mode_btns.items():
@@ -825,7 +854,7 @@ class RotorUiMixin:
             self.rotor_refresh_bar_title()
             self.rotor_connect_btn.setText("Desconectar")
             self.rotor_settings_status.setText(f"Rotor conectado · AZ {data[0]:.0f}° EL {data[1]:.0f}°")
-            self.rotor_bar.setVisible(True)
+            self.rotor_show_bar(True)
             self.rotor_set_top("on")
             # v1.9.4: conectar não arma mais o AUTOMÁTICO; o modo segue o escolhido (começa DESLIGADO)
             self.rotor_set_state_button(False)

@@ -489,5 +489,12 @@
 "Bezel subtitle",
 "Interface scale",
 "Automatic",
-"Shrinks the whole program proportionally to fit short screens without scrolling. Automatic: by screen height, never below 80%. Takes effect when the program is reopened."
+"Shrinks the whole program proportionally to fit short screens without scrolling. Automatic: by screen height, never below 80%. Takes effect when the program is reopened.",
+"Rotator off · click to show or hide the rotator panel",
+"ENABLE CONTROL",
+"DISABLE CONTROL",
+"CONNECTING…",
+"Connects to the rotator controller (port from Settings → Rotators)",
+"Connecting to the rotator controller",
+"Stops the rotator, disconnects the controller and returns to OFF mode"
 ]

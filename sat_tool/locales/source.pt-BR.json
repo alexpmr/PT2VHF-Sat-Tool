@@ -489,5 +489,12 @@
 "Subtítulo da moldura",
 "Escala da interface",
 "Automática",
-"Reduz o programa inteiro na mesma proporção para caber em telas baixas sem rolar. Automática: pela altura da tela, nunca abaixo de 80 %. Vale ao reabrir o programa."
+"Reduz o programa inteiro na mesma proporção para caber em telas baixas sem rolar. Automática: pela altura da tela, nunca abaixo de 80 %. Vale ao reabrir o programa.",
+"Rotor desligado · clique para mostrar ou esconder o bloco do rotor",
+"ATIVAR CONTROLE",
+"DESATIVAR CONTROLE",
+"CONECTANDO…",
+"Conecta ao controlador do rotor (porta de Configurações → Rotores)",
+"Conectando ao controlador do rotor",
+"Para o rotor, desconecta o controlador e volta ao modo DESLIGADO"
 ]

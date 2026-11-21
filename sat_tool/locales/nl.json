@@ -489,5 +489,12 @@
 "Ondertitel van het front",
 "Schaal van de interface",
 "Automatisch",
-"Verkleint het hele programma evenredig zodat het op lage schermen past zonder scrollen. Automatisch: op basis van de schermhoogte, nooit onder 80 %. Werkt na het opnieuw openen van het programma."
+"Verkleint het hele programma evenredig zodat het op lage schermen past zonder scrollen. Automatisch: op basis van de schermhoogte, nooit onder 80 %. Werkt na het opnieuw openen van het programma.",
+"Rotor uit · klik om het rotorblok te tonen of te verbergen",
+"BEDIENING AAN",
+"BEDIENING UIT",
+"VERBINDEN…",
+"Verbindt met de rotorbesturing (poort uit Instellingen → Rotoren)",
+"Verbinden met de rotorbesturing",
+"Stopt de rotor, verbreekt de besturing en gaat terug naar modus UIT"
 ]

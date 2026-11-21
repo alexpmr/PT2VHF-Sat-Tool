@@ -813,5 +813,13 @@
 "Zweryfikowane zdjęcie niedostępne; sprawdź u operatora/AMSAT.",
 "Zdjęcie:",
 "Zamknij",
-"Pokaż cały świat"
+"Pokaż cały świat",
+"kliknij, aby pokazać lub ukryć panel rotora",
+"Rotor łączy się",
+"WŁĄCZ STEROWANIE",
+"WYŁĄCZ STEROWANIE",
+"ŁĄCZENIE…",
+"Łączy ze sterownikiem rotora (port z Ustawienia → Rotory)",
+"Łączenie ze sterownikiem rotora",
+"Zatrzymuje rotor, rozłącza sterownik i wraca do trybu WYŁ."
 ]
