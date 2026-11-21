@@ -371,7 +371,24 @@ class RotorUiMixin:
         btn.setEnabled(state != "busy")
 
     def rotor_top_clicked(self):
-        self.rotor_toggle_connection()
+        """v1.9.4 (relato 21/11): o ícone ROTOR é liga/desliga. Com o bloco do rotor aberto, desligar fecha a
+        porta e esconde o bloco, mesmo que a conexão tenha falhado (antes, sem cabo, o 2º clique tentava conectar
+        de novo e o bloco não sumia). Desligado: liga, mostra o bloco e conecta."""
+        if self.rotor_cfg("rotor_enabled") or self.rotor.connected:
+            self.rotor_set_enabled(False)
+        else:
+            self.rotor_toggle_connection()
+
+    def rotor_set_enabled(self, on: bool):
+        """Habilita/desabilita o rotor como o "Habilitar" de Configurações → Rotores (salva e mostra/esconde a faixa)."""
+        self.rotor_enable.blockSignals(True)
+        self.rotor_enable.setChecked(bool(on))
+        self.rotor_enable.blockSignals(False)
+        if not on:
+            self.rotor_set_mode("off", "rotor desligado pelo ícone ROTOR")
+        self.rotor_save()
+        if not on:
+            self.rotor_set_top("busy" if self.rotor.connected else "off")
 
     def rotor_toggle_connection(self):
         if self.rotor.connected:
@@ -810,7 +827,7 @@ class RotorUiMixin:
             self.rotor_settings_status.setText(f"Rotor conectado · AZ {data[0]:.0f}° EL {data[1]:.0f}°")
             self.rotor_bar.setVisible(True)
             self.rotor_set_top("on")
-            self.rotor_auto = True   # conectar arma o rastreamento automático
+            # v1.9.4: conectar não arma mais o AUTOMÁTICO; o modo segue o escolhido (começa DESLIGADO)
             self.rotor_set_state_button(False)
             self.rotor_set_chips("PARADO", "")
             self.rotor_label.setText("Conectado · " + str(self.rotor_cfg("rotor_port")))
