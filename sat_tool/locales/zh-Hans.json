@@ -305,7 +305,7 @@
 "轨道遥测",
 "程序主题",
 "TLE / 轨道星历",
-"TS-2000 继续使用“操作”选项卡中的 Auto CAT。FT-817 无 SAT 模式：在同一台 FT-817 上收发时使用异频（RX 在 VFO A，TX 在 VFO B）。",
+"TS-2000 继续使用“操作”标签页的 Auto CAT。同一台电台收发：FT-847 使用 SAT 模式；ICOM IC-9700/910/9100/821 使用 SUB（接收）和 MAIN（发射）；FT-817 和 Yaesu 文本 CAT 使用异频（接收在 VFO A，发射在 VFO B）。",
 "TX（上行）",
 "TX / UPLINK\n— MHz",
 "字体大小",
@@ -451,11 +451,11 @@
 "用于 SSTV 的图像",
 "保存 SSTV 音频",
 "图像 (*.png *.jpg *.jpeg *.bmp *.gif)",
-"串口 / 波特率 (FT-817, ICOM, Kenwood)",
+"串口 / 波特率 (Yaesu, ICOM, Kenwood)",
 "ICOM 电台的 CI-V 地址（若非出厂值，请在电台或此处修改）",
-"设备自动多普勒 (FT-817/ICOM/Kenwood/rigctld) — 不触发 PTT",
+"设备自动多普勒 (Yaesu/ICOM/Kenwood/rigctld) — 不触发 PTT",
 "请先连接 FT-817、ICOM、Kenwood 或 rigctld。",
-"ICOM CI-V (IC-746, IC-910, IC-9700, IC-705, IC-7300…)",
+"ICOM CI-V（IC-9700/910/9100/821 使用 MAIN/SUB；IC-746、IC-705、IC-7300…）",
 "Kenwood 文本 CAT (TS-480、TS-590、TS-890、TS-990、无 SAT 的 TS-2000…)",
 "用于 WiSpDDE 和 Orbitron 驱动的 DDE 服务器 (Windows)",
 "在 Orbitron · Tracking · TrackingData 上发布卫星、AZ/EL、多普勒校正频率和模式。WiSpDDE 中选择 Receive DDE from Orbitron。请先关闭 Orbitron。",
@@ -496,5 +496,7 @@
 "连接中…",
 "连接转台控制器（端口见 设置 → 转台）",
 "正在连接转台控制器",
-"停止转台、断开控制器并返回关闭模式"
+"停止转台、断开控制器并返回关闭模式",
+"Yaesu FT-847（SAT 模式，5 字节 CAT）",
+"Yaesu 文本 CAT（FT-991/991A、FTDX10、FTDX101、FT-710、FT-891）"
 ]

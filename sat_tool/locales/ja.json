@@ -305,7 +305,7 @@
 "軌道テレメトリー",
 "プログラムのテーマ",
 "TLE / 軌道要素",
-"TS-2000 は運用タブの Auto CAT のままです。FT-817 は SAT モードなし：同じ FT-817 で RX と TX を行う場合はスプリット（RX は VFO A、TX は VFO B）。",
+"TS-2000 は引き続き運用タブの Auto CAT を使用します。同じ無線機で RX と TX：FT-847 は SAT モード、ICOM IC-9700/910/9100/821 は SUB（RX）と MAIN（TX）、FT-817 と Yaesu テキスト CAT はスプリット（RX は VFO A、TX は VFO B）を使用します。",
 "TX（アップリンク）",
 "TX / UPLINK\n— MHz",
 "フォントサイズ",
@@ -451,11 +451,11 @@
 "SSTV 用の画像",
 "SSTV 音声を保存",
 "画像 (*.png *.jpg *.jpeg *.bmp *.gif)",
-"シリアルポート / ボーレート (FT-817, ICOM, Kenwood)",
+"シリアルポート / ボーレート (Yaesu, ICOM, Kenwood)",
 "ICOM 無線機の CI-V アドレス（工場出荷値でない場合は無線機またはここで変更）",
-"機器の自動ドップラー (FT-817/ICOM/Kenwood/rigctld) — PTT なし",
+"機器の自動ドップラー (Yaesu/ICOM/Kenwood/rigctld) — PTT なし",
 "先に FT-817、ICOM、Kenwood または rigctld を接続してください。",
-"ICOM CI-V (IC-746, IC-910, IC-9700, IC-705, IC-7300…)",
+"ICOM CI-V（IC-9700/910/9100/821 は MAIN/SUB、IC-746、IC-705、IC-7300…）",
 "Kenwood テキスト CAT (TS-480, TS-590, TS-890, TS-990, SAT なし TS-2000…)",
 "WiSpDDE と Orbitron ドライバー用 DDE サーバー (Windows)",
 "衛星、AZ/EL、ドップラー補正周波数、モードを Orbitron · Tracking · TrackingData で公開します。WiSpDDE では Receive DDE from Orbitron。先に Orbitron を閉じてください。",
@@ -496,5 +496,7 @@
 "接続中…",
 "ローテーター制御器に接続（設定 → ローテーター のポート）",
 "ローテーター制御器に接続中",
-"ローテーターを停止し、制御器を切断してオフモードに戻します"
+"ローテーターを停止し、制御器を切断してオフモードに戻します",
+"Yaesu FT-847（SAT モード、5 バイト CAT）",
+"Yaesu テキスト CAT（FT-991/991A、FTDX10、FTDX101、FT-710、FT-891）"
 ]

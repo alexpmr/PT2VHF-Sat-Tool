@@ -305,7 +305,7 @@
 "BAHNTELEMETRIE",
 "PROGRAMMTHEMA",
 "TLE / BAHNDATEN",
-"Der TS-2000 bleibt beim Auto CAT des Tabs Betrieb. FT-817 ohne SAT-Modus: mit RX und TX am selben FT-817 wird Split verwendet (RX auf VFO A, TX auf VFO B).",
+"Der TS-2000 bleibt beim Auto-CAT im Reiter Betrieb. RX und TX am selben Gerät: Der FT-847 nutzt den SAT-Modus; ICOM IC-9700/910/9100/821 nutzen SUB (RX) und MAIN (TX); FT-817 und Yaesu-Text-CAT nutzen Split (RX auf VFO A, TX auf VFO B).",
 "TX (Uplink)",
 "TX / UPLINK\n— MHz",
 "Schriftgröße",
@@ -451,11 +451,11 @@
 "Bild für SSTV",
 "SSTV-Audio speichern",
 "Bilder (*.png *.jpg *.jpeg *.bmp *.gif)",
-"Serielle Schnittstelle / Baud (FT-817, ICOM, Kenwood)",
+"Serielle Schnittstelle / Baud (Yaesu, ICOM, Kenwood)",
 "CI-V-Adresse des ICOM-Funkgeräts (hier oder am Gerät ändern, falls nicht ab Werk)",
-"Automatischer Doppler an den Geräten (FT-817/ICOM/Kenwood/rigctld) — ohne PTT",
+"Automatischer Doppler an den Geräten (Yaesu/ICOM/Kenwood/rigctld) — ohne PTT",
 "Zuerst FT-817, ICOM, Kenwood oder rigctld verbinden.",
-"ICOM CI-V (IC-746, IC-910, IC-9700, IC-705, IC-7300…)",
+"ICOM CI-V (IC-9700/910/9100/821 mit MAIN/SUB; IC-746, IC-705, IC-7300…)",
 "Kenwood Text-CAT (TS-480, TS-590, TS-890, TS-990, TS-2000 ohne SAT…)",
 "DDE-Server für WiSpDDE und Orbitron-Treiber (Windows)",
 "Veröffentlicht Satellit, AZ/EL, Doppler-korrigierte Frequenzen und Modi unter Orbitron · Tracking · TrackingData. In WiSpDDE: Receive DDE from Orbitron. Orbitron vorher schließen.",
@@ -496,5 +496,7 @@
 "VERBINDE…",
 "Verbindet mit dem Rotor-Steuergerät (Port aus Einstellungen → Rotoren)",
 "Verbinde mit dem Rotor-Steuergerät",
-"Stoppt den Rotor, trennt das Steuergerät und wechselt in den Modus AUS"
+"Stoppt den Rotor, trennt das Steuergerät und wechselt in den Modus AUS",
+"Yaesu FT-847 (SAT-Modus, 5-Byte-CAT)",
+"Yaesu-Text-CAT (FT-991/991A, FTDX10, FTDX101, FT-710, FT-891)"
 ]

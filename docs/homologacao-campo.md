@@ -20,6 +20,10 @@ aconteceu) ou **Não testado**. Em caso de falha: aba **LOGs / CAT → "Baixar l
 - [ ] Kenwood TS-2000: frequências e modo seguem o Doppler; tecla A/B (MAIN↔SUB) e RX ONLY.
 - [ ] ICOM (CI-V) — modelo: ______ endereço CI-V: ____ — sintoniza RX/TX e o split no mesmo rádio.
 - [ ] Kenwood CAT texto (TS-480/590/890/990) — modelo: ______.
+- [ ] ICOM IC-9700/910/9100/821 com RX e TX no mesmo rádio: downlink na SUB, uplink na MAIN, modo satélite ligado,
+  Doppler do RX acompanhando durante o TX.
+- [ ] Yaesu FT-847: modo SAT ligado pelo programa; SAT RX e SAT TX acompanham o Doppler (FM e SSB invertido).
+- [ ] Yaesu FT-991/991A (CAT texto): RX no VFO-A, TX no VFO-B com o SPLIT ligado no rádio; modo do VFO-B certo.
 - [ ] WiSpDDE (Windows): "Receive DDE from Orbitron" recebe satélite e frequências.
 
 ## 4. RTL-SDR

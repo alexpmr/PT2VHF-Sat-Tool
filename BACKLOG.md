@@ -167,6 +167,21 @@
 
 ## Pendentes
 
+- **CAT para ICOM e Yaesu** (registrado em 21/11/2026, pedido do operador: "implemente CAT para icom e yaesu")
+  - Já existiam: ICOM CI-V (1.9.0, 18 modelos) e Yaesu FT-817/818/857/897 (1.4.0).
+  - **Feito (branch fix/tle-alpha5, entra na próxima versão):**
+    - ICOM IC-9700, IC-910, IC-9100, IC-820, IC-821 e IC-970 com RX e TX no mesmo rádio: **SUB = RX (downlink), MAIN =
+      TX (uplink)**, e modo satélite ligado por CI-V (16 5A) no IC-9700/910/9100. Antes o driver usava split VFO A/B,
+      que nesses rádios não cruza 145/435 MHz. O Doppler do RX continua durante o TX (full duplex). Os demais ICOM
+      seguem com o split.
+    - **Yaesu FT-847** (novo): modo SAT nativo, CAT ON antes de tudo, downlink pelos comandos SAT RX e uplink pelos
+      SAT TX; sozinho (só RX ou só TX) usa o VFO principal. 8N2, 4800/9600/57600.
+    - **Yaesu CAT texto** (novo): FT-991/991A, FTDX10, FTDX101, FT-710, FT-891 — FA/FB de 9 dígitos, MD0, leitura do
+      TX para não mexer durante o câmbio. Mesmo rádio: RX no VFO-A, TX no VFO-B; o modo do VFO-B é ajustado trocando
+      A/B (SV) só quando muda; o SPLIT é ligado pelo operador no rádio.
+    - Nenhum deles aciona PTT. Testes com rádios simulados: tests/test_v194_cat_icom_yaesu.py.
+  - Pendente: homologar com os rádios reais (docs/homologacao-campo.md, item 3). FT-736R continua só pelo rigctld.
+
 - **BUG · OTA 1.9.2 → 1.9.3: baixou, fechou o programa e não instalou nem abriu o novo** (registrado em 21/11/2026, relato do operador)
   - O atualizador (scripts/apply-update.ps1) não mudou da 1.9.1 para cá e grava cada etapa; mesmo em falha ele reabre
     o programa. Como nada abriu, ou o atualizador não chegou a rodar, ou parou antes do fim, ou o programa novo abriu

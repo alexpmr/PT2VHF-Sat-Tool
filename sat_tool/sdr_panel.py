@@ -350,7 +350,7 @@ class SdrPanel(QWidget):
         self.ft_port = QComboBox(); self.ft_port.setEditable(True)
         self.ft_baud = QComboBox(); [self.ft_baud.addItem(b) for b in ("1200", "4800", "9600", "19200", "38400", "57600", "115200")]
         self.ft_baud.setCurrentText(str(self.cfg.get("ft817_baud", "9600")))
-        g.addWidget(QLabel("Porta serial / baud (FT-817, ICOM, Kenwood)"), 2, 0); g.addWidget(self.ft_port, 2, 1); g.addWidget(self.ft_baud, 2, 2)
+        g.addWidget(QLabel("Porta serial / baud (Yaesu, ICOM, Kenwood)"), 2, 0); g.addWidget(self.ft_port, 2, 1); g.addWidget(self.ft_baud, 2, 2)
         # v1.9.0: ICOM CI-V — modelo define o endereço de fábrica (o mesmo xx da linha CAT do manual)
         self.icom_model = QComboBox()
         for model, address in rigs.ICOM_ADDRESSES.items():
@@ -363,11 +363,12 @@ class SdrPanel(QWidget):
         self.rig_connect = QPushButton("Conectar equipamentos")
         self.rig_connect.clicked.connect(self.connect_rigs)
         g.addWidget(self.rig_connect, 4, 0)
-        self.rig_doppler = QCheckBox("Doppler automático nos equipamentos (FT-817/ICOM/Kenwood/rigctld) — sem PTT")
+        self.rig_doppler = QCheckBox("Doppler automático nos equipamentos (Yaesu/ICOM/Kenwood/rigctld) — sem PTT")
         self.rig_doppler.toggled.connect(self.arm_rig_doppler)
         g.addWidget(self.rig_doppler, 4, 1, 1, 3)
-        self.rig_status = QLabel("TS-2000 continua com o Auto CAT da aba Operação. FT-817 sem modo SAT: "
-                                 "com RX e TX no mesmo FT-817 usa split (RX no VFO A, TX no VFO B).")
+        self.rig_status = QLabel("TS-2000 continua com o Auto CAT da aba Operação. RX e TX no mesmo rádio: "
+                                 "FT-847 usa o modo SAT; ICOM IC-9700/910/9100/821 usam SUB (RX) e MAIN (TX); "
+                                 "FT-817 e Yaesu CAT texto usam split (RX no VFO A, TX no VFO B).")
         self.rig_status.setWordWrap(True); self.rig_status.setStyleSheet("color:#a8cee0;font-size:11px")
         g.addWidget(self.rig_status, 5, 0, 1, 4)
         self.rtl_tcp = QLineEdit(str(self.cfg.get("rtl_tcp", "")))
@@ -949,6 +950,12 @@ class SdrPanel(QWidget):
                 if kind == "FT-817":
                     rig = rigs.FT817(self.w.log)
                     rig.connect(self.cfg["ft817_port"], self.cfg["ft817_baud"])
+                elif kind == "FT-847":
+                    rig = rigs.FT847(self.w.log)
+                    rig.connect(self.cfg["ft817_port"], self.cfg["ft817_baud"])
+                elif kind == "YAESU":
+                    rig = rigs.YaesuText(self.w.log)
+                    rig.connect(self.cfg["ft817_port"], self.cfg["ft817_baud"])
                 elif kind == "ICOM":
                     rig = rigs.Icom(self.w.log, int(self.cfg.get("icom_address", rigs.ICOM_ADDRESSES["IC-746"])))
                     rig.connect(self.cfg["ft817_port"], self.cfg["ft817_baud"])
@@ -965,6 +972,17 @@ class SdrPanel(QWidget):
                 msgs.append(f"{role.upper()}: {rig.name} conectado")
             except Exception as exc:
                 msgs.append(f"{role.upper()}: falha {kind}: {exc}")
+        # v1.9.4: mesmo rádio no RX e no TX → MAIN/SUB (ICOM), modo SAT (FT-847) ou VFO-B (Yaesu texto)
+        same = self.rx_rig is not None and self.rx_rig is self.tx_rig
+        for rig in {id(r): r for r in (self.rx_rig, self.tx_rig) if r}.values():
+            if hasattr(rig, "use_same_rig"):
+                rig.use_same_rig(same)
+        if same and getattr(self.rx_rig, "dual_band", False):
+            msgs.append("RX na SUB, TX na MAIN")
+        elif same and isinstance(self.rx_rig, rigs.FT847):
+            msgs.append("modo SAT: RX = SAT RX, TX = SAT TX")
+        elif same and isinstance(self.rx_rig, rigs.YaesuText):
+            msgs.append("RX no VFO-A, TX no VFO-B: ligue o SPLIT no rádio")
         self.rig_status.setText(" · ".join(msgs) or "Nenhum equipamento externo a conectar (TS-2000/SDR já tratados).")
         self.dispatch.reset()
 
