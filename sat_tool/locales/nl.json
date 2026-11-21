@@ -486,5 +486,8 @@
 "Radiofront (realistisch paneel)",
 "Tekent het display in een radiopaneel met toetsen, leds en knoppen",
 "Label van het front",
-"Ondertitel van het front"
+"Ondertitel van het front",
+"Schaal van de interface",
+"Automatisch",
+"Verkleint het hele programma evenredig zodat het op lage schermen past zonder scrollen. Automatisch: op basis van de schermhoogte, nooit onder 80 %. Werkt na het opnieuw openen van het programma."
 ]

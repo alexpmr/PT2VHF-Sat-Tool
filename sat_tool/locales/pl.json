@@ -486,5 +486,8 @@
 "Ramka radiostacji (realistyczny panel)",
 "Rysuje wyświetlacz w panelu radiostacji z klawiszami, diodami i pokrętłami",
 "Etykieta ramki",
-"Podtytuł ramki"
+"Podtytuł ramki",
+"Skala interfejsu",
+"Automatyczna",
+"Zmniejsza cały program proporcjonalnie, aby mieścił się na niskich ekranach bez przewijania. Automatyczna: według wysokości ekranu, nigdy poniżej 80 %. Działa po ponownym uruchomieniu programu."
 ]

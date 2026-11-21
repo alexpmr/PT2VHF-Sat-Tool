@@ -271,22 +271,67 @@ class MainWindow(RotorUiMixin, QMainWindow):
             sc.activated.connect(func)
             self.display_shortcuts.append(sc)
 
+    def show_fitted(self):
+        """v1.9.2: abre do tamanho da tela quando ela é menor que o tamanho padrão (antes passava da borda)."""
+        screen=QApplication.primaryScreen()
+        avail=screen.availableGeometry() if screen is not None else None
+        if avail is not None and (avail.width()<self.width()+16 or avail.height()<self.height()+40):
+            self.showMaximized()
+        else:
+            self.show()
+        QTimer.singleShot(2500,self.check_ui_scale)
+
+    def check_ui_scale(self):
+        """Se a aba Operação ainda rola com a janela maximizada, guarda o fator que faz caber (vale ao reabrir)."""
+        from . import ui_scale
+        c=self.config.values
+        if c.get("ui_scale","auto") not in ("auto","",None):
+            return
+        screen=self.screen() if hasattr(self,"screen") else QApplication.primaryScreen()
+        if screen is None or not hasattr(self,"operation_scroll"):
+            return
+        learned=ui_scale.learn_from_window(self,self.operation_scroll,screen.availableGeometry().height())
+        if learned:
+            c["ui_scale_learned"]=learned
+            self.config.save()
+            self.log(f"Escala da interface: a tela pede {learned['scale']*100:.0f} % para caber sem rolar; "
+                     "vale na próxima abertura (Configurações → Tema → Escala da interface)")
+
     def show_official_site_notice(self):
-        """Boas-vindas: banner "Powered by www.PT2VHF.com" (v1.7.2), clicável, com link e botão Fechar."""
-        from .qt_compat import QDialog, QDialogButtonBox
+        """Boas-vindas: banner "Powered by www.PT2VHF.com" (v1.7.2), clicável, com link e botão Fechar.
+
+        v1.9.2: era um QDialog (janela própria, com barra de título, aparecendo como outro programa por cima).
+        Agora é uma camada dentro da janela principal: fundo escurecido sobre o programa e o cartão no centro;
+        acompanha a janela ao mover/redimensionar e some sozinho no fim da contagem (ou Fechar / Esc / clique fora).
+        """
+        from .qt_compat import QShortcut, QKeySequence
         try:
             from PySide6.QtGui import QDesktopServices
+            from PySide6.QtWidgets import QFrame
         except ImportError:  # PySide2
             from PySide2.QtGui import QDesktopServices
+            from PySide2.QtWidgets import QFrame
+        old = getattr(self, 'welcome_overlay', None)
+        if old is not None:
+            old.close_welcome()
         url = 'https://www.pt2vhf.com'
-        dialog = QDialog(self)
-        dialog.setWindowTitle('PT2VHF Sat Tool')
-        layout = QVBoxLayout(dialog)
+        overlay = QWidget(self)
+        overlay.setObjectName('welcomeOverlay')
+        overlay.setAttribute(Qt.WA_StyledBackground, True)
+        overlay.setStyleSheet('#welcomeOverlay{background:rgba(4,10,18,170)}')
+        outer = QVBoxLayout(overlay)
+        outer.setAlignment(Qt.AlignCenter)
+        card = QFrame(overlay)
+        card.setObjectName('welcomeCard')
+        card.setStyleSheet('#welcomeCard{background:#0f1c2c;border:1px solid #2c4a6b;border-radius:10px}')
+        outer.addWidget(card, 0, Qt.AlignCenter)
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(14, 14, 14, 10)
         pix = QPixmap(str(branding_asset('welcome-banner.jpg')))
         if not pix.isNull():
-            screen = QApplication.primaryScreen().availableGeometry() if QApplication.primaryScreen() else None
-            width = min(760, int(screen.width() * 0.8)) if screen else 760
-            dpr = dialog.devicePixelRatioF()
+            avail = self.width() or 900
+            width = max(320, min(760, int(avail * 0.8)))
+            dpr = overlay.devicePixelRatioF()
             pix = pix.scaledToWidth(int(width * dpr), Qt.SmoothTransformation)
             pix.setDevicePixelRatio(dpr)
             banner = QLabel()
@@ -302,10 +347,8 @@ class MainWindow(RotorUiMixin, QMainWindow):
             layout.addWidget(title)
         link = QLabel(f'<a href="{url}" style="color:#6cc7ff;font-weight:700">www.PT2VHF.com</a>')
         link.setOpenExternalLinks(True)
-        buttons = QDialogButtonBox()
-        close = buttons.addButton('Fechar', QDialogButtonBox.RejectRole)
-        close.setDefault(True)
-        buttons.rejected.connect(dialog.reject)
+        close = QPushButton('Fechar')
+        close.setObjectName('welcomeClose')
         # v1.7.2: fica 10 s na tela, com contagem regressiva discreta embaixo, e fecha sozinha
         countdown = QLabel()
         countdown.setObjectName('welcomeCountdown')
@@ -317,28 +360,49 @@ class MainWindow(RotorUiMixin, QMainWindow):
         bar.setStyleSheet('QProgressBar{background:#1c3049;border:0;border-radius:2px}'
                           'QProgressBar::chunk{background:#f08a24;border-radius:2px}')
         left = {'s': WELCOME_SECONDS}
+        timer = QTimer(overlay)
+
+        def close_welcome():
+            timer.stop()
+            if getattr(self, 'welcome_overlay', None) is overlay:
+                self.welcome_overlay = None
+            overlay.hide()
+            overlay.deleteLater()
 
         def tick():
             countdown.setText(f"\u23f1 {left['s']} s")
             bar.setValue(left['s'])
             if left['s'] <= 0:
-                timer.stop()
-                dialog.accept()
+                close_welcome()
+                return
             left['s'] -= 1
 
-        timer = QTimer(dialog)
         timer.timeout.connect(tick)
-        tick()
-        timer.start(1000)
-        dialog.finished.connect(lambda *_: timer.stop())
+        close.clicked.connect(close_welcome)
+        # clique no fundo escurecido (fora do cartão) também fecha
+        overlay.mousePressEvent = lambda event: close_welcome()
+        card.mousePressEvent = lambda event: event.accept()
+        esc = QShortcut(QKeySequence('Esc'), overlay)
+        esc.activated.connect(close_welcome)
+        overlay.close_welcome = close_welcome
         row = QHBoxLayout()
         row.addWidget(link)
         row.addStretch(1)
         row.addWidget(bar)
         row.addWidget(countdown)
-        row.addWidget(buttons)
+        row.addWidget(close)
         layout.addLayout(row)
-        qt_exec(dialog)
+        self.welcome_overlay = overlay
+        if not getattr(self, '_welcome_filter', False):
+            self.installEventFilter(self)
+            self._welcome_filter = True
+        overlay.setGeometry(self.rect())
+        overlay.show()
+        overlay.raise_()
+        close.setFocus()
+        tick()
+        timer.start(1000)
+        return overlay
 
     def log(self,message):
         """Qt widgets may only be modified from the GUI thread.
@@ -2797,10 +2861,22 @@ class MainWindow(RotorUiMixin, QMainWindow):
             w=QDoubleSpinBox();w.setRange(lo,hi);w.setDecimals(0);w.setSingleStep(5 if hi>50 else 1);w.setSuffix(suffix);return w
         self.theme_brightness=spin(50,150," %");self.theme_contrast=spin(50,160," %")
         self.theme_saturation=spin(0,150," %");self.theme_font=spin(9,18," px")
+        from . import ui_scale
+        self.ui_scale_combo=QComboBox()
+        for value,name in ui_scale.CHOICES:
+            self.ui_scale_combo.addItem(name,value)
+        current=c.get("ui_scale","auto")
+        idx=next((i for i in range(self.ui_scale_combo.count())
+                  if str(self.ui_scale_combo.itemData(i))==str(current)),0)
+        self.ui_scale_combo.setCurrentIndex(idx)
+        self.ui_scale_combo.setToolTip("Reduz o programa inteiro na mesma proporção para caber em telas baixas sem rolar. "
+                                       "Automática: pela altura da tela, nunca abaixo de 80 %. Vale ao reabrir o programa.")
+        self.ui_scale_combo.currentIndexChanged.connect(self.change_ui_scale)
         self.theme_follow_display=QCheckBox("Display acompanha o brilho")
         self.theme_follow_map=QCheckBox("Mapa acompanha o brilho")
         rows=(("Tema",self.theme_preset),("Cor de destaque",self.theme_accent),("Brilho",self.theme_brightness),
-              ("Contraste",self.theme_contrast),("Saturação",self.theme_saturation),("Tamanho da fonte",self.theme_font))
+              ("Contraste",self.theme_contrast),("Saturação",self.theme_saturation),("Tamanho da fonte",self.theme_font),
+              ("Escala da interface",self.ui_scale_combo))
         for i,(txt,w) in enumerate(rows):
             grid.addWidget(label(txt),i,0);grid.addWidget(w,i,1)
         bv.addLayout(grid)
@@ -2820,6 +2896,16 @@ class MainWindow(RotorUiMixin, QMainWindow):
         for w in (self.theme_follow_display,self.theme_follow_map):
             w.toggled.connect(self.change_theme)
         self.theme_reset.clicked.connect(self.reset_theme)
+
+    def change_ui_scale(self,*_):
+        from . import ui_scale
+        value=self.ui_scale_combo.currentData()
+        self.config.values["ui_scale"]=value
+        if value!="auto":
+            self.config.values["ui_scale_learned"]={}
+        self.config.save()
+        self.theme_status.setText(f"Escala da interface: {self.ui_scale_combo.currentText()} (agora "
+                                  f"{ui_scale.current_scale()*100:.0f} %). Vale ao reabrir o programa.")
 
     def theme_options(self):
         from .appearance import DEFAULTS
@@ -3782,6 +3868,8 @@ class MainWindow(RotorUiMixin, QMainWindow):
             from PySide6.QtCore import QEvent
         except ImportError:
             from PySide2.QtCore import QEvent
+        if obj is self and event.type()==QEvent.Resize and getattr(self,"welcome_overlay",None) is not None:
+            self.welcome_overlay.setGeometry(self.rect())
         if obj is getattr(getattr(self,"pass_table",None),"viewport",lambda:None)() and event.type()==QEvent.Resize:
             QTimer.singleShot(0,self.fit_pass_columns)
         return super().eventFilter(obj,event)
@@ -5042,6 +5130,12 @@ def _single_instance_mutex():
 
 
 def main():
+    # v1.9.2: ajuste proporcional (telas baixas sem rolagem) precisa ser definido antes da QApplication
+    try:
+        from . import ui_scale
+        ui_scale.apply_before_qt(Config().values)
+    except Exception:
+        pass
     app=QApplication(sys.argv)
     app.setStyle('Fusion')
     app.setStyleSheet(STYLE)
@@ -5054,7 +5148,7 @@ def main():
     except Exception:
         pass
     window=MainWindow()
-    window.show()
+    window.show_fitted()
     QTimer.singleShot(2500,window.show_last_update_result)
     code=qt_exec(app)
     del mutex

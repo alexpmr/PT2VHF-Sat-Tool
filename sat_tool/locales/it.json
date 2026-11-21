@@ -486,5 +486,8 @@
 "Cornice radio (pannello realistico)",
 "Disegna il display dentro un pannello radio con tasti, LED e manopole",
 "Etichetta della cornice",
-"Sottotitolo della cornice"
+"Sottotitolo della cornice",
+"Scala dell'interfaccia",
+"Automatica",
+"Riduce l'intero programma in proporzione per stare negli schermi bassi senza scorrere. Automatica: in base all'altezza dello schermo, mai sotto l'80 %. Vale alla riapertura del programma."
 ]

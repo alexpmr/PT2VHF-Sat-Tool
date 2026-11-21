@@ -43,6 +43,7 @@ DEFAULTS = {
     "web_controls": False, "web_pin_hash": "", "web_pin_salt": "", "web_session_hours": 8,
     "language": "", "frequency_style": "radio10",
     "gps_port": "", "gps_baud": 9600,
+    "ui_scale": "auto", "ui_scale_learned": {},
     "trail_period": "2 h", "trail_direction": "Ambos", "trail_ambos_v160_migrated": True, "trail_custom_hours": 3.0,
 }
 

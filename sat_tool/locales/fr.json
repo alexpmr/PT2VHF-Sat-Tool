@@ -486,5 +486,8 @@
 "Façade de radio (panneau réaliste)",
 "Dessine l’afficheur dans une façade de radio avec touches, LED et boutons",
 "Étiquette de la façade",
-"Sous-titre de la façade"
+"Sous-titre de la façade",
+"Échelle de l'interface",
+"Automatique",
+"Réduit tout le programme proportionnellement pour tenir sur les écrans bas sans défilement. Automatique : selon la hauteur de l'écran, jamais sous 80 %. Prend effet à la réouverture du programme."
 ]

@@ -246,6 +246,23 @@
     movimento (nem estacionar) e os gauges seguem lendo a posição; PARAR (Esc/F12) em qualquer modo, em AUTOMÁTICO
     passa a MANUAL; sempre DESLIGADO ao abrir. Testes em tests/test_v192_rotor_modes.py.
 
+- **Tela principal sem rolagem em resoluções menores (PU2MUS)** (registrado em 18/11/2026)
+  - Relato: "os problemas de resolução continuam, é necessário rolar a tela para as informações mais importantes":
+    mapa-múndi, lista de passagens e telemetria. A réplica do painel do rádio é boa porque mostra as frequências mudando.
+  - Situação atual (1366×768): o display ocupa ~190 px, o mapa fica sem altura e a telemetria sai da tela (barra de rolagem).
+  - Decisão do operador (18/11): manter o layout atual e fazer ajuste proporcional (mockups descartados).
+  - Feito (1.9.3): sat_tool/ui_scale.py. Antes de abrir, o programa mede a altura útil da tela (Windows) e
+    reduz tudo na mesma proporção com QT_SCALE_FACTOR (fontes, display, botões, mapa), entre 80 % e 100 %;
+    a aba Operação precisa de ~880 px a 100 %. Em 1366×768 com barra de tarefas: 82 %, sem rolagem.
+    Se a janela maximizada ainda rolar (outros sistemas, fonte diferente), guarda o fator que cabe e usa na próxima
+    abertura. Configurações → Tema → "Escala da interface": Automática / 100 / 95 / 90 / 85 / 80 % (vale ao reabrir).
+    A janela abre maximizada quando a tela é menor que o tamanho padrão. Teste tests/test_v192_ui_scale.py.
+- **Splash como parte do programa, não uma segunda janela** (registrado em 15/11/2026, pedido do operador)
+  - O banner "Powered by www.PT2VHF.com" abria num QDialog próprio (barra de título, parecia outro aplicativo por cima).
+  - Feito (1.9.3): camada dentro da janela principal, com fundo escurecido e o cartão no centro; acompanha
+    a janela ao redimensionar, não bloqueia o programa e fecha sozinha em 10 s (ou Fechar, Esc, clique fora).
+- **Versão 1.9.3 publicada em 21/11/2026** (pedido "gere versão nova com o backlog resolvido")
+  - Ajuste proporcional da tela (PU2MUS), abertura dentro da janela e debug RX mais robusto.
 - **Versão 1.9.1 publicada em 14/11/2026** (pedido "gere uma versão completa para windows e publique no site")
   - Correção do OTA, áudio RX contínuo, debug do áudio RX e AFSK sem reinício.
 - **RX: interrupção do áudio a cada 2 segundos** (registrado em 14/11/2026, relato do operador)
@@ -264,7 +281,7 @@
 - **SAT Tool fechando do nada** (registrado em 14/11/2026, relato do operador, provavelmente na 1.9.0)
   - Aguardando o log: aba "LOGs / CAT" → "Baixar log completo (ZIP)" depois de reabrir, ou a pasta
     %LOCALAPPDATA%\PT2VHF\SatTool\diagnostics (native-crash.log e events.log, com as versões .previous).
-  - Pendente: analisar o log e corrigir.
+  - **Resolvido** (confirmado pelo operador em 17/11/2026), sem precisar dos logs.
 - **OTA: baixa, fecha o app e nada mais acontece** (registrado em 14/11/2026, relato do operador ao atualizar para 1.9.0)
   - Causa: o atualizador (apply-update.ps1) é aberto pelo app, portanto é filho dele; ao listar a árvore de
     processos do app para esperar o fechamento, ele se incluía, esperava a si mesmo 90 s e se encerrava com

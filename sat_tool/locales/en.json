@@ -486,5 +486,8 @@
 "Radio bezel (realistic panel)",
 "Draws the display inside a radio panel with keys, LEDs and knobs",
 "Bezel label",
-"Bezel subtitle"
+"Bezel subtitle",
+"Interface scale",
+"Automatic",
+"Shrinks the whole program proportionally to fit short screens without scrolling. Automatic: by screen height, never below 80%. Takes effect when the program is reopened."
 ]

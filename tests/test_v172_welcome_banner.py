@@ -33,20 +33,29 @@ def test_welcome_closes_itself_after_countdown():
         gui.MainWindow.check_for_updates=lambda self:None
         assert gui.WELCOME_SECONDS == 10
         gui.WELCOME_SECONDS = 2
-        seen = []
-        def look():
-            m = gui.QApplication.activeModalWidget()
-            if m is None:
-                gui.QTimer.singleShot(100, look); return
-            seen.append(m.findChild(gui.QLabel, 'welcomeCountdown').text())
         with tempfile.TemporaryDirectory() as d:
             gui.Config=lambda:Config(Path(d))
             app=gui.QApplication([])
-            w=gui.MainWindow()
-            gui.QTimer.singleShot(100, look)
-            t=time.monotonic(); w.show_official_site_notice(); dt=time.monotonic()-t
-            assert 1.5 < dt < 4, dt          # fechou sozinha ao fim da contagem
-            assert seen and seen[0].endswith('2 s'), seen
+            w=gui.MainWindow(); w.resize(1000,700); w.show(); app.processEvents()
+            t=time.monotonic(); ov=w.show_official_site_notice(); dt=time.monotonic()-t
+            assert dt < 1, dt                                    # não bloqueia o programa
+            # v1.9.2: parte da janela principal, não uma segunda janela por cima
+            assert not ov.isWindow() and ov.parent() is w and ov.isVisible()
+            assert gui.QApplication.activeModalWidget() is None
+            assert [x for x in gui.QApplication.topLevelWidgets() if x.isVisible() and x is not w and x.isWindow()
+                    and x.windowTitle()=='PT2VHF Sat Tool'] == []
+            assert ov.geometry() == w.rect()
+            w.resize(1100,760); app.processEvents()
+            assert ov.geometry() == w.rect()                    # acompanha a janela
+            assert ov.findChild(gui.QLabel,'welcomeCountdown').text().endswith('2 s')
+            end=time.monotonic()+5
+            while w.welcome_overlay is not None and time.monotonic()<end:
+                app.processEvents(); time.sleep(0.05)
+            assert w.welcome_overlay is None                     # fechou sozinho ao fim da contagem
+            assert 1.5 < time.monotonic()-t < 4.5
+            ov2=w.show_official_site_notice()
+            ov2.findChild(gui.QPushButton,'welcomeClose').click(); app.processEvents()
+            assert w.welcome_overlay is None
     ''')
     r = subprocess.run([sys.executable, "-c", source], capture_output=True, text=True, timeout=120,
                        env={**os.environ, "QT_QPA_PLATFORM": "offscreen", "LANG": "pt_BR.UTF-8"})

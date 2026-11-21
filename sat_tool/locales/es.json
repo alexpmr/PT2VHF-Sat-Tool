@@ -486,5 +486,8 @@
 "Marco de radio (panel realista)",
 "Dibuja el display dentro de un panel de radio con teclas, LEDs y perillas",
 "Etiqueta del marco",
-"Subtítulo del marco"
+"Subtítulo del marco",
+"Escala de la interfaz",
+"Automática",
+"Reduce todo el programa en la misma proporción para caber en pantallas bajas sin desplazamiento. Automática: según la altura de la pantalla, nunca por debajo del 80 %. Se aplica al reabrir el programa."
 ]

@@ -486,5 +486,8 @@
 "Funkgeräte-Rahmen (realistisches Panel)",
 "Zeichnet das Display in ein Funkgeräte-Panel mit Tasten, LEDs und Knöpfen",
 "Rahmenbeschriftung",
-"Rahmen-Untertitel"
+"Rahmen-Untertitel",
+"Oberflächenskalierung",
+"Automatisch",
+"Verkleinert das ganze Programm proportional, damit es auf niedrige Bildschirme ohne Scrollen passt. Automatisch: nach Bildschirmhöhe, nie unter 80 %. Wirkt nach dem Neustart des Programms."
 ]
