@@ -230,8 +230,22 @@ def age_hours(data_dir: Path, name: str) -> float | None:
     return (datetime.now(timezone.utc).timestamp() - file.stat().st_mtime) / 3600
 
 
+_ALPHA5 = "ABCDEFGHJKLMNPQRSTUVWXYZ"   # sem I e O, como no padrão Alpha-5 do Space Force
+
+
+def tle_catalog_number(field: str) -> int | None:
+    """Número de catálogo do TLE, inclusive Alpha-5 ("A0084" → 100084, "Z9999" → 339999). None se inválido."""
+    field = field.strip()
+    if field.isdigit():
+        return int(field)
+    if len(field) == 5 and field[0] in _ALPHA5 and field[1:].isdigit():
+        return (_ALPHA5.index(field[0]) + 10) * 10000 + int(field[1:])
+    return None
+
+
 def parse_tle(text: str) -> list[dict]:
-    """Parse 3LE and 2LE feeds; TLE supports five-digit catalog numbers only."""
+    """Parse 3LE and 2LE feeds. v1.9.4: aceita Alpha-5 (catálogo acima de 99999); uma linha inválida é
+    pulada em vez de derrubar a fonte inteira (antes um "A0084" no satonline.txt da R4UAB derrubava tudo)."""
     lines = [l.strip() for l in text.splitlines() if l.strip()]
     result = []
     i = 0
@@ -245,7 +259,10 @@ def parse_tle(text: str) -> list[dict]:
         one,two=lines[i:i+2]
         if (one.startswith("1 ") and two.startswith("2 ") and len(one)>=69
             and len(two)>=69 and one[2:7]==two[2:7]):
-            norad=int(one[2:7])
+            norad=tle_catalog_number(one[2:7])
+            if norad is None:
+                i+=2
+                continue
             result.append({"NORAD_CAT_ID":norad,"OBJECT_NAME":name or f"NORAD {norad}",
                            "TLE_LINE1":one,"TLE_LINE2":two})
             i+=2

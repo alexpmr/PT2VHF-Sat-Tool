@@ -167,6 +167,11 @@
 
 ## Pendentes
 
+- **Roteiro de homologação em campo** (registrado em 21/11/2026, pedido "faça o que puder e eu depois irei indicar o
+  que funcionou de fato"): docs/homologacao-campo.md reúne os testes que dependem do equipamento real (OTA, rotor
+  ERC-M, CAT ICOM/Kenwood, WiSpDDE, RTL-SDR, escala da tela, 2 monitores, painel Web, idiomas, LUČA-1). Aguardando o
+  retorno do operador item a item.
+
 - **TLE em segundo plano totalmente transparente** (registrado em 13/11/2026)
   - Pedido: "baixar os TLEs em background, sem mostrar na tela ao iniciar, de forma transparente".
   - **Feito (1.9.0):** o download da abertura não escreve mais nada na linha de resumo (nem progresso,
@@ -200,6 +205,12 @@
 - **Satélite novo de SSTV LUČA-1 (RS90S), ainda fora do CelesTrak** (registrado em 13/11/2026)
   - Aparece pelas fontes AMSAT/R4UAB assim que uma delas o publicar (o ambiente de desenvolvimento não acessa
     esses sites para conferir). Pendente: confirmar no programa e, se o Alex quiser, deixá-lo marcado por padrão.
+  - **Conferido em 21/11/2026:** o LUČA-1 está no satonline.txt da R4UAB (LUCA-1 (RS90S), NORAD 67287), mas **não
+    aparecia no programa por um defeito**: a R4UAB passou a publicar satélites com catálogo acima de 99999 no
+    formato Alpha-5 ("A0084" = 100084, ex.: RASSVET-3) e o leitor de TLE quebrava nessa linha, derrubando a fonte
+    R4UAB inteira a cada atualização. **Corrigido (branch fix/tle-alpha5, entra na próxima versão):** leitor aceita
+    Alpha-5 e pula linha inválida sem perder o resto (376 satélites lidos do arquivo real). Teste
+    tests/test_v194_tle_alpha5.py. Pendente do operador: deixar o LUČA-1 marcado por padrão ou não.
 - **Botão PREVER: passagens das próximas 24 h de todos os satélites selecionados** (registrado em 13/11/2026)
   - Pedido do PU2MUS: lista única das passagens de 24 h, com elevação mínima configurável, sem ter que
     consultar satélite por satélite. **Feito (1.9.0):** botão PREVER ao lado de "Mostrar no mapa": 1 a 72 h,
