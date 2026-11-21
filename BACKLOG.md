@@ -251,7 +251,7 @@
     mapa-múndi, lista de passagens e telemetria. A réplica do painel do rádio é boa porque mostra as frequências mudando.
   - Situação atual (1366×768): o display ocupa ~190 px, o mapa fica sem altura e a telemetria sai da tela (barra de rolagem).
   - Decisão do operador (18/11): manter o layout atual e fazer ajuste proporcional (mockups descartados).
-  - Feito (próxima versão): sat_tool/ui_scale.py. Antes de abrir, o programa mede a altura útil da tela (Windows) e
+  - Feito (1.9.3): sat_tool/ui_scale.py. Antes de abrir, o programa mede a altura útil da tela (Windows) e
     reduz tudo na mesma proporção com QT_SCALE_FACTOR (fontes, display, botões, mapa), entre 80 % e 100 %;
     a aba Operação precisa de ~880 px a 100 %. Em 1366×768 com barra de tarefas: 82 %, sem rolagem.
     Se a janela maximizada ainda rolar (outros sistemas, fonte diferente), guarda o fator que cabe e usa na próxima
@@ -259,8 +259,10 @@
     A janela abre maximizada quando a tela é menor que o tamanho padrão. Teste tests/test_v192_ui_scale.py.
 - **Splash como parte do programa, não uma segunda janela** (registrado em 15/11/2026, pedido do operador)
   - O banner "Powered by www.PT2VHF.com" abria num QDialog próprio (barra de título, parecia outro aplicativo por cima).
-  - Feito (próxima versão): camada dentro da janela principal, com fundo escurecido e o cartão no centro; acompanha
+  - Feito (1.9.3): camada dentro da janela principal, com fundo escurecido e o cartão no centro; acompanha
     a janela ao redimensionar, não bloqueia o programa e fecha sozinha em 10 s (ou Fechar, Esc, clique fora).
+- **Versão 1.9.3 publicada em 21/11/2026** (pedido "gere versão nova com o backlog resolvido")
+  - Ajuste proporcional da tela (PU2MUS), abertura dentro da janela e debug RX mais robusto.
 - **Versão 1.9.1 publicada em 14/11/2026** (pedido "gere uma versão completa para windows e publique no site")
   - Correção do OTA, áudio RX contínuo, debug do áudio RX e AFSK sem reinício.
 - **RX: interrupção do áudio a cada 2 segundos** (registrado em 14/11/2026, relato do operador)
