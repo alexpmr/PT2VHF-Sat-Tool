@@ -167,6 +167,18 @@
 
 ## Pendentes
 
+- **BUG · OTA 1.9.2 → 1.9.3: baixou, fechou o programa e não instalou nem abriu o novo** (registrado em 21/11/2026, relato do operador)
+  - O atualizador (scripts/apply-update.ps1) não mudou da 1.9.1 para cá e grava cada etapa; mesmo em falha ele reabre
+    o programa. Como nada abriu, ou o atualizador não chegou a rodar, ou parou antes do fim, ou o programa novo abriu
+    e fechou logo em seguida.
+  - Diferença do teste do CI: lá o "programa" é um script falso; no uso real é o Sat Tool, que pode demorar a sair
+    (ex.: RTL-SDR ligado, leitura contínua da 1.9.1) — nesse caso o atualizador espera 90 s + 15 s e só então reabre.
+  - Aguardando do operador: %TEMP%\PT2VHF-Sat-Tool-update-helper.log, %TEMP%\PT2VHF-Sat-Tool-setup.log,
+    %TEMP%\PT2VHF-Sat-Tool-update-error.txt (se existir); edição (Setup ou Portátil); se o RTL-SDR estava ligado;
+    e qual versão aparece em Sobre ao abrir o programa agora.
+  - Próximo passo: com o log, corrigir; e trocar o teste do CI para atualizar o programa real instalado
+    (não só o script falso), para pegar esse tipo de falha antes de publicar.
+
 - **BUG · Ícone ROTOR abre o bloco do rotor, mas o 2º clique não o esconde** (registrado em 21/11/2026, relato do operador)
   - Causa: o ícone só alternava a conexão. Sem cabo (conexão falhando) ou desconectado, o 2º clique tentava conectar
     de novo e o bloco continuava aberto, porque o rotor seguia habilitado. Além disso, conectar armava o AUTOMÁTICO,
