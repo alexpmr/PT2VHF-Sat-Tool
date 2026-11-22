@@ -30,7 +30,12 @@ O sufixo `Win11-x64` é mantido para compatibilidade com o atualizador e também
 4. Se outro computador/celular não alcançar a página, use **Liberar no firewall do Windows** (regra só para a porta, perfil Privado, só a rede local; o Windows pede confirmação) e confira na lista **Endereços desta máquina** o IPv4 da mesma rede do outro aparelho. Não configure redirecionamento de porta no roteador.
 5. Opcional: **Permitir controle pela rede (sem PTT)** com **PIN da estação** (4 a 12 dígitos). O navegador passa a poder escolher satélite, ligar/desligar Auto CAT, A/B, RX ONLY e rastrear/estacionar/PARAR o rotor. Cada ação pede o PIN e vai para o log com o IP; PTT/TX nunca é acionado pela rede.
 
-**Escopo do painel Web v1.9.5:** satélite, frequências, display do rádio (mesmo modelo da janela), rotor, CAT, telemetria orbital e APRS decodificado, mapa vetorial offline e passagens, atualizados a cada 1,5 s. Só aparelhos da rede privada (IP público é recusado); **Renovar chave** derruba links e sessões antigos; diagnóstico mostra último acesso remoto e navegador remoto ativo. O desktop deve permanecer aberto. O HTTP na LAN não é criptografado; não divulgue a URL fora da rede.
+**Escopo do painel Web v1.9.6:** satélite, frequências, display do rádio (mesmo modelo da janela), rotor, CAT, telemetria orbital e APRS decodificado, mapa vetorial offline e passagens, atualizados a cada 1,5 s. Só aparelhos da rede privada (IP público é recusado); **Renovar chave** derruba links e sessões antigos; diagnóstico mostra último acesso remoto e navegador remoto ativo. O desktop deve permanecer aberto. O HTTP na LAN não é criptografado; não divulgue a URL fora da rede.
+
+## Novidades v1.9.6 — LUČA-1 marcado por padrão
+
+- O satélite de SSTV **LUČA-1 (RS90S, NORAD 67287)** vem marcado por padrão, também nas instalações existentes
+  (uma única vez; se você desmarcar depois, fica desmarcado). As órbitas vêm da fonte R4UAB.
 
 ## Novidades v1.9.5 — rotor pelo Hamlib rotctld e quatro novos displays
 

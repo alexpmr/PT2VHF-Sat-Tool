@@ -2,7 +2,9 @@ from __future__ import annotations
 from pathlib import Path
 import json, os, sys
 
-DEFAULT_SATELLITES = ("25544", "27607", "40931", "7530", "24278", "44909", "59112")
+# v1.9.6: LUČA-1 (RS90S, NORAD 67287, SSTV) entra nos padrões por decisão do operador (22/11/2026).
+LUCA1_NORAD = "67287"
+DEFAULT_SATELLITES = ("25544", "27607", "40931", "7530", "24278", "44909", "59112", LUCA1_NORAD)
 
 DEFAULTS = {
     # v1.4.0: SDR, equipamentos RX/TX separados e telemetria.
@@ -36,7 +38,7 @@ DEFAULTS = {
     "cat_auto_select": True, "cat_auto_connect_startup": True,
     "cat_tracking_interval_s": 1, "cat_doppler_out_of_view": True,
     "cat_live_v137_migrated": True,
-    "default_satellites_v1316_migrated": True,
+    "default_satellites_v1316_migrated": True, "luca1_default_v196_migrated": True,
     "aos_alarm_enabled": True, "aos_alarm_sound": True,
     "aos_alarm_lead_seconds": 10, "aos_alarm_fired": [],
     "web_enabled": False, "web_allow_lan": False, "web_port": 8094,
@@ -116,6 +118,13 @@ class Config:
                     if isinstance(current, list):
                         self.values[key] = current + [g for g in ("amsat", "r4uab") if g not in current]
                 self.values["tle_sources_v181_migrated"] = True
+                self.save()
+            # v1.9.6: LUČA-1 marcado uma única vez nas seleções existentes; desmarcar depois não é revertido.
+            if not data.get("luca1_default_v196_migrated", False):
+                current = self.values.get("satellite_selection")
+                if isinstance(current, list) and LUCA1_NORAD not in [str(n) for n in current]:
+                    self.values["satellite_selection"] = [str(n) for n in current] + [LUCA1_NORAD]
+                self.values["luca1_default_v196_migrated"] = True
                 self.save()
             # v1.3.16: soma os satélites padrão à seleção existente uma única vez,
             # sem desmarcar nada; desmarcar depois não é revertido.

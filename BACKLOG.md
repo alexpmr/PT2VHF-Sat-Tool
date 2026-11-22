@@ -153,6 +153,12 @@
   2 monitores e DPI diferentes, RTL-SDR real no escopo do display, acesso de celular/notebook pela LAN e regra de
   firewall no Windows, fontes CJK no Windows/macOS.
 
+## v1.9.6 — LUČA-1 marcado por padrão (22/11/2026)
+
+- LUČA-1 (RS90S, NORAD 67287) nos satélites padrão e somado uma vez às seleções existentes.
+- Continuam pendentes por depender do operador: homologação em campo (docs/homologacao-campo.md), inclusive o
+  rotor pelo rotctld (1.9.5) e os CAT ICOM/Yaesu (1.9.4).
+
 ## v1.9.4 — CAT ICOM/Yaesu para satélite, ícone ROTOR e LUČA-1 (22/11/2026)
 
 - CAT ICOM MAIN/SUB (IC-9700/910/9100/820/821/970), Yaesu FT-847 (modo SAT) e Yaesu CAT texto (FT-991/991A…).
@@ -282,7 +288,9 @@
   - **Decisão do operador (22/11/2026): "LUČA-1 vem marcado por padrão".** A fazer na próxima versão: incluir o NORAD
     67287 (LUČA-1 / RS90S) nos satélites padrão (sat_tool/config.py, DEFAULT_SATELLITES) para instalações novas e
     somá-lo uma única vez às seleções existentes, sem desmarcar nada (migração como a dos padrões da v1.3.16);
-    desmarcar depois não é revertido. Teste da migração. Não implementado até o pedido de versão nova.
+    desmarcar depois não é revertido. Teste da migração.
+  - **Feito (1.9.6):** NORAD 67287 em DEFAULT_SATELLITES; seleções existentes ganham o LUČA-1 uma única vez
+    (luca1_default_v196_migrated); seleção automática preservada. Teste tests/test_v196_luca1_default.py.
 - **Botão PREVER: passagens das próximas 24 h de todos os satélites selecionados** (registrado em 13/11/2026)
   - Pedido do PU2MUS: lista única das passagens de 24 h, com elevação mínima configurável, sem ter que
     consultar satélite por satélite. **Feito (1.9.0):** botão PREVER ao lado de "Mostrar no mapa": 1 a 72 h,
