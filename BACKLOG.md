@@ -159,7 +159,7 @@
 - Ícone ROTOR abre/esconde o bloco; ATIVAR/DESATIVAR CONTROLE dentro do bloco.
 - TLE Alpha-5: a fonte R4UAB (com o LUČA-1) não cai mais inteira.
 - OTA: teste do CI com o programa real, atualizador encerra app travado, aviso na abertura seguinte.
-- Continuam pendentes por depender do operador: log do OTA se repetir, LUČA-1 marcado por padrão ou não, fotos para
+- Continuam pendentes por depender do operador: log do OTA se repetir, fotos para
   novos estilos de display e homologação em campo (docs/homologacao-campo.md).
 
 ## v1.9.2 — modos do rotor, moldura de rádio e configurações salvas (19/11/2026)
@@ -278,7 +278,11 @@
     formato Alpha-5 ("A0084" = 100084, ex.: RASSVET-3) e o leitor de TLE quebrava nessa linha, derrubando a fonte
     R4UAB inteira a cada atualização. **Corrigido (1.9.4):** leitor aceita
     Alpha-5 e pula linha inválida sem perder o resto (376 satélites lidos do arquivo real). Teste
-    tests/test_v194_tle_alpha5.py. Pendente do operador: deixar o LUČA-1 marcado por padrão ou não.
+    tests/test_v194_tle_alpha5.py.
+  - **Decisão do operador (22/11/2026): "LUČA-1 vem marcado por padrão".** A fazer na próxima versão: incluir o NORAD
+    67287 (LUČA-1 / RS90S) nos satélites padrão (sat_tool/config.py, DEFAULT_SATELLITES) para instalações novas e
+    somá-lo uma única vez às seleções existentes, sem desmarcar nada (migração como a dos padrões da v1.3.16);
+    desmarcar depois não é revertido. Teste da migração. Não implementado até o pedido de versão nova.
 - **Botão PREVER: passagens das próximas 24 h de todos os satélites selecionados** (registrado em 13/11/2026)
   - Pedido do PU2MUS: lista única das passagens de 24 h, com elevação mínima configurável, sem ter que
     consultar satélite por satélite. **Feito (1.9.0):** botão PREVER ao lado de "Mostrar no mapa": 1 a 72 h,
