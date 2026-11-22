@@ -2444,7 +2444,7 @@ class MainWindow(RotorUiMixin, QMainWindow):
                     if action.isChecked()} if hasattr(self,"catalog_category_actions") else set(DEFAULT_GROUPS)
         ids=[]
         for ident,obj in self.omm.items():
-            # v1.9.6: marcados e satélites padrão buscados pelo NORAD ("defaults", ex.: IO-86 fora dos grupos)
+            # v1.9.7: marcados e satélites padrão buscados pelo NORAD ("defaults", ex.: IO-86 fora dos grupos)
             # aparecem com qualquer filtro de categoria; antes sumiam da lista
             cats=obj.get("CATEGORIES",["amateur"])
             if not categories.intersection(cats) and ident not in checked and "defaults" not in cats:
@@ -4652,7 +4652,7 @@ class MainWindow(RotorUiMixin, QMainWindow):
             self.photo.setHtml(photo_html(None))
 
     def apply_named_defaults(self):
-        """v1.9.6: marca uma única vez os satélites padrão conhecidos só pelo nome (ex.: HADES-E2)."""
+        """v1.9.7: marca uma única vez os satélites padrão conhecidos só pelo nome (ex.: HADES-E2)."""
         c=self.config.values
         applied=list(c.get("named_defaults_applied") or [])
         changed=False

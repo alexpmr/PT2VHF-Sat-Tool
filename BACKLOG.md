@@ -153,13 +153,19 @@
   2 monitores e DPI diferentes, RTL-SDR real no escopo do display, acesso de celular/notebook pela LAN e regra de
   firewall no Windows, fontes CJK no Windows/macOS.
 
+## v1.9.6 — LUČA-1 marcado por padrão (22/11/2026)
+
+- LUČA-1 (RS90S, NORAD 67287) nos satélites padrão e somado uma vez às seleções existentes.
+- Continuam pendentes por depender do operador: homologação em campo (docs/homologacao-campo.md), inclusive o
+  rotor pelo rotctld (1.9.5) e os CAT ICOM/Yaesu (1.9.4).
+
 ## v1.9.4 — CAT ICOM/Yaesu para satélite, ícone ROTOR e LUČA-1 (22/11/2026)
 
 - CAT ICOM MAIN/SUB (IC-9700/910/9100/820/821/970), Yaesu FT-847 (modo SAT) e Yaesu CAT texto (FT-991/991A…).
 - Ícone ROTOR abre/esconde o bloco; ATIVAR/DESATIVAR CONTROLE dentro do bloco.
 - TLE Alpha-5: a fonte R4UAB (com o LUČA-1) não cai mais inteira.
 - OTA: teste do CI com o programa real, atualizador encerra app travado, aviso na abertura seguinte.
-- Continuam pendentes por depender do operador: log do OTA se repetir, LUČA-1 marcado por padrão ou não, fotos para
+- Continuam pendentes por depender do operador: log do OTA se repetir, fotos para
   novos estilos de display e homologação em campo (docs/homologacao-campo.md).
 
 ## v1.9.2 — modos do rotor, moldura de rádio e configurações salvas (19/11/2026)
@@ -179,18 +185,18 @@
 - **Atualizar frequências demorava horas ("SatNOGS: 14 de 12535 satélites", 6h40)** (registrado em 22/11/2026, relato do operador)
   - Causa: o botão consultava o SatNOGS um satélite por vez para o catálogo inteiro (~12.500 requisições com pausa de
     0,4 s); o SatNOGS também recusa consultas em sequência (provável causa da falha no NORAD 27848).
-  - **Feito (1.9.6):** `refresh_all_transmitters` baixa /api/transmitters/ inteiro numa consulta (pedido do operador:
+  - **Feito (1.9.7):** `refresh_all_transmitters` baixa /api/transmitters/ inteiro numa consulta (pedido do operador:
     "baixar todos localmente"), agrupa por NORAD e grava tx_<norad>.json só de quem tem transmissor. Teste
-    tests/test_v196_satnogs_bulk.py.
+    tests/test_v197_satnogs_bulk.py.
 - **IO-86 não aparecia na lista de satélites** (registrado em 22/11/2026, relato do operador)
   - Satélites padrão fora dos grupos da CelesTrak entram pelo NORAD na categoria "defaults", que não existe no filtro de
-    categorias: ficavam fora da aba Satélites. **Feito (1.9.6):** marcados e "defaults" aparecem com qualquer filtro; se a
+    categorias: ficavam fora da aba Satélites. **Feito (1.9.7):** marcados e "defaults" aparecem com qualquer filtro; se a
     CelesTrak não tiver a órbita do NORAD, o programa usa o TLE do SatNOGS.
 - **Ativos por padrão: ISS, SO-50, HADES-E2, além dos que já estão** (operador, 22/11/2026; antes "ativo por padrão"
-  para o LUČA-1). **Feito (1.9.6):** ISS e SO-50 já eram padrão; LUČA-1 (NORAD 67287) entrou em DEFAULT_SATELLITES com
-  apelidos LUCA-1/LUČA-1/RS90S; HADES-E2 em DEFAULT_SATELLITE_NAMES, achado pelo nome (HADES-E2/HADES E2) no catálogo
+  para o LUČA-1, publicado na 1.9.6). **Feito (1.9.7):** ISS e SO-50 já eram padrão; LUČA-1 já entrou na 1.9.6 (apelidos
+  LUCA-1/LUČA-1/RS90S na busca); HADES-E2 em DEFAULT_SATELLITE_NAMES, achado pelo nome (HADES-E2/HADES E2) no catálogo
   baixado, porque o NORAD não pôde ser conferido daqui. Instalações existentes recebem a marcação uma vez.
-- **Versão 1.9.6 publicada em 22/11/2026** (frequências SatNOGS numa consulta, IO-86 na lista, LUČA-1 padrão).
+- **Versão 1.9.7 publicada em 22/11/2026** (frequências SatNOGS numa consulta, IO-86 na lista, HADES-E2 padrão).
 
 - **Rotor via Hamlib rotctld** (registrado em 22/11/2026, aprovado pelo operador; só registrar, sem implementar agora)
   - Hoje o rotor só fala GS-232A/B nativo pela serial. Pedido: opção de protocolo "Hamlib rotctld" por TCP
@@ -294,7 +300,13 @@
     formato Alpha-5 ("A0084" = 100084, ex.: RASSVET-3) e o leitor de TLE quebrava nessa linha, derrubando a fonte
     R4UAB inteira a cada atualização. **Corrigido (1.9.4):** leitor aceita
     Alpha-5 e pula linha inválida sem perder o resto (376 satélites lidos do arquivo real). Teste
-    tests/test_v194_tle_alpha5.py. Pendente do operador: deixar o LUČA-1 marcado por padrão ou não.
+    tests/test_v194_tle_alpha5.py.
+  - **Decisão do operador (22/11/2026): "LUČA-1 vem marcado por padrão".** A fazer na próxima versão: incluir o NORAD
+    67287 (LUČA-1 / RS90S) nos satélites padrão (sat_tool/config.py, DEFAULT_SATELLITES) para instalações novas e
+    somá-lo uma única vez às seleções existentes, sem desmarcar nada (migração como a dos padrões da v1.3.16);
+    desmarcar depois não é revertido. Teste da migração.
+  - **Feito (1.9.6):** NORAD 67287 em DEFAULT_SATELLITES; seleções existentes ganham o LUČA-1 uma única vez
+    (luca1_default_v196_migrated); seleção automática preservada. Teste tests/test_v196_luca1_default.py.
 - **Botão PREVER: passagens das próximas 24 h de todos os satélites selecionados** (registrado em 13/11/2026)
   - Pedido do PU2MUS: lista única das passagens de 24 h, com elevação mínima configurável, sem ter que
     consultar satélite por satélite. **Feito (1.9.0):** botão PREVER ao lado de "Mostrar no mapa": 1 a 72 h,

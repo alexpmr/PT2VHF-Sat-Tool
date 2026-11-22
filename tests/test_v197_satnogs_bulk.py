@@ -1,4 +1,4 @@
-"""v1.9.6 (22/11/2026): frequências do SatNOGS numa única consulta; IO-86 sempre na lista; LUČA-1 padrão."""
+"""v1.9.7 (22/11/2026): frequências do SatNOGS numa única consulta; IO-86 sempre na lista; LUČA-1 padrão."""
 import json
 
 from sat_tool import catalog

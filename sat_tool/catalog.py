@@ -94,7 +94,7 @@ SATNOGS_TLE = "https://db.satnogs.org/api/tle/"
 
 
 def _satnogs_tle_omm(ident):
-    """v1.9.6: reserva quando a CelesTrak não tem o NORAD (ex.: "No GP data found"): TLE do SatNOGS DB."""
+    """v1.9.7: reserva quando a CelesTrak não tem o NORAD (ex.: "No GP data found"): TLE do SatNOGS DB."""
     response=requests.get(SATNOGS_TLE,params={"format":"json","norad_cat_id":ident},headers=HEADERS,timeout=30)
     response.raise_for_status()
     rows=response.json()
@@ -114,7 +114,7 @@ def _satnogs_tle_omm(ident):
 
 
 def refresh_catnr_omm(data_dir, ident):
-    """OMM de um único NORAD, com cache de 2 h como os grupos. v1.9.6: se a CelesTrak não tiver, usa o SatNOGS."""
+    """OMM de um único NORAD, com cache de 2 h como os grupos. v1.9.7: se a CelesTrak não tiver, usa o SatNOGS."""
     ident=str(int(ident))
     file=cache_path(data_dir,"catnr_"+ident+".json")
     hours=age_hours(data_dir,file.name)
@@ -267,7 +267,7 @@ def refresh_transmitters(data_dir: Path, norad: int):
 
 
 def refresh_all_transmitters(data_dir: Path, ids, progress=None, cancel=None) -> dict:
-    """v1.9.5: UMA consulta ao SatNOGS com todos os transmissores (alguns MB), em vez de uma por satélite.
+    """v1.9.7: UMA consulta ao SatNOGS com todos os transmissores (alguns MB), em vez de uma por satélite.
 
     Antes eram ~12.500 requisições sequenciais (horas, e o SatNOGS limita/recusa consultas em sequência).
     Grava tx_<norad>.json só para quem tem transmissores; um cache antigo de quem deixou de ter é zerado.
