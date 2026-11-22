@@ -476,7 +476,7 @@ jobs:
       - name: Atualizar instaladores, contadores e OTA
         run: |
           python3 scripts/publish_sat_to_site.py --version 1.9.6 --release-dir release --site-dir site \
-            --notes 'v1.9.6: Atualizar frequências baixa a lista inteira de transmissores do SatNOGS numa única consulta e separa por satélite no próprio computador (antes eram milhares de consultas, uma por satélite, com horas de espera); IO-86 e os demais satélites padrão sempre aparecem na lista de satélites, com qualquer filtro de categoria, e passam a ter o SatNOGS como reserva quando a CelesTrak não tem a órbita; LUČA-1 marcado por padrão. Windows x64, Linux x64 (.tar.gz e .deb) e macOS ARM64.'
+            --notes 'v1.9.6: Atualizar frequências baixa a lista inteira de transmissores do SatNOGS numa única consulta e separa por satélite no próprio computador (antes eram milhares de consultas, uma por satélite, com horas de espera); IO-86 e os demais satélites padrão sempre aparecem na lista de satélites, com qualquer filtro de categoria, e passam a ter o SatNOGS como reserva quando a CelesTrak não tem a órbita; LUČA-1 e HADES-E2 marcados por padrão, junto de ISS, SO-50 e os demais. Windows x64, Linux x64 (.tar.gz e .deb) e macOS ARM64.'
       - name: Commit e push no site (Hostinger)
         working-directory: site
         run: |

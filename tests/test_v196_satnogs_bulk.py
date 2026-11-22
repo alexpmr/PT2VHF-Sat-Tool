@@ -126,3 +126,39 @@ def test_gui_lists_default_satellites_and_updates_in_one_request():
     result = subprocess.run([sys.executable, "-c", source], capture_output=True, text=True, timeout=120,
                             env={**os.environ, "QT_QPA_PLATFORM": "offscreen"})
     assert result.returncode == 0 and "OK" in result.stdout, result.stdout + result.stderr
+
+
+def test_named_default_hades_e2_marked_once():
+    import os, subprocess, sys, textwrap
+    source = textwrap.dedent(r'''
+        import tempfile
+        from pathlib import Path
+        from sat_tool import app as gui
+        from sat_tool.config import Config
+        class FakeWeb(gui.QWidget):
+            def setHtml(self,*a,**k):pass
+            def page(self):return self
+            def runJavaScript(self,*a,**k):pass
+            def reload(self):pass
+        gui.QWebEngineView=FakeWeb
+        gui.load_orbits=lambda d:[]
+        gui.MainWindow.check_for_updates=lambda self:None
+        with tempfile.TemporaryDirectory() as d:
+            gui.Config=lambda:Config(Path(d))
+            app=gui.QApplication([])
+            w=gui.MainWindow(); app.processEvents()
+            w.background=lambda key,fn:None
+            w.config.values["satellite_selection"]=["25544"]
+            w.populate_catalog([{"NORAD_CAT_ID":25544,"OBJECT_NAME":"ISS (ZARYA)"}])
+            assert w.config.values["satellite_selection"]==["25544"] and w.config.values["named_defaults_applied"]==[]
+            w.populate_catalog([{"NORAD_CAT_ID":25544,"OBJECT_NAME":"ISS (ZARYA)"},
+                                {"NORAD_CAT_ID":99950,"OBJECT_NAME":"HADES E2"}])
+            assert w.config.values["satellite_selection"]==["25544","99950"]
+            w.config.values["satellite_selection"]=["25544"]
+            w.populate_catalog([{"NORAD_CAT_ID":99950,"OBJECT_NAME":"HADES-E2"}])
+            assert w.config.values["satellite_selection"]==["25544"]      # desmarcar depois é respeitado
+        print("OK")
+    ''')
+    result = subprocess.run([sys.executable, "-c", source], capture_output=True, text=True, timeout=120,
+                            env={**os.environ, "QT_QPA_PLATFORM": "offscreen"})
+    assert result.returncode == 0 and "OK" in result.stdout, result.stdout + result.stderr

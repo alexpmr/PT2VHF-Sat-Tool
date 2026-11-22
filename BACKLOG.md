@@ -186,8 +186,10 @@
   - Satélites padrão fora dos grupos da CelesTrak entram pelo NORAD na categoria "defaults", que não existe no filtro de
     categorias: ficavam fora da aba Satélites. **Feito (1.9.6):** marcados e "defaults" aparecem com qualquer filtro; se a
     CelesTrak não tiver a órbita do NORAD, o programa usa o TLE do SatNOGS.
-- **LUČA-1 ativo por padrão** (resposta do operador em 22/11/2026: "ativo por padrão"). **Feito (1.9.6):** NORAD 67287
-  em DEFAULT_SATELLITES, com apelidos LUCA-1/LUČA-1/RS90S; instalações existentes recebem a marcação uma vez.
+- **Ativos por padrão: ISS, SO-50, HADES-E2, além dos que já estão** (operador, 22/11/2026; antes "ativo por padrão"
+  para o LUČA-1). **Feito (1.9.6):** ISS e SO-50 já eram padrão; LUČA-1 (NORAD 67287) entrou em DEFAULT_SATELLITES com
+  apelidos LUCA-1/LUČA-1/RS90S; HADES-E2 em DEFAULT_SATELLITE_NAMES, achado pelo nome (HADES-E2/HADES E2) no catálogo
+  baixado, porque o NORAD não pôde ser conferido daqui. Instalações existentes recebem a marcação uma vez.
 - **Versão 1.9.6 publicada em 22/11/2026** (frequências SatNOGS numa consulta, IO-86 na lista, LUČA-1 padrão).
 
 - **Rotor via Hamlib rotctld** (registrado em 22/11/2026, aprovado pelo operador; só registrar, sem implementar agora)

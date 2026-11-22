@@ -38,7 +38,8 @@ O sufixo `Win11-x64` é mantido para compatibilidade com o atualizador e também
   satélite no próprio computador. Antes eram ~12.500 consultas, uma por satélite (horas, e o SatNOGS recusava parte delas).
 - **IO-86 e os demais satélites padrão** sempre aparecem na lista da aba Satélites, com qualquer filtro de categoria (os
   satélites marcados também). Quando a CelesTrak não tem a órbita de um satélite padrão, o programa usa o TLE do SatNOGS.
-- **LUČA-1** (NORAD 67287) vem marcado por padrão; instalações existentes recebem a marcação uma única vez.
+- **Ativos por padrão:** além de ISS, SO-50, IO-86, AO-7, FO-29, RS-44 e SONATE-2, agora também **LUČA-1** (NORAD 67287)
+  e **HADES-E2** (achado pelo nome no catálogo baixado); instalações existentes recebem a marcação uma única vez.
 
 ## Novidades v1.9.5 — rotor pelo Hamlib rotctld e quatro novos displays
 

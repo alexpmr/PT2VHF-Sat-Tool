@@ -34,7 +34,7 @@ from .appearance import DEFAULTS as THEME_DEFAULTS
 from .rotor_ui import RotorUiMixin
 from .cat import TS2000, available_ports, decode_satellite_status
 from .catalog import refresh_orbits, load_orbits, refresh_transmitters, refresh_all_transmitters, load_transmitters, age_hours, satellite_search_text, normalized_satellite_search, DEFAULT_GROUPS
-from .config import Config, DEFAULT_SATELLITES
+from .config import Config, DEFAULT_SATELLITES, DEFAULT_SATELLITE_NAMES
 from .geolocation import GeoFix
 from .maidenhead import maidenhead_to_latlon
 from .location_map import parse_coordinate_fields, sanitize_map_pick, valid_coordinates
@@ -2340,6 +2340,7 @@ class MainWindow(RotorUiMixin, QMainWindow):
     def populate_catalog(self, objects):
         old=self.sat_combo.currentData() or self.config.values.get('selected_norad')
         self.omm={str(o['NORAD_CAT_ID']):o for o in objects if o.get('NORAD_CAT_ID')}
+        self.apply_named_defaults()
         self.plan_satellites.clear()
         self._active_satellite_id=None  # Reload orbital elements even for the same NORAD
         self.track_cache_key=None
@@ -4649,6 +4650,30 @@ class MainWindow(RotorUiMixin, QMainWindow):
             self.summary.setText('Sem atualização: usando cache OMM, se existente')
         if key.startswith('photo:') and key.split(':')[1]==str(self.sat_combo.currentData()):
             self.photo.setHtml(photo_html(None))
+
+    def apply_named_defaults(self):
+        """v1.9.6: marca uma única vez os satélites padrão conhecidos só pelo nome (ex.: HADES-E2)."""
+        c=self.config.values
+        applied=list(c.get("named_defaults_applied") or [])
+        changed=False
+        for name in DEFAULT_SATELLITE_NAMES:
+            if name in applied:
+                continue
+            key=normalized_satellite_search(name)
+            found=[ident for ident,obj in self.omm.items()
+                   if key in {normalized_satellite_search(n) for n in
+                              [obj.get("OBJECT_NAME","")]+list(obj.get("ALT_NAMES",[]))}]
+            if not found:
+                continue          # ainda não está no catálogo: tenta de novo na próxima atualização
+            selection=c.get("satellite_selection")
+            if selection is not None and found[0] not in [str(n) for n in selection]:
+                c["satellite_selection"]=[str(n) for n in selection]+[found[0]]
+            applied.append(name)
+            changed=True
+            self.log(f"Satélite padrão {name} (NORAD {found[0]}) marcado")
+        if changed:
+            c["named_defaults_applied"]=applied
+            self.config.save()
 
     def enabled_satellite_ids(self):
         c=self.config.values
