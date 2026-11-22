@@ -37,7 +37,7 @@ def test_user_selection_overrides_auto_and_is_stable():
 
 def test_v1316_default_satellites(tmp_path):
     from sat_tool.config import Config, DEFAULT_SATELLITES
-    assert DEFAULT_SATELLITES == ("25544", "27607", "40931", "7530", "24278", "44909", "59112")
+    assert DEFAULT_SATELLITES == ("25544", "27607", "40931", "7530", "24278", "44909", "59112", "67287")
     assert Config(tmp_path).values["satellite_selection"] == list(DEFAULT_SATELLITES)
 
 
