@@ -176,6 +176,16 @@
 
 ## Pendentes
 
+- **Rotor via Hamlib rotctld** (registrado em 22/11/2026, aprovado pelo operador; só registrar, sem implementar agora)
+  - Hoje o rotor só fala GS-232A/B nativo pela serial. Pedido: opção de protocolo "Hamlib rotctld" por TCP
+    (padrão 127.0.0.1:4533), para que qualquer rotor suportado pelo Hamlib funcione.
+  - Modelo: a opção RIGCTLD do RX/TX em sat_tool/rigs.py. Comandos rotctld: `P az el` (posicionar), `p` (ler posição),
+    `S` (parar), `K` (estacionar); manter PARAR (Esc/F12), limites, flip e modos AUTOMÁTICO/MANUAL/DESLIGADO.
+  - **Feito (1.9.5):** Configurações → Rotores → Protocolo → "Hamlib rotctld (TCP)" e "Endereço do rotctld" (padrão
+    127.0.0.1:4533, salvo). sat_tool/rotor.py `RotctldRotor` com a mesma interface do GS-232: `p` lê a posição, `P az el`
+    move, `S` para; estacionar usa a posição do perfil. "Testar rotctld" só lê a posição. Resposta `RPRT -n` vira erro
+    visível no log/faixa. Teste tests/test_v195_rotctld.py (rotctld falso por TCP). Falta homologar com rotor real.
+
 - **CAT para ICOM e Yaesu** (registrado em 21/11/2026, pedido do operador: "implemente CAT para icom e yaesu")
   - Já existiam: ICOM CI-V (1.9.0, 18 modelos) e Yaesu FT-817/818/857/897 (1.4.0).
   - **Feito (1.9.4):**
@@ -330,6 +340,8 @@
   - O banner "Powered by www.PT2VHF.com" abria num QDialog próprio (barra de título, parecia outro aplicativo por cima).
   - Feito (1.9.3): camada dentro da janela principal, com fundo escurecido e o cartão no centro; acompanha
     a janela ao redimensionar, não bloqueia o programa e fecha sozinha em 10 s (ou Fechar, Esc, clique fora).
+- **Versão 1.9.5 publicada em 22/11/2026** (pedido "gere nova versão com o backlog resolvido")
+  - Rotor pelo Hamlib rotctld e displays FT-847, FT-817/818, TS-790 e IC-705 a partir das fotos do operador.
 - **Versão 1.9.3 publicada em 21/11/2026** (pedido "gere versão nova com o backlog resolvido")
   - Ajuste proporcional da tela (PU2MUS), abertura dentro da janela e debug RX mais robusto.
 - **Versão 1.9.1 publicada em 14/11/2026** (pedido "gere uma versão completa para windows e publique no site")
@@ -600,7 +612,14 @@
     display, na janela principal, na prévia e no display destacado (sat_tool/lcd_bezel.py). "SWR 1.2" não é mais
     cortado. Moldura no formato de cada rádio (706 compacto, 7100 inclinado) continua dependendo de referências.
 
-- **Displays inspirados em rádios VHF/UHF (144/440 MHz, FM e SSB) de Yaesu, Icom e Kenwood** (registrado em 07/11/2026) — **6 estilos implementados na v1.7.1** (IC-706MKIIG, IC-7100, FT-897/857, IC-910H, FT-991A, IC-9700); FT-847, IC-705, TS-790 e FT-817/818 ainda dependem de referências e mockup; o painel metálico (moldura) segue o item da moldura
+- **Displays inspirados em rádios VHF/UHF (144/440 MHz, FM e SSB) de Yaesu, Icom e Kenwood** (registrado em 07/11/2026) — **6 estilos implementados na v1.7.1** (IC-706MKIIG, IC-7100, FT-897/857, IC-910H, FT-991A, IC-9700); FT-847, FT-817/818, TS-790 e IC-705 feitos a partir das fotos do operador (22/11/2026, v1.9.5); o painel metálico (moldura) segue o item da moldura
+  - **Feito (1.9.5):** "Estilo FT-847": LCD azul-claro com segmentos azuis, medidor S/Po/ALC à esquerda, MAIN
+    com a letra do VFO e SUB alinhado à direita na mesma linha, faixa "── SATELLITE ──" sob o SUB, etiquetas de modo
+    (backlight só azul). "Estilo FT-817/818": LCD pequeno âmbar/laranja, VFOa e ícones à esquerda, modo no canto,
+    frequência à direita com medidor embaixo e linha [A] [B] [C] F com as teclas do app. "Estilo TS-790": VFD com
+    dígitos ciano, medidor SIGNAL/RF laranja à esquerda e janela "SUB RX DISPLAY" em vermelho à direita. "Estilo IC-705":
+    tela preta com frequência branca grande, VFO A/B, medidor S/Po azul e vermelho e "SPECTRUM SCOPE" com o RTL-SDR.
+    Teste tests/test_v195_ft847_ft817_displays.py.
   - **Aprovado pelo operador (07/11/2026):** o painel realista (`docs/backlog/display-painel-realista-mockup.png`)
     é a base; os estilos dos rádios reais entram como modelos de display **dentro desse painel**.
   - Pesquisa inicial (manuais/fabricantes, 07/11/2026) — características a reproduzir:

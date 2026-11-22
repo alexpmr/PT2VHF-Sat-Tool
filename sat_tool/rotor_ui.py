@@ -11,8 +11,9 @@ import time
 from datetime import timedelta
 
 from .qt_compat import (Qt, QHBoxLayout, QVBoxLayout, QGridLayout, QLabel, QPushButton, QComboBox, QCheckBox,
-                        QDoubleSpinBox, QMessageBox, QWidget, QPlainTextEdit)
-from .rotor import (GS232Rotor, PROFILES, RotorProfile, needs_move, plan_pass, probe_port, to_rotor,
+                        QDoubleSpinBox, QMessageBox, QWidget, QPlainTextEdit, QLineEdit)
+from .rotor import (ROTCTLD_DEFAULT, GS232Rotor, RotctldRotor, make_rotor, probe_rotctld,  # noqa: F401
+                    PROFILES, RotorProfile, needs_move, plan_pass, probe_port, to_rotor,
                     calibrated_north_offset, jog_target)
 
 PREFERENCES = {"auto": "Automático (normal se couber, senão flip)", "normal": "Sempre normal (nunca flip)",
@@ -26,7 +27,7 @@ class RotorUiMixin:
     # ------------------------------------------------------------------ estado
     def rotor_init(self):
         self.rotor_log_lines = []
-        self.rotor = GS232Rotor(self.rotor_log)
+        self.rotor = make_rotor(str(self.rotor_cfg("rotor_protocol") or "gs232"), self.rotor_log)
         self.rotor_tracking = False
         # v1.9.2: modo do rotor AUTOMÁTICO / MANUAL / DESLIGADO; ao abrir o programa sempre DESLIGADO
         # (decisão do operador, 14/11/2026). rotor_auto (propriedade) = modo automático.
@@ -105,13 +106,23 @@ class RotorUiMixin:
             self.rotor_baud.addItem(b)
         self.rotor_baud.setCurrentText(str(int(self.rotor_cfg("rotor_baud"))))
         self.rotor_protocol = QComboBox(); self.rotor_protocol.addItem("Yaesu GS-232A/B", "gs232")
-        self.rotor_protocol.setToolTip("Hamlib rotctld, EasyComm e SPID Rot2Prog entram em versões futuras")
+        # v1.9.5: Hamlib rotctld por TCP (qualquer rotor suportado pelo Hamlib)
+        self.rotor_protocol.addItem("Hamlib rotctld (TCP)", "rotctld")
+        self.rotor_protocol.setCurrentIndex(max(0, self.rotor_protocol.findData(str(self.rotor_cfg("rotor_protocol") or "gs232"))))
+        self.rotor_protocol.setToolTip("GS-232A/B: controlador na porta COM (ERC-M, GS-232, K3NG). "
+                                       "Hamlib rotctld: qualquer rotor do Hamlib; rode o rotctld e informe o endereço")
+        self.rotor_rotctld_addr = QLineEdit(str(self.rotor_cfg("rotor_rotctld") or ROTCTLD_DEFAULT))
+        self.rotor_rotctld_addr.setPlaceholderText(ROTCTLD_DEFAULT)
+        self.rotor_rotctld_addr.setToolTip("Endereço:porta do rotctld (padrão 127.0.0.1:4533). Ex.: rotctld -m 603 -r COM5")
+        self.rotor_protocol.currentIndexChanged.connect(lambda *_: self.rotor_protocol_changed())
         self.rotor_model = QComboBox()
         for code, prof in PROFILES.items():
             self.rotor_model.addItem(prof.name, code)
         self.rotor_model.setCurrentIndex(max(0, self.rotor_model.findData(str(self.rotor_cfg("rotor_profile")))))
         bv.addLayout(form((("Porta COM (USB do ERC-M)", prow), ("Velocidade", self.rotor_baud),
-                           ("Protocolo", self.rotor_protocol), ("Controlador / perfil", self.rotor_model))))
+                           ("Protocolo", self.rotor_protocol), ("Endereço do rotctld", self.rotor_rotctld_addr),
+                           ("Controlador / perfil", self.rotor_model))))
+        self.rotor_protocol_changed()
         actions = QHBoxLayout()
         self.rotor_save_btn = QPushButton("Salvar rotor"); self.rotor_save_btn.setObjectName("primary")
         self.rotor_connect_btn = QPushButton("Conectar")
@@ -290,6 +301,25 @@ class RotorUiMixin:
             self.rotor_az_max.setValue(prof.az_max)
             self.rotor_el_max.setValue(prof.el_max)
 
+    def rotor_protocol_is_rotctld(self) -> bool:
+        return (self.rotor_protocol.currentData() if hasattr(self, "rotor_protocol")
+                else self.rotor_cfg("rotor_protocol")) == "rotctld"
+
+    def rotor_where(self) -> str:
+        """Onde o rotor está ligado: porta COM (GS-232) ou endereço do rotctld."""
+        if str(self.rotor_cfg("rotor_protocol")) == "rotctld":
+            return "rotctld " + str(self.rotor_cfg("rotor_rotctld") or ROTCTLD_DEFAULT)
+        return str(self.rotor_cfg("rotor_port") or "sem porta")
+
+    def rotor_protocol_changed(self):
+        tcp = self.rotor_protocol_is_rotctld()
+        self.rotor_rotctld_addr.setEnabled(tcp)
+        for w in (self.rotor_port, self.rotor_refresh, self.rotor_detect, self.rotor_baud):
+            w.setEnabled(not tcp or w is self.rotor_detect)
+        self.rotor_detect.setText("Testar rotctld" if tcp else "Detectar (só leitura)")
+        self.rotor_detect.setToolTip("Conecta ao rotctld e lê a posição ('p'); não move o rotor" if tcp else
+                                     "Procura o controlador GS-232 lendo a posição (C2) em cada porta; não move o rotor")
+
     def rotor_update_ports(self):
         try:
             from .cat import available_ports
@@ -307,6 +337,8 @@ class RotorUiMixin:
     def rotor_save(self):
         v = self.config.values
         was_enabled = bool(v.get("rotor_enabled"))
+        v.update(rotor_protocol=self.rotor_protocol.currentData() or "gs232",
+                 rotor_rotctld=self.rotor_rotctld_addr.text().strip() or ROTCTLD_DEFAULT)
         v.update(rotor_enabled=self.rotor_enable.isChecked(), rotor_port=self.rotor_port.currentText().strip(),
                  rotor_baud=int(self.rotor_baud.currentText()), rotor_profile=self.rotor_model.currentData() or "g5400b",
                  rotor_az_max=self.rotor_az_max.value(), rotor_el_max=self.rotor_el_max.value(),
@@ -327,6 +359,11 @@ class RotorUiMixin:
         self.rotor_settings_status.setText("Configurações do rotor salvas")
 
     def rotor_autodetect(self):
+        if self.rotor_protocol_is_rotctld():
+            address = self.rotor_rotctld_addr.text().strip() or ROTCTLD_DEFAULT
+            self.rotor_settings_status.setText(f"Testando o rotctld em {address} (somente leitura)…")
+            self.background("rotor-detect", lambda: (lambda pos: ("rotctld " + address, pos) if pos else None)(probe_rotctld(address)))
+            return
         try:
             from .cat import available_ports
             ports = available_ports()
@@ -364,7 +401,7 @@ class RotorUiMixin:
         from .app import top_button_style
         self.rotor_top_state = state
         btn = getattr(self, "rotor_top_btn", None)
-        port = str(self.rotor_cfg("rotor_port")) or "sem porta"
+        port = self.rotor_where()
         if btn is not None:
             btn.setStyleSheet(top_button_style(self.TOP_STYLES[state]))
             btn.setToolTip({"off": "Rotor desligado · clique para mostrar ou esconder o bloco do rotor",
@@ -429,6 +466,15 @@ class RotorUiMixin:
             self.rotor_enable.blockSignals(False)
         self.rotor_save()
         port, baud = str(self.rotor_cfg("rotor_port")), int(self.rotor_cfg("rotor_baud"))
+        protocol = str(self.rotor_cfg("rotor_protocol") or "gs232")
+        if isinstance(self.rotor, RotctldRotor) != (protocol == "rotctld"):
+            self.rotor = make_rotor(protocol, self.rotor_log)     # troca de protocolo (desconectado)
+        if protocol == "rotctld":
+            address = str(self.rotor_cfg("rotor_rotctld") or ROTCTLD_DEFAULT)
+            self.rotor_settings_status.setText(f"Conectando ao rotctld em {address}…")
+            self.rotor_set_top("busy")
+            self.background("rotor-connect", lambda: self.rotor.connect(address))
+            return
         if not port:
             QMessageBox.information(self, "Rotor", "Escolha a porta COM do rotor (ou use Detectar).")
             return
@@ -565,7 +611,7 @@ class RotorUiMixin:
 
     def rotor_refresh_bar_title(self):
         prof = PROFILES.get(str(self.rotor_cfg("rotor_profile")), PROFILES["g5400b"])
-        port = str(self.rotor_cfg("rotor_port") or "sem porta")
+        port = self.rotor_where()
         if getattr(self, "rotor_title", None) is not None:
             self.rotor_title.setText(f"ROTOR · {prof.name} via {port}")
         if getattr(self, "rotor_active", None) is not None:
@@ -859,7 +905,7 @@ class RotorUiMixin:
             # v1.9.4: conectar não arma mais o AUTOMÁTICO; o modo segue o escolhido (começa DESLIGADO)
             self.rotor_set_state_button(False)
             self.rotor_set_chips("PARADO", "")
-            self.rotor_label.setText("Conectado · " + str(self.rotor_cfg("rotor_port")))
+            self.rotor_label.setText("Conectado · " + self.rotor_where())
             if data:
                 self.rotor_show_position(data)
         elif key == "rotor-close":
@@ -871,8 +917,13 @@ class RotorUiMixin:
         elif key == "rotor-detect":
             if data:
                 port, pos = data
+                if port.startswith("rotctld "):
+                    self.rotor_settings_status.setText(f"{port} respondeu · AZ {pos[0]:.0f}° EL {pos[1]:.0f}°")
+                    return True
                 self.rotor_port.setCurrentText(port)
                 self.rotor_settings_status.setText(f"Controlador GS-232 encontrado em {port} · AZ {pos[0]:.0f}° EL {pos[1]:.0f}°")
+            elif self.rotor_protocol_is_rotctld():
+                self.rotor_settings_status.setText("O rotctld não respondeu. Confira se ele está rodando e o endereço:porta.")
             else:
                 self.rotor_settings_status.setText("Nenhum controlador GS-232 respondeu. Confira cabo USB, driver e velocidade.")
         elif key == "rotor-read" and data:

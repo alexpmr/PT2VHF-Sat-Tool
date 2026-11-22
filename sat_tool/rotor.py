@@ -1,4 +1,4 @@
-"""Controle de rotor az/el pelo protocolo Yaesu GS-232A/B (v1.7.0).
+"""Controle de rotor az/el pelo protocolo Yaesu GS-232A/B (v1.7.0) ou pelo Hamlib rotctld (v1.9.5).
 
 Pensado para o Yaesu G-5400B ligado à interface ERC-M (DF9GR, Easy Rotor Control), que aparece
 no computador como porta serial (USB) e emula o GS-232. Também serve para outros controladores
@@ -225,6 +225,146 @@ def probe_port(port: str, baud: int = 9600, opener=None) -> Optional[tuple[float
         return None
     finally:
         rotor.close()
+
+
+# ---------------------------------------------------------------- Hamlib rotctld (v1.9.5)
+ROTCTLD_DEFAULT = "127.0.0.1:4533"
+
+
+def parse_address(text: str, default_port: int = 4533) -> tuple[str, int]:
+    """'127.0.0.1:4533', 'localhost' ou ':4533' → (host, porta)."""
+    text = (text or "").strip() or ROTCTLD_DEFAULT
+    host, _, port = text.rpartition(":") if ":" in text else (text, "", "")
+    host = host.strip() or "127.0.0.1"
+    try:
+        port_n = int(port) if port else default_port
+    except ValueError:
+        raise ValueError(f"Endereço do rotctld inválido: {text} (use endereço:porta, ex.: {ROTCTLD_DEFAULT})")
+    if not 0 < port_n < 65536:
+        raise ValueError(f"Porta do rotctld inválida: {port_n}")
+    return host, port_n
+
+
+class RotctldRotor(GS232Rotor):
+    """Cliente do Hamlib rotctld por TCP (qualquer rotor suportado pelo Hamlib).
+
+    Mesma interface do GS232Rotor: connect(endereço), read_position ('p'), move ('P az el'), stop ('S'), park.
+    O estacionamento usa a posição do perfil (como no GS-232), não o 'K' do Hamlib.
+    """
+
+    def __init__(self, logger: Callable[[str], None] | None = None):
+        super().__init__(logger)
+        self.sock = None
+        self.address = ""
+
+    @property
+    def connected(self) -> bool:
+        return self.sock is not None
+
+    def connect(self, port: str, baud: int = 0, timeout: float = 2.0, opener=None):
+        """`port` é o endereço 'host:porta' do rotctld; `opener(host, port, timeout)` permite testes sem rede."""
+        with self.lock:
+            self.close()
+            host, port_n = parse_address(port)
+            if opener is None:
+                import socket
+                opener = lambda h, pn, t: socket.create_connection((h, pn), timeout=t)
+            self.sock = opener(host, port_n, timeout)
+            try:
+                self.sock.settimeout(timeout)
+            except Exception:
+                pass
+            self._buf = b""
+            self.address = f"{host}:{port_n}"
+            self.logger(f"Rotor: rotctld {self.address} conectado")
+            try:
+                self.position = self.read_position()
+            except Exception:
+                self.close()
+                raise
+            return self.position
+
+    def close(self):
+        with self.lock:
+            sock, self.sock = getattr(self, "sock", None), None
+            if sock is not None:
+                try:
+                    sock.close()
+                except Exception:
+                    pass
+
+    def _readline(self) -> str:
+        while b"\n" not in self._buf:
+            chunk = self.sock.recv(1024)
+            if not chunk:
+                raise ConnectionError("rotctld fechou a conexão")
+            self._buf += chunk
+        line, _, self._buf = self._buf.partition(b"\n")
+        return line.decode("ascii", errors="replace").strip()
+
+    def _send(self, command: str, lines: int = 1) -> list[str]:
+        with self.lock:
+            if not self.connected:
+                raise ConnectionError("Rotor desconectado")
+            try:
+                self.sock.sendall((command + "\n").encode("ascii"))
+                self.logger("Rotor TX " + command)
+                answer = []
+                for _ in range(lines):
+                    line = self._readline()
+                    answer.append(line)
+                    if line.startswith("RPRT"):
+                        break
+            except (OSError, ConnectionError):
+                self.close()
+                raise
+            self.logger("Rotor RX " + " | ".join(answer))
+            for line in answer:
+                if line.startswith("RPRT") and line.split()[-1] != "0":
+                    raise ConnectionError(f"rotctld recusou '{command}': {line}")
+            return answer
+
+    def read_position(self) -> tuple[float, float]:
+        try:
+            answer = self._send("p", lines=2)
+            if len(answer) < 2:
+                raise ValueError("Resposta de posição incompleta do rotctld: " + " | ".join(answer))
+            pos = (float(answer[0].replace(",", ".")), float(answer[1].replace(",", ".")))
+        except Exception:
+            self.failures += 1
+            raise
+        self.failures = 0
+        self.position = pos
+        return pos
+
+    def move(self, az: float, el: float, profile: RotorProfile) -> tuple[float, float]:
+        az = min(profile.az_max, max(0.0, az))
+        el = min(profile.el_max, max(0.0, el))
+        self._send(f"P {az:.1f} {el:.1f}")
+        self.last_command_at = time.monotonic()
+        return az, el
+
+    def stop(self):
+        if self.connected:
+            try:
+                self._send("S")
+            except Exception as exc:
+                self.logger("Rotor: falha ao enviar PARAR: " + str(exc))
+
+
+def probe_rotctld(address: str, opener=None) -> Optional[tuple[float, float]]:
+    """Testa o rotctld lendo a posição ('p'); não move o rotor."""
+    rotor = RotctldRotor()
+    try:
+        return rotor.connect(address, timeout=1.5, opener=opener)
+    except Exception:
+        return None
+    finally:
+        rotor.close()
+
+
+def make_rotor(protocol: str, logger=None):
+    return RotctldRotor(logger) if protocol == "rotctld" else GS232Rotor(logger)
 
 
 def calibrated_north_offset(read_az: float, true_az: float, current_offset: float = 0.0) -> float:

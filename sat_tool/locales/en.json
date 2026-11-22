@@ -498,5 +498,17 @@
 "Connecting to the rotator controller",
 "Stops the rotator, disconnects the controller and returns to OFF mode",
 "Yaesu FT-847 (SAT mode, 5-byte CAT)",
-"Yaesu text CAT (FT-991/991A, FTDX10, FTDX101, FT-710, FT-891)"
+"Yaesu text CAT (FT-991/991A, FTDX10, FTDX101, FT-710, FT-891)",
+"FT-847 style (blue LCD, MAIN and SUB side by side)",
+"FT-817/818 style (small amber LCD)",
+"NO TX",
+"TS-790 style (VFD with SUB RX window)",
+"IC-705 style (color screen with spectrum)",
+"Hamlib rotctld (TCP)",
+"rotctld address",
+"Test rotctld",
+"Connects to rotctld and reads the position ('p'); does not move the rotator",
+"rotctld address:port (default 127.0.0.1:4533). E.g.: rotctld -m 603 -r COM5",
+"rotctld did not answer. Check that it is running and the address:port.",
+"GS-232A/B: controller on the COM port (ERC-M, GS-232, K3NG). Hamlib rotctld: any Hamlib rotator; run rotctld and enter its address"
 ]

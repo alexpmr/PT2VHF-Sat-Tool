@@ -60,7 +60,8 @@ def application_dir() -> Path:
 # v1.9.2: configurações gravadas por telas mais novas (rotor, aparência, display destacado, painel SDR)
 # eram descartadas ao reabrir porque não estavam em DEFAULTS. Ficam aqui, com o mesmo padrão de antes.
 ROTOR_DEFAULTS = {
-    "rotor_enabled": False, "rotor_port": "", "rotor_baud": 9600, "rotor_profile": "g5400b",
+    "rotor_enabled": False, "rotor_port": "", "rotor_baud": 9600, "rotor_protocol": "gs232",
+    "rotor_rotctld": "127.0.0.1:4533", "rotor_profile": "g5400b",
     "rotor_az_max": 450.0, "rotor_el_max": 180.0, "rotor_north_offset": 0.0, "rotor_park_az": 0.0,
     "rotor_park_el": 0.0, "rotor_tolerance": 4.0, "rotor_min_interval": 2.0, "rotor_prepos_s": 180.0,
     "rotor_min_el": 0.0, "rotor_preference": "auto", "rotor_jog_step": 5.0,

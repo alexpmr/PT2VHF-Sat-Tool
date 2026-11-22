@@ -498,5 +498,17 @@
 "Conectando ao controlador do rotor",
 "Para o rotor, desconecta o controlador e volta ao modo DESLIGADO",
 "Yaesu FT-847 (modo SAT, CAT 5 bytes)",
-"Yaesu CAT texto (FT-991/991A, FTDX10, FTDX101, FT-710, FT-891)"
+"Yaesu CAT texto (FT-991/991A, FTDX10, FTDX101, FT-710, FT-891)",
+"Estilo FT-847 (LCD azul, MAIN e SUB lado a lado)",
+"Estilo FT-817/818 (LCD pequeno âmbar)",
+"SEM TX",
+"Estilo TS-790 (VFD com janela SUB RX)",
+"Estilo IC-705 (tela colorida com espectro)",
+"Hamlib rotctld (TCP)",
+"Endereço do rotctld",
+"Testar rotctld",
+"Conecta ao rotctld e lê a posição ('p'); não move o rotor",
+"Endereço:porta do rotctld (padrão 127.0.0.1:4533). Ex.: rotctld -m 603 -r COM5",
+"O rotctld não respondeu. Confira se ele está rodando e o endereço:porta.",
+"GS-232A/B: controlador na porta COM (ERC-M, GS-232, K3NG). Hamlib rotctld: qualquer rotor do Hamlib; rode o rotctld e informe o endereço"
 ]
