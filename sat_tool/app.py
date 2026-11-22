@@ -1740,6 +1740,8 @@ class MainWindow(RotorUiMixin, QMainWindow):
             version=getattr(self.available_update,'version','')
             launch_staged_update(Path(package), portable=self.update_distribution[1]=='Portable', script_path=script,
                                  version=version)
+            from .updater import mark_update_pending
+            mark_update_pending(version)   # v1.9.4: se nada terminar, a próxima abertura avisa com o log
             self.doppler_checkbox.setChecked(False)
             self.cat_tracking_armed=False
             self.radio.disconnect()
@@ -1753,11 +1755,39 @@ class MainWindow(RotorUiMixin, QMainWindow):
             self.version_btn.setText('Falha ao instalar · tentar novamente')
             QMessageBox.critical(self,'Atualização não aplicada',str(exc))
 
+    def selftest_ota(self):
+        """Só para o CI: aplica o Setup de PT2VHF_SELFTEST_OTA como se viesse do site (mesmo caminho do OTA).
+        As variáveis saem do ambiente antes, para o programa reaberto não repetir o teste."""
+        package=os.environ.pop("PT2VHF_SELFTEST_OTA","")
+        version=os.environ.pop("PT2VHF_SELFTEST_OTA_VERSION",__version__)
+        os.environ.pop("PT2VHF_SELFTEST_OTA_DELAY_MS",None)
+        if not package:
+            return
+        from .updater import AvailableUpdate
+        self.available_update=AvailableUpdate(version=version,body="",is_prerelease=False,
+                                              asset_name=Path(package).name,url="",expected_sha256=None,
+                                              expected_size=0,html_url="")
+        self.log(f"Teste de OTA do CI: aplicando {package}")
+        self.update_ready(package)
+
     def show_last_update_result(self):
-        from .updater import read_update_result
+        from .updater import read_update_result, check_pending_update
         result=read_update_result()
         if not result:
+            # v1.9.4: a atualização foi lançada, mas o atualizador não deixou resultado (relato 21/11: "baixou,
+            # fechou e não instalou"): avisa com as últimas linhas do log do atualizador.
+            pending=check_pending_update(__version__)
+            if pending:
+                target,lines=pending
+                tail="\n".join(lines) or "(o atualizador não chegou a registrar nada)"
+                self.log(f"Atualização para {target} não terminou; log do atualizador: {tail}")
+                QMessageBox.warning(self,"Atualização não concluída",
+                                    f"A atualização para a versão {target} não terminou e o programa continua na "
+                                    f"versão {__version__}.\n\nÚltimas linhas do atualizador:\n{tail}\n\n"
+                                    "Instale a versão nova pelo site www.pt2vhf.com/sat e, se puder, envie o "
+                                    "arquivo %TEMP%\\PT2VHF-Sat-Tool-update-helper.log.")
             return
+        check_pending_update(__version__)
         status,version,detail=result
         self.log(f"Resultado da última atualização: {status} {version} {detail}")
         if status=="ok":
@@ -5150,6 +5180,9 @@ def main():
     window=MainWindow()
     window.show_fitted()
     QTimer.singleShot(2500,window.show_last_update_result)
+    # v1.9.4: teste do CI — o programa real instalado aplica a si mesmo um Setup local pelo caminho do OTA
+    if os.environ.get("PT2VHF_SELFTEST_OTA"):
+        QTimer.singleShot(int(os.environ.get("PT2VHF_SELFTEST_OTA_DELAY_MS","15000")),window.selftest_ota)
     code=qt_exec(app)
     del mutex
     # Threads de serial/SDR/rede são daemon; sai imediatamente para não deixar processos órfãos.

@@ -813,5 +813,13 @@
 "Geprüftes Foto nicht verfügbar; Betreiber/AMSAT fragen.",
 "Foto:",
 "Schließen",
-"Ganze Welt zeigen"
+"Ganze Welt zeigen",
+"klicken, um den Rotor-Block ein- oder auszublenden",
+"Rotor verbindet",
+"STEUERUNG EIN",
+"STEUERUNG AUS",
+"VERBINDE…",
+"Verbindet mit dem Rotor-Steuergerät (Port aus Einstellungen → Rotoren)",
+"Verbinde mit dem Rotor-Steuergerät",
+"Stoppt den Rotor, trennt das Steuergerät und wechselt in den Modus AUS"
 ]

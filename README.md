@@ -30,7 +30,20 @@ O sufixo `Win11-x64` é mantido para compatibilidade com o atualizador e também
 4. Se outro computador/celular não alcançar a página, use **Liberar no firewall do Windows** (regra só para a porta, perfil Privado, só a rede local; o Windows pede confirmação) e confira na lista **Endereços desta máquina** o IPv4 da mesma rede do outro aparelho. Não configure redirecionamento de porta no roteador.
 5. Opcional: **Permitir controle pela rede (sem PTT)** com **PIN da estação** (4 a 12 dígitos). O navegador passa a poder escolher satélite, ligar/desligar Auto CAT, A/B, RX ONLY e rastrear/estacionar/PARAR o rotor. Cada ação pede o PIN e vai para o log com o IP; PTT/TX nunca é acionado pela rede.
 
-**Escopo do painel Web v1.9.3:** satélite, frequências, display do rádio (mesmo modelo da janela), rotor, CAT, telemetria orbital e APRS decodificado, mapa vetorial offline e passagens, atualizados a cada 1,5 s. Só aparelhos da rede privada (IP público é recusado); **Renovar chave** derruba links e sessões antigos; diagnóstico mostra último acesso remoto e navegador remoto ativo. O desktop deve permanecer aberto. O HTTP na LAN não é criptografado; não divulgue a URL fora da rede.
+**Escopo do painel Web v1.9.4:** satélite, frequências, display do rádio (mesmo modelo da janela), rotor, CAT, telemetria orbital e APRS decodificado, mapa vetorial offline e passagens, atualizados a cada 1,5 s. Só aparelhos da rede privada (IP público é recusado); **Renovar chave** derruba links e sessões antigos; diagnóstico mostra último acesso remoto e navegador remoto ativo. O desktop deve permanecer aberto. O HTTP na LAN não é criptografado; não divulgue a URL fora da rede.
+
+## Novidades v1.9.4 — CAT ICOM e Yaesu para satélite
+
+- **ICOM IC-9700, IC-910, IC-9100, IC-820, IC-821 e IC-970** com RX e TX no mesmo rádio: downlink na SUB, uplink na
+  MAIN e modo satélite ligado pelo programa (IC-9700/910/9100). O Doppler do RX continua durante o TX.
+- **Yaesu FT-847** no modo SAT (SAT RX e SAT TX, full duplex) e **Yaesu CAT texto** (FT-991/991A, FTDX10, FTDX101,
+  FT-710, FT-891): RX no VFO-A e TX no VFO-B, com o SPLIT ligado no rádio. Nenhum driver aciona PTT.
+- **Ícone ROTOR** abre e esconde o bloco do rotor; dentro dele, **ATIVAR/DESATIVAR CONTROLE**. Conectar não liga
+  mais o AUTOMÁTICO sozinho.
+- **LUČA-1 (RS90S)** e os satélites russos da R4UAB voltam a aparecer: a lista passou a ter números de catálogo
+  acima de 99999 (formato Alpha-5) e o programa perdia a fonte inteira.
+- **Atualização automática:** se o programa antigo travar ao fechar, o atualizador o encerra e instala; se a
+  atualização não terminar, a abertura seguinte avisa com as últimas linhas do registro do atualizador.
 
 ## Novidades v1.9.3 — tela sem rolagem em monitores menores
 

@@ -813,5 +813,13 @@
 "Verified photo unavailable; check with the operator/AMSAT.",
 "Photo:",
 "Close",
-"Show whole world"
+"Show whole world",
+"click to show or hide the rotator panel",
+"Rotator connecting",
+"ENABLE CONTROL",
+"DISABLE CONTROL",
+"CONNECTING…",
+"Connects to the rotator controller (port from Settings → Rotators)",
+"Connecting to the rotator controller",
+"Stops the rotator, disconnects the controller and returns to OFF mode"
 ]

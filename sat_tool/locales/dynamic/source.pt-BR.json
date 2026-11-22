@@ -813,5 +813,13 @@
 "Foto verificada indisponível; consultar operador/AMSAT.",
 "Foto:",
 "Fechar",
-"Mostrar mundo"
+"Mostrar mundo",
+"clique para mostrar ou esconder o bloco do rotor",
+"Rotor conectando",
+"ATIVAR CONTROLE",
+"DESATIVAR CONTROLE",
+"CONECTANDO…",
+"Conecta ao controlador do rotor (porta de Configurações → Rotores)",
+"Conectando ao controlador do rotor",
+"Para o rotor, desconecta o controlador e volta ao modo DESLIGADO"
 ]

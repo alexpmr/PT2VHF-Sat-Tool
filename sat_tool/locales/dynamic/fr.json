@@ -813,5 +813,13 @@
 "Photo vérifiée indisponible ; consultez l'opérateur/AMSAT.",
 "Photo :",
 "Fermer",
-"Afficher le monde"
+"Afficher le monde",
+"cliquez pour afficher ou masquer le bloc du rotor",
+"Rotor en connexion",
+"ACTIVER LE CONTRÔLE",
+"DÉSACTIVER LE CONTRÔLE",
+"CONNEXION…",
+"Se connecte au contrôleur du rotor (port de Paramètres → Rotors)",
+"Connexion au contrôleur du rotor",
+"Arrête le rotor, déconnecte le contrôleur et revient au mode ARRÊT"
 ]
