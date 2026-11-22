@@ -55,5 +55,6 @@ def test_modal_frequency_download_progress_updates_per_record():
     assert "self.frequency_progress_dialog.setWindowModality(Qt.WindowModal)" in source
     assert "self.frequency_progress_dialog.canceled.connect(self.cancel_catalog_transmitters)" in source
     assert "self.frequency_progress_dialog.setValue(index)" in source
-    assert 'stats["no_data"]+=1' in source
+    # v1.9.6: uma única consulta ao SatNOGS (lista inteira), com progresso por página
+    assert "refresh_all_transmitters(data_dir,ids" in source and '"tx-batch-page"' in source
     assert 'if "tx-batch" not in self.pending_jobs:return' in source

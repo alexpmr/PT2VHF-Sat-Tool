@@ -2,7 +2,7 @@ from __future__ import annotations
 from pathlib import Path
 import json, os, sys
 
-DEFAULT_SATELLITES = ("25544", "27607", "40931", "7530", "24278", "44909", "59112")
+DEFAULT_SATELLITES = ("25544", "27607", "40931", "7530", "24278", "44909", "59112", "67287")
 
 DEFAULTS = {
     # v1.4.0: SDR, equipamentos RX/TX separados e telemetria.
@@ -37,6 +37,7 @@ DEFAULTS = {
     "cat_tracking_interval_s": 1, "cat_doppler_out_of_view": True,
     "cat_live_v137_migrated": True,
     "default_satellites_v1316_migrated": True,
+    "luca1_default_v196_migrated": True,
     "aos_alarm_enabled": True, "aos_alarm_sound": True,
     "aos_alarm_lead_seconds": 10, "aos_alarm_fired": [],
     "web_enabled": False, "web_allow_lan": False, "web_port": 8094,
@@ -127,6 +128,13 @@ class Config:
                     merged += [n for n in DEFAULT_SATELLITES if n not in merged]
                     self.values["satellite_selection"] = merged
                 self.values["default_satellites_v1316_migrated"] = True
+                self.save()
+            # v1.9.6 (operador, 22/11/2026: "ativo por padrão"): LUČA-1 (NORAD 67287) marcado uma única vez
+            if not data.get("luca1_default_v196_migrated", False):
+                current = self.values.get("satellite_selection")
+                if current is not None and "67287" not in [str(n) for n in current]:
+                    self.values["satellite_selection"] = [str(n) for n in current] + ["67287"]
+                self.values["luca1_default_v196_migrated"] = True
                 self.save()
 
     def save(self):

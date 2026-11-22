@@ -33,7 +33,7 @@ from .passfmt import radial_kmh_text
 from .appearance import DEFAULTS as THEME_DEFAULTS
 from .rotor_ui import RotorUiMixin
 from .cat import TS2000, available_ports, decode_satellite_status
-from .catalog import refresh_orbits, load_orbits, refresh_transmitters, load_transmitters, age_hours, satellite_search_text, normalized_satellite_search, DEFAULT_GROUPS
+from .catalog import refresh_orbits, load_orbits, refresh_transmitters, refresh_all_transmitters, load_transmitters, age_hours, satellite_search_text, normalized_satellite_search, DEFAULT_GROUPS
 from .config import Config, DEFAULT_SATELLITES
 from .geolocation import GeoFix
 from .maidenhead import maidenhead_to_latlon
@@ -2382,18 +2382,14 @@ class MainWindow(RotorUiMixin, QMainWindow):
         if "tx-batch" in self.pending_jobs:
             self.catalog_progress.setText("Já existe atualização em execução")
             return
-        if len(ids)>25:
-            reply=QMessageBox.question(self,"Atualizar frequências",
-                f"Consultar SatNOGS para {len(ids)} satélites? Requisições sequenciais e canceláveis.",
-                QMessageBox.Yes|QMessageBox.No,QMessageBox.No)
-            if reply!=QMessageBox.Yes:return
+        # v1.9.5: uma única consulta com todos os transmissores do SatNOGS (antes: uma por satélite, horas)
         self.freq_update_cancel=False
         self.frequency_started_at=time.monotonic()
         self.refresh_catalog_freq.setEnabled(False)
         self.stop_catalog_freq.setEnabled(True)
-        self.catalog_progress.setText(f"SatNOGS: iniciando 0/{len(ids)}")
+        self.catalog_progress.setText("SatNOGS: baixando a lista de transmissores…")
         self.frequency_progress_dialog=QProgressDialog(
-            f"Consultando frequências SatNOGS…\n0 de {len(ids)} satélites", "Cancelar",0,len(ids),self)
+            "Baixando a lista de transmissores do SatNOGS (uma única consulta)…", "Cancelar",0,0,self)
         self.frequency_progress_dialog.setWindowTitle("Atualizar frequências dos satélites")
         self.frequency_progress_dialog.setMinimumDuration(0)
         self.frequency_progress_dialog.setAutoClose(False)
@@ -2403,25 +2399,15 @@ class MainWindow(RotorUiMixin, QMainWindow):
         center=self.frameGeometry().center()
         self.frequency_progress_dialog.move(center-self.frequency_progress_dialog.rect().center())
         self.frequency_progress_dialog.canceled.connect(self.cancel_catalog_transmitters)
-        self.frequency_progress_dialog.setValue(0)
         self.frequency_progress_dialog.show()
         data_dir=self.config.dir
         def work():
-            import time
-            stats={"total":len(ids),"ok":0,"no_data":0,"failed":[],"cancelled":False}
-            for i,ident in enumerate(ids,1):
-                if self.freq_update_cancel:
-                    stats["cancelled"]=True;break
-                try:
-                    rows=refresh_transmitters(data_dir,int(ident))
-                    if rows:stats["ok"]+=1
-                    else:stats["no_data"]+=1
-                    self.events.result.emit("tx-batch-item",(ident,rows,i,len(ids)))
-                except Exception as exc:
-                    stats["failed"].append(f"{ident}: {exc}")
-                    self.events.result.emit("tx-batch-item",(ident,None,i,len(ids)))
-                if i<len(ids):time.sleep(0.4)
-            return stats
+            def progress(page,count):
+                self.events.result.emit("tx-batch-page",(page,count))
+            try:
+                return refresh_all_transmitters(data_dir,ids,progress=progress,cancel=lambda:self.freq_update_cancel)
+            except InterruptedError:
+                return {"total":len(ids),"ok":0,"no_data":0,"failed":[],"cancelled":True,"rows":{}}
         self.background("tx-batch",work)
 
     def cancel_catalog_transmitters(self):
@@ -2457,7 +2443,10 @@ class MainWindow(RotorUiMixin, QMainWindow):
                     if action.isChecked()} if hasattr(self,"catalog_category_actions") else set(DEFAULT_GROUPS)
         ids=[]
         for ident,obj in self.omm.items():
-            if not categories.intersection(obj.get("CATEGORIES",["amateur"])):
+            # v1.9.6: marcados e satélites padrão buscados pelo NORAD ("defaults", ex.: IO-86 fora dos grupos)
+            # aparecem com qualquer filtro de categoria; antes sumiam da lista
+            cats=obj.get("CATEGORIES",["amateur"])
+            if not categories.intersection(cats) and ident not in checked and "defaults" not in cats:
                 continue
             if query and query not in satellite_search_text(ident,obj):
                 continue
@@ -4313,6 +4302,14 @@ class MainWindow(RotorUiMixin, QMainWindow):
             else:
                 self.log(f"TLE/OMM: categoria {index}/{total} {group} · {count} satélites")
             return
+        if key=="tx-batch-page":
+            page,count=data
+            text=f"SatNOGS: {count} transmissores recebidos (página {page})"
+            self.catalog_progress.setText(text)
+            if self.frequency_progress_dialog:
+                elapsed=time.monotonic()-(self.frequency_started_at or time.monotonic())
+                self.frequency_progress_dialog.setLabelText(text+f"\nDecorrido: {format_duration(elapsed)}")
+            return
         if key=="tx-batch-item":
             ident,rows,index,total=data
             if rows is not None:
@@ -4414,6 +4411,11 @@ class MainWindow(RotorUiMixin, QMainWindow):
             if self.frequency_progress_dialog:
                 self.frequency_progress_dialog.close()
                 self.frequency_progress_dialog=None
+            for ident,rows in (data.get("rows") or {}).items():
+                self.pass_rows[ident]=rows
+            current=self.sat_combo.currentData()
+            if current is not None and str(current) in (data.get("rows") or {}):
+                self.choose_cached_modes(int(current))
             self.refresh_satellite_table()
             self.refresh_tracked_table()
             self.refresh_passes()

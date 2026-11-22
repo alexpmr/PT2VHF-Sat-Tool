@@ -510,5 +510,7 @@
 "Łączy się z rotctld i odczytuje pozycję ('p'); nie porusza rotorem",
 "Adres:port rotctld (domyślnie 127.0.0.1:4533). Np.: rotctld -m 603 -r COM5",
 "rotctld nie odpowiedział. Sprawdź, czy działa, oraz adres:port.",
-"GS-232A/B: sterownik na porcie COM (ERC-M, GS-232, K3NG). Hamlib rotctld: dowolny rotor Hamlib; uruchom rotctld i podaj adres"
+"GS-232A/B: sterownik na porcie COM (ERC-M, GS-232, K3NG). Hamlib rotctld: dowolny rotor Hamlib; uruchom rotctld i podaj adres",
+"Pobieranie listy nadajników SatNOGS (jedno zapytanie)…",
+"SatNOGS: pobieranie listy nadajników…"
 ]

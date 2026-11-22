@@ -510,5 +510,7 @@
 "rotctld に接続して位置を読み取ります（'p'）。ローテーターは動かしません",
 "rotctld のアドレス:ポート（既定 127.0.0.1:4533）。例: rotctld -m 603 -r COM5",
 "rotctld が応答しません。起動しているか、アドレス:ポートを確認してください。",
-"GS-232A/B: COM ポートのコントローラー（ERC-M、GS-232、K3NG）。Hamlib rotctld: Hamlib 対応の任意のローテーター。rotctld を起動してアドレスを入力"
+"GS-232A/B: COM ポートのコントローラー（ERC-M、GS-232、K3NG）。Hamlib rotctld: Hamlib 対応の任意のローテーター。rotctld を起動してアドレスを入力",
+"SatNOGS の送信機リストをダウンロード中（1 回のリクエスト）…",
+"SatNOGS: 送信機リストをダウンロード中…"
 ]
