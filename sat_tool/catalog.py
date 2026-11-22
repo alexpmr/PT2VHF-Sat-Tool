@@ -25,7 +25,8 @@ ALIASES = {"27607": ("SO-50", "SO50", "SAUDISAT 1C", "SAUDISAT-1C"),
            "44909": ("RS-44", "RS44", "DOSAAF-85"),
            "7530": ("AO-7", "AO7", "OSCAR 7"),
            "40931": ("IO-86", "IO86", "LAPAN-A2"),
-           "59112": ("SONATE-2", "SONATE2")}
+           "59112": ("SONATE-2", "SONATE2"),
+           "67287": ("LUCA-1", "LUČA-1", "LUCA1", "RS90S")}
 
 
 def normalized_satellite_search(text):
@@ -89,24 +90,57 @@ def refresh_group_omm(data_dir, group):
     return objects
 
 
+SATNOGS_TLE = "https://db.satnogs.org/api/tle/"
+
+
+def _satnogs_tle_omm(ident):
+    """v1.9.7: reserva quando a CelesTrak não tem o NORAD (ex.: "No GP data found"): TLE do SatNOGS DB."""
+    response=requests.get(SATNOGS_TLE,params={"format":"json","norad_cat_id":ident},headers=HEADERS,timeout=30)
+    response.raise_for_status()
+    rows=response.json()
+    if isinstance(rows,dict):
+        rows=rows.get("results",[])
+    objects=[]
+    for row in rows if isinstance(rows,list) else []:
+        if not isinstance(row,dict):
+            continue
+        text="\n".join(str(row.get(k) or "") for k in ("tle0","tle1","tle2"))
+        for parsed in parse_tle(text):
+            if str(parsed["NORAD_CAT_ID"])==str(ident):
+                objects.append(tle_to_omm(parsed))
+    if not objects:
+        raise ValueError("SatNOGS sem TLE para NORAD "+str(ident))
+    return objects[:1]
+
+
 def refresh_catnr_omm(data_dir, ident):
-    """OMM de um único NORAD, com cache de 2 h como os grupos."""
+    """OMM de um único NORAD, com cache de 2 h como os grupos. v1.9.7: se a CelesTrak não tiver, usa o SatNOGS."""
     ident=str(int(ident))
     file=cache_path(data_dir,"catnr_"+ident+".json")
     hours=age_hours(data_dir,file.name)
     if file.exists() and hours is not None and hours<2:
         return json.loads(file.read_text(encoding="utf-8"))
     try:
-        response=requests.get("https://celestrak.org/NORAD/elements/gp.php",
-                              params={"CATNR":ident,"FORMAT":"json"},headers=HEADERS,timeout=30)
-        response.raise_for_status()
-        objects=response.json()
+        try:
+            response=requests.get("https://celestrak.org/NORAD/elements/gp.php",
+                                  params={"CATNR":ident,"FORMAT":"json"},headers=HEADERS,timeout=30)
+            response.raise_for_status()
+            try:
+                objects=response.json()
+            except ValueError:
+                raise ValueError("CelesTrak sem dados para NORAD "+ident+": "+response.text.strip()[:60])
+            if not isinstance(objects,list) or not objects or \
+                    not all(isinstance(o,dict) and "NORAD_CAT_ID" in o for o in objects):
+                raise ValueError("OMM inválido para NORAD "+ident)
+        except Exception as celestrak_error:
+            try:
+                objects=_satnogs_tle_omm(ident)
+            except Exception as satnogs_error:
+                raise ValueError(f"{celestrak_error}; {satnogs_error}")
     except Exception:
         if file.exists():
             return json.loads(file.read_text(encoding="utf-8"))
         raise
-    if not isinstance(objects,list) or not all(isinstance(o,dict) and "NORAD_CAT_ID" in o for o in objects):
-        raise ValueError("OMM inválido para NORAD "+ident)
     temp=file.with_suffix(".tmp")
     temp.write_text(json.dumps(objects,ensure_ascii=False),encoding="utf-8")
     temp.replace(file)
@@ -177,17 +211,18 @@ def load_omm(data_dir: Path):
     return json.loads(file.read_text(encoding="utf-8")) if file.exists() else []
 
 
-def refresh_transmitters(data_dir: Path, norad: int):
-    # Some API deployments paginate results; never persist partial pages.
-    from urllib.parse import urlparse
+def _fetch_transmitter_pages(params, max_pages=25, progress=None, cancel=None):
+    """Baixa todas as páginas de /api/transmitters/ (lista simples ou paginada). Nunca devolve página parcial."""
+    from urllib.parse import urljoin, urlparse
     rows=[]
     url=SATNOGS_TRANSMITTERS
-    params={"format":"json","satellite__norad_cat_id":norad}
     seen=set()
-    for page in range(25):
+    for page in range(max_pages):
+        if cancel is not None and cancel():
+            raise InterruptedError("Atualização cancelada")
         if url in seen:raise ValueError("Paginação SatNOGS cíclica")
         seen.add(url)
-        response=requests.get(url,params=params,headers=HEADERS,timeout=25)
+        response=requests.get(url,params=params,headers=HEADERS,timeout=60 if params and "satellite__norad_cat_id" not in params else 25)
         response.raise_for_status()
         result=response.json()
         if isinstance(result,list):
@@ -197,25 +232,77 @@ def refresh_transmitters(data_dir: Path, norad: int):
         else:raise ValueError("Resposta de transponders inválida")
         if not isinstance(current,list):raise ValueError("Registros de transponder inválidos")
         rows.extend(current)
+        if progress is not None:progress(page+1,len(rows))
         if not nxt:break
-        from urllib.parse import urljoin
         url=urljoin(SATNOGS_TRANSMITTERS,nxt)
         parsed=urlparse(url)
         if parsed.scheme!="https" or parsed.hostname!="db.satnogs.org":
             raise ValueError("Paginação SatNOGS encaminhou para domínio não autorizado")
         params=None
     else:raise ValueError("Paginação SatNOGS excedeu o limite")
+    return rows
+
+
+def _unique_transmitters(rows):
     unique={}
     for entry in rows:
         if not isinstance(entry,dict):raise ValueError("Transponder em formato inválido")
         key=str(entry.get("uuid") or entry.get("id") or (entry.get("description"),entry.get("downlink_low"),entry.get("uplink_low")))
         unique[key]=entry
-    result=list(unique.values())
+    return list(unique.values())
+
+
+def _write_transmitters(data_dir: Path, norad: int, rows):
     target=cache_path(data_dir,f"tx_{norad}.json")
     temp=target.with_suffix(".tmp")
-    temp.write_text(json.dumps(result,ensure_ascii=False),encoding="utf-8")
+    temp.write_text(json.dumps(rows,ensure_ascii=False),encoding="utf-8")
     temp.replace(target)
+
+
+def refresh_transmitters(data_dir: Path, norad: int):
+    # Some API deployments paginate results; never persist partial pages.
+    result=_unique_transmitters(_fetch_transmitter_pages({"format":"json","satellite__norad_cat_id":norad}))
+    _write_transmitters(data_dir,norad,result)
     return result
+
+
+def refresh_all_transmitters(data_dir: Path, ids, progress=None, cancel=None) -> dict:
+    """v1.9.7: UMA consulta ao SatNOGS com todos os transmissores (alguns MB), em vez de uma por satélite.
+
+    Antes eram ~12.500 requisições sequenciais (horas, e o SatNOGS limita/recusa consultas em sequência).
+    Grava tx_<norad>.json só para quem tem transmissores; um cache antigo de quem deixou de ter é zerado.
+    Satélites sem transmissor não ganham arquivo vazio (o catálogo tem milhares deles).
+    """
+    rows=_fetch_transmitter_pages({"format":"json"},max_pages=200,progress=progress,cancel=cancel)
+    by_norad={}
+    for entry in _unique_transmitters(rows):
+        norad=entry.get("norad_cat_id")
+        try:
+            norad=int(norad)
+        except (TypeError,ValueError):
+            continue
+        by_norad.setdefault(norad,[]).append(entry)
+    cache_path(data_dir,"satnogs_transmitters.json")
+    temp=data_dir/"satnogs_transmitters.tmp"
+    temp.write_text(json.dumps(rows,ensure_ascii=False),encoding="utf-8")
+    temp.replace(data_dir/"satnogs_transmitters.json")
+    stats={"total":0,"ok":0,"no_data":0,"failed":[],"cancelled":False,"rows":{},"downloaded":len(rows)}
+    for ident in ids:
+        try:
+            norad=int(ident)
+        except (TypeError,ValueError):
+            continue
+        stats["total"]+=1
+        found=by_norad.get(norad,[])
+        if found:
+            _write_transmitters(data_dir,norad,found)
+            stats["ok"]+=1
+            stats["rows"][str(ident)]=found
+        else:
+            stats["no_data"]+=1
+            if (data_dir/f"tx_{norad}.json").exists():
+                _write_transmitters(data_dir,norad,[])
+    return stats
 
 
 def load_transmitters(data_dir: Path, norad: int):

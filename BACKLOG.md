@@ -182,6 +182,22 @@
 
 ## Pendentes
 
+- **Atualizar frequências demorava horas ("SatNOGS: 14 de 12535 satélites", 6h40)** (registrado em 22/11/2026, relato do operador)
+  - Causa: o botão consultava o SatNOGS um satélite por vez para o catálogo inteiro (~12.500 requisições com pausa de
+    0,4 s); o SatNOGS também recusa consultas em sequência (provável causa da falha no NORAD 27848).
+  - **Feito (1.9.7):** `refresh_all_transmitters` baixa /api/transmitters/ inteiro numa consulta (pedido do operador:
+    "baixar todos localmente"), agrupa por NORAD e grava tx_<norad>.json só de quem tem transmissor. Teste
+    tests/test_v197_satnogs_bulk.py.
+- **IO-86 não aparecia na lista de satélites** (registrado em 22/11/2026, relato do operador)
+  - Satélites padrão fora dos grupos da CelesTrak entram pelo NORAD na categoria "defaults", que não existe no filtro de
+    categorias: ficavam fora da aba Satélites. **Feito (1.9.7):** marcados e "defaults" aparecem com qualquer filtro; se a
+    CelesTrak não tiver a órbita do NORAD, o programa usa o TLE do SatNOGS.
+- **Ativos por padrão: ISS, SO-50, HADES-E2, além dos que já estão** (operador, 22/11/2026; antes "ativo por padrão"
+  para o LUČA-1, publicado na 1.9.6). **Feito (1.9.7):** ISS e SO-50 já eram padrão; LUČA-1 já entrou na 1.9.6 (apelidos
+  LUCA-1/LUČA-1/RS90S na busca); HADES-E2 em DEFAULT_SATELLITE_NAMES, achado pelo nome (HADES-E2/HADES E2) no catálogo
+  baixado, porque o NORAD não pôde ser conferido daqui. Instalações existentes recebem a marcação uma vez.
+- **Versão 1.9.7 publicada em 22/11/2026** (frequências SatNOGS numa consulta, IO-86 na lista, HADES-E2 padrão).
+
 - **Rotor via Hamlib rotctld** (registrado em 22/11/2026, aprovado pelo operador; só registrar, sem implementar agora)
   - Hoje o rotor só fala GS-232A/B nativo pela serial. Pedido: opção de protocolo "Hamlib rotctld" por TCP
     (padrão 127.0.0.1:4533), para que qualquer rotor suportado pelo Hamlib funcione.

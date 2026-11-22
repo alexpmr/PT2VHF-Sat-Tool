@@ -510,5 +510,7 @@
 "Si connette a rotctld e legge la posizione ('p'); non muove il rotore",
 "Indirizzo:porta di rotctld (predefinito 127.0.0.1:4533). Es.: rotctld -m 603 -r COM5",
 "rotctld non ha risposto. Verifica che sia in esecuzione e l'indirizzo:porta.",
-"GS-232A/B: controller sulla porta COM (ERC-M, GS-232, K3NG). Hamlib rotctld: qualsiasi rotore Hamlib; avvia rotctld e indica l'indirizzo"
+"GS-232A/B: controller sulla porta COM (ERC-M, GS-232, K3NG). Hamlib rotctld: qualsiasi rotore Hamlib; avvia rotctld e indica l'indirizzo",
+"Download dell'elenco dei trasmettitori SatNOGS (una sola richiesta)…",
+"SatNOGS: download dell'elenco dei trasmettitori…"
 ]

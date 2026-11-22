@@ -510,5 +510,7 @@
 "Maakt verbinding met rotctld en leest de positie ('p'); beweegt de rotor niet",
 "rotctld-adres:poort (standaard 127.0.0.1:4533). Bijv.: rotctld -m 603 -r COM5",
 "rotctld antwoordde niet. Controleer of het draait en het adres:poort.",
-"GS-232A/B: controller op de COM-poort (ERC-M, GS-232, K3NG). Hamlib rotctld: elke Hamlib-rotor; start rotctld en vul het adres in"
+"GS-232A/B: controller op de COM-poort (ERC-M, GS-232, K3NG). Hamlib rotctld: elke Hamlib-rotor; start rotctld en vul het adres in",
+"SatNOGS-zenderlijst downloaden (één verzoek)…",
+"SatNOGS: zenderlijst downloaden…"
 ]

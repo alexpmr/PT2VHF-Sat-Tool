@@ -510,5 +510,7 @@
 "连接 rotctld 并读取位置（'p'）；不会转动旋转器",
 "rotctld 地址:端口（默认 127.0.0.1:4533）。例：rotctld -m 603 -r COM5",
 "rotctld 未响应。请确认它正在运行以及地址:端口。",
-"GS-232A/B：COM 端口上的控制器（ERC-M、GS-232、K3NG）。Hamlib rotctld：任何 Hamlib 支持的旋转器；运行 rotctld 并填写地址"
+"GS-232A/B：COM 端口上的控制器（ERC-M、GS-232、K3NG）。Hamlib rotctld：任何 Hamlib 支持的旋转器；运行 rotctld 并填写地址",
+"正在下载 SatNOGS 发射机列表（一次请求）…",
+"SatNOGS：正在下载发射机列表…"
 ]
