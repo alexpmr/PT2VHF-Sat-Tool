@@ -256,7 +256,7 @@ jobs:
           $pkgDir = Join-Path $env:RUNNER_TEMP 'otareal'; New-Item -ItemType Directory -Force -Path $pkgDir | Out-Null
           $pkg = Join-Path $pkgDir (Split-Path -Leaf $setup); Copy-Item $setup $pkg -Force
           $log = Join-Path $env:TEMP 'PT2VHF-Sat-Tool-update-helper.log'
-          foreach ($f in @($log, (Join-Path $env:TEMP 'PT2VHF-Sat-Tool-update-result.txt'))) { Remove-Item $f -ErrorAction SilentlyContinue }
+          foreach ($f in @($log, (Join-Path $env:TEMP 'PT2VHF-Sat-Tool-update-result.txt'), (Join-Path $env:TEMP 'PT2VHF-Sat-Tool-update-helper.out'))) { Remove-Item $f -ErrorAction SilentlyContinue }
           $env:PT2VHF_SELFTEST_OTA = $pkg; $env:PT2VHF_SELFTEST_OTA_VERSION = '1.9.4'; $env:PT2VHF_SELFTEST_OTA_DELAY_MS = '20000'
           $app = Start-Process -FilePath $exe -WorkingDirectory $dir -PassThru
           $null = $app.Handle
@@ -267,6 +267,10 @@ jobs:
             $done = (Test-Path $log) -and ((Get-Content $log -Raw) -match 'programa aberto pelo instalador|abrindo:|nenhum executavel')
           }
           if (Test-Path $log) { Get-Content $log | ForEach-Object { Write-Host "helper: $_" } } else { Write-Host 'helper: (sem log: o atualizador não rodou)' }
+          $out = Join-Path $env:TEMP 'PT2VHF-Sat-Tool-update-helper.out'
+          if (Test-Path $out) { Get-Content $out -Tail 20 | ForEach-Object { Write-Host "helper-out: $_" } }
+          $events = Get-ChildItem -Path (Join-Path $env:LOCALAPPDATA 'PT2VHF'), (Join-Path $env:APPDATA 'PT2VHF') -Recurse -Filter 'events.log' -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($events) { Get-Content $events.FullName -Tail 25 | ForEach-Object { Write-Host "app: $_" } }
           $setupLog = Join-Path $env:TEMP 'PT2VHF-Sat-Tool-setup.log'
           if (Test-Path $setupLog) { Get-Content $setupLog -Tail 10 | ForEach-Object { Write-Host "setup: $_" } }
           Start-Sleep -Seconds 15   # o programa reaberto precisa continuar aberto

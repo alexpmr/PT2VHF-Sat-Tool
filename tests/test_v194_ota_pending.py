@@ -35,3 +35,24 @@ def test_ci_exercises_ota_with_the_real_installed_program():
     assert "PT2VHF_SELFTEST_OTA" in wf
     app = Path("sat_tool/app.py").read_text(encoding="utf-8")
     assert 'os.environ.pop("PT2VHF_SELFTEST_OTA"' in app   # o programa reaberto não repete o teste
+
+
+def test_helper_starts_with_hidden_console_and_redirected_output(tmp_path):
+    """CI com o programa real (22/11): como DETACHED_PROCESS sem entrada/saída o PowerShell não rodava o script."""
+    calls = []
+
+    class P:
+        pid = 4321
+
+    def fake_popen(args, **kw):
+        calls.append(kw)
+        if len(calls) == 1:
+            raise OSError("breakaway negado")
+        return P()
+
+    assert updater.start_update_helper(["powershell.exe", "-File", "x.ps1"], tmp_path, tmp_path, popen=fake_popen) == 4321
+    first, second = calls
+    assert first["creationflags"] & 0x08000000 and not first["creationflags"] & 0x00000008   # NO_WINDOW, sem DETACHED
+    assert first["creationflags"] & 0x01000000 and not second["creationflags"] & 0x01000000  # breakaway e fallback
+    assert second["stdin"] is not None and second["stdout"] is not None and second["cwd"] == str(tmp_path)
+    assert (tmp_path / updater.HELPER_OUTPUT).exists()

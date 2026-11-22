@@ -345,11 +345,40 @@ def launch_staged_update(package: Path, *, portable: bool, script_path: Path,
         raise FileNotFoundError('Atualizador externo não incluído no pacote')
     args = update_script_args(helper, pid=os.getpid(), package=candidate, destination=destination, exe=exe,
                               portable=portable, version=version)
-    # Processo independente: continua vivo depois que o app (e seus filhos) encerram.
-    flags = getattr(subprocess, 'CREATE_NEW_PROCESS_GROUP', 0) | getattr(subprocess, 'DETACHED_PROCESS', 0) \
-        | getattr(subprocess, 'CREATE_BREAKAWAY_FROM_JOB', 0)
+    return start_update_helper(args, package.parent)
+
+
+HELPER_OUTPUT = 'PT2VHF-Sat-Tool-update-helper.out'
+
+
+def helper_creation_flags(breakaway: bool = True) -> int:
+    """v1.9.4: console OCULTO (CREATE_NO_WINDOW) em vez de DETACHED_PROCESS.
+
+    O CI com o programa real mostrou o defeito do relato de 21/11 ("baixou, fechou e não instalou"): aberto pelo
+    app (GUI, sem console) como DETACHED_PROCESS e sem entrada/saída válidas, o powershell.exe saía antes de rodar
+    a 1ª linha do apply-update.ps1. Com console oculto e saídas num arquivo ele roda normalmente.
+    """
+    flags = getattr(subprocess, 'CREATE_NEW_PROCESS_GROUP', 0x200) | getattr(subprocess, 'CREATE_NO_WINDOW', 0x08000000)
+    if breakaway:
+        flags |= getattr(subprocess, 'CREATE_BREAKAWAY_FROM_JOB', 0x01000000)
+    return flags
+
+
+def start_update_helper(args: list, workdir: Path, temp_dir: Optional[Path] = None, popen=None) -> int:
+    """Abre o atualizador como processo independente; stdout/stderr vão para %TEMP% (erros do PowerShell)."""
+    popen = popen or subprocess.Popen
+    out_path = Path(temp_dir or tempfile.gettempdir()) / HELPER_OUTPUT
+    with open(out_path, 'ab') as out:
+        common = dict(stdin=subprocess.DEVNULL, stdout=out, stderr=subprocess.STDOUT, close_fds=True,
+                      cwd=str(workdir))
+        try:
+            proc = popen(args, creationflags=helper_creation_flags(True), **common)
+        except OSError:
+            # Alguns ambientes proíbem sair do job: tenta sem CREATE_BREAKAWAY_FROM_JOB.
+            proc = popen(args, creationflags=helper_creation_flags(False), **common)
     try:
-        subprocess.Popen(args, close_fds=True, creationflags=flags)
-    except OSError:
-        # Alguns ambientes proíbem sair do job: tenta sem CREATE_BREAKAWAY_FROM_JOB.
-        subprocess.Popen(args, close_fds=True, creationflags=flags & ~getattr(subprocess, 'CREATE_BREAKAWAY_FROM_JOB', 0))
+        from .crash_diagnostics import report_event
+        report_event(f"Atualizador iniciado: PID {proc.pid} · {' '.join(map(str, args[-14:]))}")
+    except Exception:
+        pass
+    return proc.pid

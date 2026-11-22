@@ -204,6 +204,11 @@
     Setup pelo caminho do OTA e o teste exige que a versão nova reabra e continue aberta); se o app antigo travar ao
     fechar, o atualizador o encerra e instala (antes desistia); se a atualização não terminar, a abertura seguinte
     avisa com as últimas linhas do log do atualizador (tests/test_v194_ota_pending.py).
+  - **Reproduzido no CI em 22/11/2026** pelo teste com o programa real: o app fechou e o atualizador não registrou
+    nenhuma linha (o mesmo Setup, lançado por script, instalou e reabriu). Causa provável: o app (sem console) abria o
+    powershell.exe como DETACHED_PROCESS e sem entrada/saída válidas, e ele saía antes de rodar o script. Correção:
+    console oculto (CREATE_NO_WINDOW), entrada/saída redirecionadas para %TEMP%\PT2VHF-Sat-Tool-update-helper.out e
+    PID do atualizador no events.log do diagnóstico.
   - Atenção: quem está na 1.9.3 ou anterior usa o atualizador da própria versão instalada; a melhoria vale a partir
     das atualizações feitas já na 1.9.4. Pendente: o log do operador, se a falha se repetir.
 
