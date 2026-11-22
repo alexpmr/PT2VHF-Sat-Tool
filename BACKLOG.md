@@ -176,6 +176,12 @@
 
 ## Pendentes
 
+- **Rotor via Hamlib rotctld** (registrado em 22/11/2026, aprovado pelo operador; só registrar, sem implementar agora)
+  - Hoje o rotor só fala GS-232A/B nativo pela serial. Pedido: opção de protocolo "Hamlib rotctld" por TCP
+    (padrão 127.0.0.1:4533), para que qualquer rotor suportado pelo Hamlib funcione.
+  - Modelo: a opção RIGCTLD do RX/TX em sat_tool/rigs.py. Comandos rotctld: `P az el` (posicionar), `p` (ler posição),
+    `S` (parar), `K` (estacionar); manter PARAR (Esc/F12), limites, flip e modos AUTOMÁTICO/MANUAL/DESLIGADO.
+
 - **CAT para ICOM e Yaesu** (registrado em 21/11/2026, pedido do operador: "implemente CAT para icom e yaesu")
   - Já existiam: ICOM CI-V (1.9.0, 18 modelos) e Yaesu FT-817/818/857/897 (1.4.0).
   - **Feito (1.9.4):**
