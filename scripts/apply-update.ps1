@@ -78,7 +78,14 @@ try {
             if ($id -ne $WaitPid -and $id -ne $PID) { Stop-Process -Id $id -Force -ErrorAction SilentlyContinue }
         }
         $left = Wait-Exit $left 15
-        if ($left -contains $WaitPid) { throw 'O PT2VHF Sat Tool nao fechou a tempo. Feche-o e instale manualmente.' }
+        if ($left -contains $WaitPid) {
+            # v1.9.4: a atualizacao ja foi aprovada e conferida; o app antigo travado ao sair e encerrado
+            # (antes o atualizador desistia e o operador ficava sem a versao nova).
+            Write-Step "app nao fechou em 105 s; encerrando o processo $WaitPid"
+            Stop-Process -Id $WaitPid -Force -ErrorAction SilentlyContinue
+            $left = Wait-Exit @($WaitPid) 15
+            if ($left -contains $WaitPid) { throw 'O PT2VHF Sat Tool nao fechou a tempo. Feche-o e instale manualmente.' }
+        }
     }
     # Processos do mapa remanescentes da pasta instalada (ex.: instancia antiga) tambem travam arquivos.
     if ($Mode -eq 'Setup' -and $Destination) {

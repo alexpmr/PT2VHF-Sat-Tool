@@ -14,6 +14,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import time
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -275,6 +276,44 @@ def read_update_result(temp_dir: Optional[Path] = None) -> Optional[tuple]:
         return None
     lines += ['', '', '']
     return lines[0].strip(), lines[1].strip(), lines[2].strip()
+
+
+PENDING_FILE = 'PT2VHF-Sat-Tool-update-pending.json'
+HELPER_LOG = 'PT2VHF-Sat-Tool-update-helper.log'
+
+
+def mark_update_pending(version: str, temp_dir: Optional[Path] = None):
+    """v1.9.4: anota a atualização em andamento antes de fechar o app (diagnóstico na próxima abertura)."""
+    import json
+    try:
+        (Path(temp_dir or tempfile.gettempdir()) / PENDING_FILE).write_text(
+            json.dumps({'version': str(version), 'at': time.time()}), encoding='utf-8')
+    except OSError:
+        pass
+
+
+def check_pending_update(current_version: str, temp_dir: Optional[Path] = None) -> Optional[tuple]:
+    """Atualização anotada que não deixou resultado: (versão alvo, últimas linhas do log do atualizador).
+
+    None quando não havia nada pendente, quando já passou de 2 dias ou quando a versão aberta já é a nova.
+    O arquivo de pendência é removido.
+    """
+    import json
+    folder = Path(temp_dir or tempfile.gettempdir())
+    path = folder / PENDING_FILE
+    try:
+        data = json.loads(path.read_text(encoding='utf-8'))
+        path.unlink()
+    except (OSError, ValueError):
+        return None
+    target = str(data.get('version', ''))
+    if not target or time.time() - float(data.get('at', 0)) > 2 * 86400 or target == str(current_version):
+        return None
+    try:
+        lines = (folder / HELPER_LOG).read_text(encoding='utf-8-sig', errors='replace').splitlines()[-8:]
+    except OSError:
+        lines = []
+    return target, lines
 
 
 MANUAL_DOWNLOAD_URL = 'https://www.pt2vhf.com/sat'

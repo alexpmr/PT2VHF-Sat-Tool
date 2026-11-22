@@ -153,6 +153,15 @@
   2 monitores e DPI diferentes, RTL-SDR real no escopo do display, acesso de celular/notebook pela LAN e regra de
   firewall no Windows, fontes CJK no Windows/macOS.
 
+## v1.9.4 — CAT ICOM/Yaesu para satélite, ícone ROTOR e LUČA-1 (22/11/2026)
+
+- CAT ICOM MAIN/SUB (IC-9700/910/9100/820/821/970), Yaesu FT-847 (modo SAT) e Yaesu CAT texto (FT-991/991A…).
+- Ícone ROTOR abre/esconde o bloco; ATIVAR/DESATIVAR CONTROLE dentro do bloco.
+- TLE Alpha-5: a fonte R4UAB (com o LUČA-1) não cai mais inteira.
+- OTA: teste do CI com o programa real, atualizador encerra app travado, aviso na abertura seguinte.
+- Continuam pendentes por depender do operador: log do OTA se repetir, LUČA-1 marcado por padrão ou não, fotos para
+  novos estilos de display e homologação em campo (docs/homologacao-campo.md).
+
 ## v1.9.2 — modos do rotor, moldura de rádio e configurações salvas (19/11/2026)
 
 - Rotor AUTOMÁTICO / MANUAL / DESLIGADO com setas manuais junto dos gauges (detalhes no item em Pendentes).
@@ -169,7 +178,7 @@
 
 - **CAT para ICOM e Yaesu** (registrado em 21/11/2026, pedido do operador: "implemente CAT para icom e yaesu")
   - Já existiam: ICOM CI-V (1.9.0, 18 modelos) e Yaesu FT-817/818/857/897 (1.4.0).
-  - **Feito (branch fix/tle-alpha5, entra na próxima versão):**
+  - **Feito (1.9.4):**
     - ICOM IC-9700, IC-910, IC-9100, IC-820, IC-821 e IC-970 com RX e TX no mesmo rádio: **SUB = RX (downlink), MAIN =
       TX (uplink)**, e modo satélite ligado por CI-V (16 5A) no IC-9700/910/9100. Antes o driver usava split VFO A/B,
       que nesses rádios não cruza 145/435 MHz. O Doppler do RX continua durante o TX (full duplex). Os demais ICOM
@@ -191,8 +200,12 @@
   - Aguardando do operador: %TEMP%\PT2VHF-Sat-Tool-update-helper.log, %TEMP%\PT2VHF-Sat-Tool-setup.log,
     %TEMP%\PT2VHF-Sat-Tool-update-error.txt (se existir); edição (Setup ou Portátil); se o RTL-SDR estava ligado;
     e qual versão aparece em Sobre ao abrir o programa agora.
-  - Próximo passo: com o log, corrigir; e trocar o teste do CI para atualizar o programa real instalado
-    (não só o script falso), para pegar esse tipo de falha antes de publicar.
+  - **Feito (1.9.4), sem o log:** o CI agora atualiza o **programa real instalado** (o próprio Sat Tool aplica o
+    Setup pelo caminho do OTA e o teste exige que a versão nova reabra e continue aberta); se o app antigo travar ao
+    fechar, o atualizador o encerra e instala (antes desistia); se a atualização não terminar, a abertura seguinte
+    avisa com as últimas linhas do log do atualizador (tests/test_v194_ota_pending.py).
+  - Atenção: quem está na 1.9.3 ou anterior usa o atualizador da própria versão instalada; a melhoria vale a partir
+    das atualizações feitas já na 1.9.4. Pendente: o log do operador, se a falha se repetir.
 
 - **BUG · Ícone ROTOR abre o bloco do rotor, mas o 2º clique não o esconde** (registrado em 21/11/2026, relato do operador)
   - Causa: o ícone só alternava a conexão. Sem cabo (conexão falhando) ou desconectado, o 2º clique tentava conectar
@@ -200,7 +213,7 @@
     contrariando "o rotor começa em DESLIGADO".
   - **Pedido do operador (21/11/2026):** "clicar abre e esconde o bloco. Uma vez dentro do bloco, adicione um botão
     ativar/desativar controle do rotor."
-  - **Feito (branch fix/tle-alpha5, entra na próxima versão):** o ícone ROTOR do topo só abre e esconde o bloco (a cor
+  - **Feito (1.9.4):** o ícone ROTOR do topo só abre e esconde o bloco (a cor
     continua mostrando o estado: vermelho desligado, âmbar conectando, verde conectado); aberto/fechado fica salvo.
     Dentro do bloco, botão **ATIVAR CONTROLE** (habilita e conecta) / **DESATIVAR CONTROLE** (modo DESLIGADO, para e
     desconecta, sem esconder o bloco). Conectar mantém o modo escolhido (não arma mais o AUTOMÁTICO). Habilitar o
@@ -248,7 +261,7 @@
   - **Conferido em 21/11/2026:** o LUČA-1 está no satonline.txt da R4UAB (LUCA-1 (RS90S), NORAD 67287), mas **não
     aparecia no programa por um defeito**: a R4UAB passou a publicar satélites com catálogo acima de 99999 no
     formato Alpha-5 ("A0084" = 100084, ex.: RASSVET-3) e o leitor de TLE quebrava nessa linha, derrubando a fonte
-    R4UAB inteira a cada atualização. **Corrigido (branch fix/tle-alpha5, entra na próxima versão):** leitor aceita
+    R4UAB inteira a cada atualização. **Corrigido (1.9.4):** leitor aceita
     Alpha-5 e pula linha inválida sem perder o resto (376 satélites lidos do arquivo real). Teste
     tests/test_v194_tle_alpha5.py. Pendente do operador: deixar o LUČA-1 marcado por padrão ou não.
 - **Botão PREVER: passagens das próximas 24 h de todos os satélites selecionados** (registrado em 13/11/2026)
