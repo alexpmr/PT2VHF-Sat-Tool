@@ -498,5 +498,17 @@
 "ローテーター制御器に接続中",
 "ローテーターを停止し、制御器を切断してオフモードに戻します",
 "Yaesu FT-847（SAT モード、5 バイト CAT）",
-"Yaesu テキスト CAT（FT-991/991A、FTDX10、FTDX101、FT-710、FT-891）"
+"Yaesu テキスト CAT（FT-991/991A、FTDX10、FTDX101、FT-710、FT-891）",
+"FT-847 スタイル（青色 LCD、MAIN と SUB を横並び）",
+"FT-817/818 スタイル（小型アンバー LCD）",
+"TX なし",
+"TS-790 スタイル（VFD、SUB RX 表示窓付き）",
+"IC-705 スタイル（スペクトラム付きカラー画面）",
+"Hamlib rotctld (TCP)",
+"rotctld のアドレス",
+"rotctld をテスト",
+"rotctld に接続して位置を読み取ります（'p'）。ローテーターは動かしません",
+"rotctld のアドレス:ポート（既定 127.0.0.1:4533）。例: rotctld -m 603 -r COM5",
+"rotctld が応答しません。起動しているか、アドレス:ポートを確認してください。",
+"GS-232A/B: COM ポートのコントローラー（ERC-M、GS-232、K3NG）。Hamlib rotctld: Hamlib 対応の任意のローテーター。rotctld を起動してアドレスを入力"
 ]

@@ -498,5 +498,17 @@
 "Connessione al controller del rotore",
 "Ferma il rotore, scollega il controller e torna alla modalità SPENTO",
 "Yaesu FT-847 (modo SAT, CAT 5 byte)",
-"Yaesu CAT testo (FT-991/991A, FTDX10, FTDX101, FT-710, FT-891)"
+"Yaesu CAT testo (FT-991/991A, FTDX10, FTDX101, FT-710, FT-891)",
+"Stile FT-847 (LCD blu, MAIN e SUB affiancati)",
+"Stile FT-817/818 (piccolo LCD ambra)",
+"NO TX",
+"Stile TS-790 (VFD con finestra SUB RX)",
+"Stile IC-705 (schermo a colori con spettro)",
+"Hamlib rotctld (TCP)",
+"Indirizzo di rotctld",
+"Prova rotctld",
+"Si connette a rotctld e legge la posizione ('p'); non muove il rotore",
+"Indirizzo:porta di rotctld (predefinito 127.0.0.1:4533). Es.: rotctld -m 603 -r COM5",
+"rotctld non ha risposto. Verifica che sia in esecuzione e l'indirizzo:porta.",
+"GS-232A/B: controller sulla porta COM (ERC-M, GS-232, K3NG). Hamlib rotctld: qualsiasi rotore Hamlib; avvia rotctld e indica l'indirizzo"
 ]

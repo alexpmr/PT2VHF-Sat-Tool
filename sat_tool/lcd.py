@@ -99,12 +99,18 @@ RADIO_MODELS = {
     "ic910": "Estilo IC-910H (MAIN em cima, SUB embaixo)",
     "ft991": "Estilo FT-991A (tela colorida com escopo)",
     "ic9700": "Estilo IC-9700 (tela colorida, escopo e waterfall)",
+    # v1.9.5: a partir das fotos do operador (22/11/2026)
+    "ft847": "Estilo FT-847 (LCD azul, MAIN e SUB lado a lado)",
+    "ft817": "Estilo FT-817/818 (LCD pequeno âmbar)",
+    "ts790": "Estilo TS-790 (VFD com janela SUB RX)",
+    "ic705": "Estilo IC-705 (tela colorida com espectro)",
 }
 _classic = MODELS.pop("classico")
 MODELS.update(RADIO_MODELS)
 MODELS["classico"] = _classic          # TIPO: ... estilos de rádio → Clássico → volta à matriz
 # Cores de backlight que cada estilo aceita (a tecla LUZ circula só entre elas).
-MODEL_THEMES = {"ic706": ("verde", "âmbar"), "ic7100": ("branco",), "ic910": ("âmbar", "verde")}
+MODEL_THEMES = {"ic706": ("verde", "âmbar"), "ic7100": ("branco",), "ic910": ("âmbar", "verde"),
+                "ft847": ("azul",), "ft817": ("âmbar", "laranja"), "ts790": ("azul",)}
 
 
 def themes_for(model: str) -> tuple:

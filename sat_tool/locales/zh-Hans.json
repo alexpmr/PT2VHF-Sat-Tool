@@ -498,5 +498,17 @@
 "正在连接转台控制器",
 "停止转台、断开控制器并返回关闭模式",
 "Yaesu FT-847（SAT 模式，5 字节 CAT）",
-"Yaesu 文本 CAT（FT-991/991A、FTDX10、FTDX101、FT-710、FT-891）"
+"Yaesu 文本 CAT（FT-991/991A、FTDX10、FTDX101、FT-710、FT-891）",
+"FT-847 风格（蓝色 LCD，MAIN 与 SUB 并排）",
+"FT-817/818 风格（小型琥珀色 LCD）",
+"无 TX",
+"TS-790 风格（VFD，带 SUB RX 窗口）",
+"IC-705 风格（带频谱的彩色屏幕）",
+"Hamlib rotctld (TCP)",
+"rotctld 地址",
+"测试 rotctld",
+"连接 rotctld 并读取位置（'p'）；不会转动旋转器",
+"rotctld 地址:端口（默认 127.0.0.1:4533）。例：rotctld -m 603 -r COM5",
+"rotctld 未响应。请确认它正在运行以及地址:端口。",
+"GS-232A/B：COM 端口上的控制器（ERC-M、GS-232、K3NG）。Hamlib rotctld：任何 Hamlib 支持的旋转器；运行 rotctld 并填写地址"
 ]
