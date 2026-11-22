@@ -38,21 +38,31 @@ def test_rotor_top_button_connects_and_disconnects():
             w.background=lambda key,fn:sent.append(key)
             w.rotor_port.setCurrentText("COM9")
             assert not w.rotor_cfg("rotor_enabled")
+            # v1.9.4: o ícone só mostra/esconde o bloco; o controle é ATIVAR/DESATIVAR CONTROLE dentro do bloco
+            assert w.rotor_bar.isHidden()
             w.rotor_top_btn.click(); app.processEvents()
-            assert sent==["rotor-connect"] and w.config.values["rotor_enabled"]   # ligar ativa o rotor
-            assert not w.rotor_top_btn.isEnabled() and "#755225" in w.rotor_top_btn.styleSheet()
+            assert not w.rotor_bar.isHidden() and sent==[] and w.config.values["rotor_bar_visible"] is True
+            assert w.rotor_control_btn.text()=="ATIVAR CONTROLE"
+            w.rotor_control_btn.click(); app.processEvents()
+            assert sent==["rotor-connect"] and w.config.values["rotor_enabled"]   # ativar habilita o rotor
+            assert w.rotor_top_btn.isEnabled() and "#755225" in w.rotor_top_btn.styleSheet()
+            assert not w.rotor_control_btn.isEnabled() and w.rotor_control_btn.text()=="CONECTANDO…"
             w.rotor.connected=True
             w.rotor_result("rotor-connect",(10.0,5.0))
-            assert w.rotor_top_btn.isEnabled() and "#12533f" in w.rotor_top_btn.styleSheet()
+            assert "#12533f" in w.rotor_top_btn.styleSheet() and w.rotor_control_btn.text()=="DESATIVAR CONTROLE"
             assert w.rotor_top_btn.toolTip().startswith("Rotor conectado · COM9")
-            w.rotor_top_btn.click(); app.processEvents()
-            assert sent[-1]=="rotor-close"
+            w.rotor_control_btn.click(); app.processEvents()
+            assert sent[-1]=="rotor-close" and not w.rotor_bar.isHidden()        # desativar não esconde o bloco
             w.rotor.connected=False
             w.rotor_result("rotor-close",None)
             assert "#783437" in w.rotor_top_btn.styleSheet() and w.rotor_top_btn.toolTip().startswith("Rotor desligado")
+            assert w.rotor_control_btn.text()=="ATIVAR CONTROLE"
             # falha ao conectar volta ao vermelho
-            w.rotor_top_btn.click(); w.rotor_failed("rotor-connect","porta ocupada")
-            assert w.rotor_top_btn.isEnabled() and "#783437" in w.rotor_top_btn.styleSheet()
+            w.rotor_control_btn.click(); w.rotor_failed("rotor-connect","porta ocupada")
+            assert w.rotor_control_btn.isEnabled() and "#783437" in w.rotor_top_btn.styleSheet()
+            # ícone esconde de novo, mesmo com o rotor habilitado
+            w.rotor_top_btn.click(); app.processEvents()
+            assert w.rotor_bar.isHidden() and w.config.values["rotor_bar_visible"] is False
     ''')
     result = subprocess.run([sys.executable, "-c", source], capture_output=True, text=True, timeout=120,
                             env={**os.environ, "QT_QPA_PLATFORM": "offscreen", "LANG": "pt_BR.UTF-8"})
@@ -103,6 +113,62 @@ def test_connect_with_rotor_disabled_keeps_port_open_and_updates_bar():
             assert "rotor-read" in sent                   # posição continua sendo lida a cada segundo
             w.rotor_result("rotor-read",(150.0,170.0))
             assert w.rotor_compass.real==(330.0,10.0)
+    ''')
+    result = subprocess.run([sys.executable, "-c", source], capture_output=True, text=True, timeout=120,
+                            env={**os.environ, "QT_QPA_PLATFORM": "offscreen", "LANG": "pt_BR.UTF-8"})
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_rotor_icon_shows_and_hides_block_control_button_inside():
+    """Pedido 21/11/2026: o ícone ROTOR abre e esconde o bloco (antes o 2º clique não escondia); dentro do bloco,
+    ATIVAR/DESATIVAR CONTROLE. Conectar não arma o AUTOMÁTICO: o rotor começa em DESLIGADO."""
+    source = textwrap.dedent(r'''
+        import tempfile
+        from pathlib import Path
+        from sat_tool import app as gui
+        from sat_tool.config import Config
+        class FakeWeb(gui.QWidget):
+            def setHtml(self,*a,**k):pass
+            def page(self):return self
+            def runJavaScript(self,*a,**k):pass
+            def reload(self):pass
+        gui.QWebEngineView=FakeWeb
+        gui.load_orbits=lambda d:[]
+        gui.MainWindow.background=lambda self,key,fn:None
+        gui.MainWindow.check_for_updates=lambda self:None
+        with tempfile.TemporaryDirectory() as d:
+            gui.Config=lambda:Config(Path(d))
+            app=gui.QApplication([])
+            w=gui.MainWindow(); w.show(); app.processEvents()
+            class R:
+                connected=False; position=None; failures=0; last_command_at=0.0
+                def stop(self):pass
+                def close(self):pass
+            w.rotor=R()
+            sent=[]
+            w.background=lambda key,fn:sent.append(key)
+            w.rotor_port.setCurrentText("COM5")
+            assert w.rotor_bar.isHidden()
+            w.rotor_top_btn.click(); app.processEvents()             # abre o bloco (sem conectar)
+            assert not w.rotor_bar.isHidden() and sent==[]
+            w.rotor_control_btn.click(); app.processEvents()         # ATIVAR CONTROLE
+            assert sent[-1]=="rotor-connect"
+            w.rotor_failed("rotor-connect","sem resposta")             # sem cabo
+            assert not w.rotor_bar.isHidden() and w.rotor_control_btn.text()=="ATIVAR CONTROLE"
+            w.rotor_top_btn.click(); app.processEvents()             # 2º clique no ícone: esconde
+            assert w.rotor_bar.isHidden() and sent.count("rotor-connect")==1
+            w.rotor_top_btn.click(); app.processEvents()             # e abre de novo
+            assert not w.rotor_bar.isHidden()
+            # conectado: conectar não liga o AUTOMÁTICO
+            w.rotor_control_btn.click(); w.rotor.connected=True; w.rotor_result("rotor-connect",(0.0,0.0))
+            assert w.rotor_mode=="off" and not w.rotor_auto
+            w.rotor_mode_btns["auto"].click(); assert w.rotor_mode=="auto"
+            w.rotor_control_btn.click(); app.processEvents()         # DESATIVAR: modo DESLIGADO e fecha a porta
+            assert w.rotor_mode=="off" and sent[-1]=="rotor-close" and not w.rotor_bar.isHidden()
+            w.close()
+            # bloco aberto/fechado fica salvo
+            w2=gui.MainWindow(); app.processEvents()
+            assert not w2.rotor_bar.isHidden()
     ''')
     result = subprocess.run([sys.executable, "-c", source], capture_output=True, text=True, timeout=120,
                             env={**os.environ, "QT_QPA_PLATFORM": "offscreen", "LANG": "pt_BR.UTF-8"})

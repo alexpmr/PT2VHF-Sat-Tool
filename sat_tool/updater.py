@@ -14,6 +14,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import time
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -277,6 +278,44 @@ def read_update_result(temp_dir: Optional[Path] = None) -> Optional[tuple]:
     return lines[0].strip(), lines[1].strip(), lines[2].strip()
 
 
+PENDING_FILE = 'PT2VHF-Sat-Tool-update-pending.json'
+HELPER_LOG = 'PT2VHF-Sat-Tool-update-helper.log'
+
+
+def mark_update_pending(version: str, temp_dir: Optional[Path] = None):
+    """v1.9.4: anota a atualização em andamento antes de fechar o app (diagnóstico na próxima abertura)."""
+    import json
+    try:
+        (Path(temp_dir or tempfile.gettempdir()) / PENDING_FILE).write_text(
+            json.dumps({'version': str(version), 'at': time.time()}), encoding='utf-8')
+    except OSError:
+        pass
+
+
+def check_pending_update(current_version: str, temp_dir: Optional[Path] = None) -> Optional[tuple]:
+    """Atualização anotada que não deixou resultado: (versão alvo, últimas linhas do log do atualizador).
+
+    None quando não havia nada pendente, quando já passou de 2 dias ou quando a versão aberta já é a nova.
+    O arquivo de pendência é removido.
+    """
+    import json
+    folder = Path(temp_dir or tempfile.gettempdir())
+    path = folder / PENDING_FILE
+    try:
+        data = json.loads(path.read_text(encoding='utf-8'))
+        path.unlink()
+    except (OSError, ValueError):
+        return None
+    target = str(data.get('version', ''))
+    if not target or time.time() - float(data.get('at', 0)) > 2 * 86400 or target == str(current_version):
+        return None
+    try:
+        lines = (folder / HELPER_LOG).read_text(encoding='utf-8-sig', errors='replace').splitlines()[-8:]
+    except OSError:
+        lines = []
+    return target, lines
+
+
 MANUAL_DOWNLOAD_URL = 'https://www.pt2vhf.com/sat'
 
 
@@ -306,11 +345,40 @@ def launch_staged_update(package: Path, *, portable: bool, script_path: Path,
         raise FileNotFoundError('Atualizador externo não incluído no pacote')
     args = update_script_args(helper, pid=os.getpid(), package=candidate, destination=destination, exe=exe,
                               portable=portable, version=version)
-    # Processo independente: continua vivo depois que o app (e seus filhos) encerram.
-    flags = getattr(subprocess, 'CREATE_NEW_PROCESS_GROUP', 0) | getattr(subprocess, 'DETACHED_PROCESS', 0) \
-        | getattr(subprocess, 'CREATE_BREAKAWAY_FROM_JOB', 0)
+    return start_update_helper(args, package.parent)
+
+
+HELPER_OUTPUT = 'PT2VHF-Sat-Tool-update-helper.out'
+
+
+def helper_creation_flags(breakaway: bool = True) -> int:
+    """v1.9.4: console OCULTO (CREATE_NO_WINDOW) em vez de DETACHED_PROCESS.
+
+    O CI com o programa real mostrou o defeito do relato de 21/11 ("baixou, fechou e não instalou"): aberto pelo
+    app (GUI, sem console) como DETACHED_PROCESS e sem entrada/saída válidas, o powershell.exe saía antes de rodar
+    a 1ª linha do apply-update.ps1. Com console oculto e saídas num arquivo ele roda normalmente.
+    """
+    flags = getattr(subprocess, 'CREATE_NEW_PROCESS_GROUP', 0x200) | getattr(subprocess, 'CREATE_NO_WINDOW', 0x08000000)
+    if breakaway:
+        flags |= getattr(subprocess, 'CREATE_BREAKAWAY_FROM_JOB', 0x01000000)
+    return flags
+
+
+def start_update_helper(args: list, workdir: Path, temp_dir: Optional[Path] = None, popen=None) -> int:
+    """Abre o atualizador como processo independente; stdout/stderr vão para %TEMP% (erros do PowerShell)."""
+    popen = popen or subprocess.Popen
+    out_path = Path(temp_dir or tempfile.gettempdir()) / HELPER_OUTPUT
+    with open(out_path, 'ab') as out:
+        common = dict(stdin=subprocess.DEVNULL, stdout=out, stderr=subprocess.STDOUT, close_fds=True,
+                      cwd=str(workdir))
+        try:
+            proc = popen(args, creationflags=helper_creation_flags(True), **common)
+        except OSError:
+            # Alguns ambientes proíbem sair do job: tenta sem CREATE_BREAKAWAY_FROM_JOB.
+            proc = popen(args, creationflags=helper_creation_flags(False), **common)
     try:
-        subprocess.Popen(args, close_fds=True, creationflags=flags)
-    except OSError:
-        # Alguns ambientes proíbem sair do job: tenta sem CREATE_BREAKAWAY_FROM_JOB.
-        subprocess.Popen(args, close_fds=True, creationflags=flags & ~getattr(subprocess, 'CREATE_BREAKAWAY_FROM_JOB', 0))
+        from .crash_diagnostics import report_event
+        report_event(f"Atualizador iniciado: PID {proc.pid} · {' '.join(map(str, args[-14:]))}")
+    except Exception:
+        pass
+    return proc.pid

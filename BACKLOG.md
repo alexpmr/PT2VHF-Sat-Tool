@@ -153,6 +153,15 @@
   2 monitores e DPI diferentes, RTL-SDR real no escopo do display, acesso de celular/notebook pela LAN e regra de
   firewall no Windows, fontes CJK no Windows/macOS.
 
+## v1.9.4 — CAT ICOM/Yaesu para satélite, ícone ROTOR e LUČA-1 (22/11/2026)
+
+- CAT ICOM MAIN/SUB (IC-9700/910/9100/820/821/970), Yaesu FT-847 (modo SAT) e Yaesu CAT texto (FT-991/991A…).
+- Ícone ROTOR abre/esconde o bloco; ATIVAR/DESATIVAR CONTROLE dentro do bloco.
+- TLE Alpha-5: a fonte R4UAB (com o LUČA-1) não cai mais inteira.
+- OTA: teste do CI com o programa real, atualizador encerra app travado, aviso na abertura seguinte.
+- Continuam pendentes por depender do operador: log do OTA se repetir, LUČA-1 marcado por padrão ou não, fotos para
+  novos estilos de display e homologação em campo (docs/homologacao-campo.md).
+
 ## v1.9.2 — modos do rotor, moldura de rádio e configurações salvas (19/11/2026)
 
 - Rotor AUTOMÁTICO / MANUAL / DESLIGADO com setas manuais junto dos gauges (detalhes no item em Pendentes).
@@ -166,6 +175,60 @@
   com equipamento real (ERC-M sem cabo, ICOM/Kenwood, WiSpDDE, 2 monitores).
 
 ## Pendentes
+
+- **CAT para ICOM e Yaesu** (registrado em 21/11/2026, pedido do operador: "implemente CAT para icom e yaesu")
+  - Já existiam: ICOM CI-V (1.9.0, 18 modelos) e Yaesu FT-817/818/857/897 (1.4.0).
+  - **Feito (1.9.4):**
+    - ICOM IC-9700, IC-910, IC-9100, IC-820, IC-821 e IC-970 com RX e TX no mesmo rádio: **SUB = RX (downlink), MAIN =
+      TX (uplink)**, e modo satélite ligado por CI-V (16 5A) no IC-9700/910/9100. Antes o driver usava split VFO A/B,
+      que nesses rádios não cruza 145/435 MHz. O Doppler do RX continua durante o TX (full duplex). Os demais ICOM
+      seguem com o split.
+    - **Yaesu FT-847** (novo): modo SAT nativo, CAT ON antes de tudo, downlink pelos comandos SAT RX e uplink pelos
+      SAT TX; sozinho (só RX ou só TX) usa o VFO principal. 8N2, 4800/9600/57600.
+    - **Yaesu CAT texto** (novo): FT-991/991A, FTDX10, FTDX101, FT-710, FT-891 — FA/FB de 9 dígitos, MD0, leitura do
+      TX para não mexer durante o câmbio. Mesmo rádio: RX no VFO-A, TX no VFO-B; o modo do VFO-B é ajustado trocando
+      A/B (SV) só quando muda; o SPLIT é ligado pelo operador no rádio.
+    - Nenhum deles aciona PTT. Testes com rádios simulados: tests/test_v194_cat_icom_yaesu.py.
+  - Pendente: homologar com os rádios reais (docs/homologacao-campo.md, item 3). FT-736R continua só pelo rigctld.
+
+- **BUG · OTA 1.9.2 → 1.9.3: baixou, fechou o programa e não instalou nem abriu o novo** (registrado em 21/11/2026, relato do operador)
+  - O atualizador (scripts/apply-update.ps1) não mudou da 1.9.1 para cá e grava cada etapa; mesmo em falha ele reabre
+    o programa. Como nada abriu, ou o atualizador não chegou a rodar, ou parou antes do fim, ou o programa novo abriu
+    e fechou logo em seguida.
+  - Diferença do teste do CI: lá o "programa" é um script falso; no uso real é o Sat Tool, que pode demorar a sair
+    (ex.: RTL-SDR ligado, leitura contínua da 1.9.1) — nesse caso o atualizador espera 90 s + 15 s e só então reabre.
+  - Aguardando do operador: %TEMP%\PT2VHF-Sat-Tool-update-helper.log, %TEMP%\PT2VHF-Sat-Tool-setup.log,
+    %TEMP%\PT2VHF-Sat-Tool-update-error.txt (se existir); edição (Setup ou Portátil); se o RTL-SDR estava ligado;
+    e qual versão aparece em Sobre ao abrir o programa agora.
+  - **Feito (1.9.4), sem o log:** o CI agora atualiza o **programa real instalado** (o próprio Sat Tool aplica o
+    Setup pelo caminho do OTA e o teste exige que a versão nova reabra e continue aberta); se o app antigo travar ao
+    fechar, o atualizador o encerra e instala (antes desistia); se a atualização não terminar, a abertura seguinte
+    avisa com as últimas linhas do log do atualizador (tests/test_v194_ota_pending.py).
+  - **Reproduzido no CI em 22/11/2026** pelo teste com o programa real: o app fechou e o atualizador não registrou
+    nenhuma linha (o mesmo Setup, lançado por script, instalou e reabriu). Causa provável: o app (sem console) abria o
+    powershell.exe como DETACHED_PROCESS e sem entrada/saída válidas, e ele saía antes de rodar o script. Correção:
+    console oculto (CREATE_NO_WINDOW), entrada/saída redirecionadas para %TEMP%\PT2VHF-Sat-Tool-update-helper.out e
+    PID do atualizador no events.log do diagnóstico.
+  - Atenção: quem está na 1.9.3 ou anterior usa o atualizador da própria versão instalada; a melhoria vale a partir
+    das atualizações feitas já na 1.9.4. Pendente: o log do operador, se a falha se repetir.
+
+- **BUG · Ícone ROTOR abre o bloco do rotor, mas o 2º clique não o esconde** (registrado em 21/11/2026, relato do operador)
+  - Causa: o ícone só alternava a conexão. Sem cabo (conexão falhando) ou desconectado, o 2º clique tentava conectar
+    de novo e o bloco continuava aberto, porque o rotor seguia habilitado. Além disso, conectar armava o AUTOMÁTICO,
+    contrariando "o rotor começa em DESLIGADO".
+  - **Pedido do operador (21/11/2026):** "clicar abre e esconde o bloco. Uma vez dentro do bloco, adicione um botão
+    ativar/desativar controle do rotor."
+  - **Feito (1.9.4):** o ícone ROTOR do topo só abre e esconde o bloco (a cor
+    continua mostrando o estado: vermelho desligado, âmbar conectando, verde conectado); aberto/fechado fica salvo.
+    Dentro do bloco, botão **ATIVAR CONTROLE** (habilita e conecta) / **DESATIVAR CONTROLE** (modo DESLIGADO, para e
+    desconecta, sem esconder o bloco). Conectar mantém o modo escolhido (não arma mais o AUTOMÁTICO). Habilitar o
+    rotor em Configurações → Rotores abre o bloco. Teste
+    tests/test_v172_top_buttons.py::test_rotor_icon_shows_and_hides_block_control_button_inside.
+
+- **Roteiro de homologação em campo** (registrado em 21/11/2026, pedido "faça o que puder e eu depois irei indicar o
+  que funcionou de fato"): docs/homologacao-campo.md reúne os testes que dependem do equipamento real (OTA, rotor
+  ERC-M, CAT ICOM/Kenwood, WiSpDDE, RTL-SDR, escala da tela, 2 monitores, painel Web, idiomas, LUČA-1). Aguardando o
+  retorno do operador item a item.
 
 - **TLE em segundo plano totalmente transparente** (registrado em 13/11/2026)
   - Pedido: "baixar os TLEs em background, sem mostrar na tela ao iniciar, de forma transparente".
@@ -200,6 +263,12 @@
 - **Satélite novo de SSTV LUČA-1 (RS90S), ainda fora do CelesTrak** (registrado em 13/11/2026)
   - Aparece pelas fontes AMSAT/R4UAB assim que uma delas o publicar (o ambiente de desenvolvimento não acessa
     esses sites para conferir). Pendente: confirmar no programa e, se o Alex quiser, deixá-lo marcado por padrão.
+  - **Conferido em 21/11/2026:** o LUČA-1 está no satonline.txt da R4UAB (LUCA-1 (RS90S), NORAD 67287), mas **não
+    aparecia no programa por um defeito**: a R4UAB passou a publicar satélites com catálogo acima de 99999 no
+    formato Alpha-5 ("A0084" = 100084, ex.: RASSVET-3) e o leitor de TLE quebrava nessa linha, derrubando a fonte
+    R4UAB inteira a cada atualização. **Corrigido (1.9.4):** leitor aceita
+    Alpha-5 e pula linha inválida sem perder o resto (376 satélites lidos do arquivo real). Teste
+    tests/test_v194_tle_alpha5.py. Pendente do operador: deixar o LUČA-1 marcado por padrão ou não.
 - **Botão PREVER: passagens das próximas 24 h de todos os satélites selecionados** (registrado em 13/11/2026)
   - Pedido do PU2MUS: lista única das passagens de 24 h, com elevação mínima configurável, sem ter que
     consultar satélite por satélite. **Feito (1.9.0):** botão PREVER ao lado de "Mostrar no mapa": 1 a 72 h,

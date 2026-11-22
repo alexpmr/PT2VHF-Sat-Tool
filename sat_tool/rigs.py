@@ -1,4 +1,5 @@
-"""Rádios adicionais para RX/TX separados: Yaesu FT-817/818/857/897 (CAT binário) e Hamlib rigctld.
+"""Rádios adicionais para RX/TX separados: Yaesu FT-817/818/857/897 e FT-847 (CAT binário), Yaesu CAT texto
+(FT-991/991A…), ICOM CI-V, Kenwood CAT texto e Hamlib rigctld.
 
 O TS-2000 continua com o driver dedicado em cat.py (modo SAT). Estes drivers recebem
 frequências já corrigidas pelo Doppler. Nenhum deles aciona PTT.
@@ -17,7 +18,9 @@ HAMLIB_MODES = {"USB": "USB", "LSB": "LSB", "CW": "CW", "FM": "FM", "AM": "AM", 
 RIG_MODELS = {
     "TS-2000": "Kenwood TS-2000 (modo SAT, CAT atual)",
     "FT-817": "Yaesu FT-817/818/857/897 (CAT 5 bytes)",
-    "ICOM": "ICOM CI-V (IC-746, IC-910, IC-9700, IC-705, IC-7300…)",
+    "FT-847": "Yaesu FT-847 (modo SAT, CAT 5 bytes)",
+    "YAESU": "Yaesu CAT texto (FT-991/991A, FTDX10, FTDX101, FT-710, FT-891)",
+    "ICOM": "ICOM CI-V (IC-9700/910/9100/821 em MAIN/SUB; IC-746, IC-705, IC-7300…)",
     "KENWOOD": "Kenwood CAT texto (TS-480, TS-590, TS-890, TS-990, TS-2000 sem SAT…)",
     "RIGCTLD": "Hamlib rigctld (IC-9700, IC-910, FT-847, SDR++/gqrx…)",
     "SDR": "RTL-SDR embutido (somente RX)",
@@ -152,6 +155,16 @@ ICOM_ADDRESSES = {
     "IC-9700": 0xA2, "IC-910": 0x60, "IC-821": 0x4C, "IC-820": 0x42, "IC-275": 0x10,
     "IC-475": 0x14, "IC-970": 0x2E, "IC-R8600": 0x96,
 }
+# v1.9.4: rádios com duas bandas (MAIN/SUB). RX e TX no mesmo rádio: SUB = RX (downlink), MAIN = TX (uplink),
+# como no modo satélite deles. O split VFO A/B não serve: não cruza 145/435 MHz nesses rádios.
+ICOM_DUAL_BAND = {"IC-9700", "IC-910", "IC-9100", "IC-820", "IC-821", "IC-970"}
+ICOM_SAT_MODE = {"IC-9700", "IC-910", "IC-9100"}      # aceitam ligar o modo satélite por CI-V (16 5A)
+
+
+def icom_model_for_address(address: int) -> str:
+    return next((m for m, a in ICOM_ADDRESSES.items() if a == int(address)), "")
+
+
 ICOM_MODES = {"LSB": 0x00, "USB": 0x01, "AM": 0x02, "CW": 0x03, "FM": 0x05, "PKT": 0x01}
 ICOM_MODE_NAMES = {0x00: "LSB", 0x01: "USB", 0x02: "AM", 0x03: "CW", 0x04: "RTTY", 0x05: "FM", 0x07: "CW-R",
                    0x08: "RTTY-R", 0x17: "DV"}
@@ -185,12 +198,36 @@ class Icom:
     """
     name = "ICOM"
 
-    def __init__(self, logger=None, address: int = ICOM_ADDRESSES["IC-746"]):
+    def __init__(self, logger=None, address: int = ICOM_ADDRESSES["IC-746"], model: str = ""):
         self.ser = None
         self.log = logger or (lambda msg: None)
         self.address = int(address)
+        self.model = model or icom_model_for_address(address)
         self.split = False
+        self.same_rig = False      # RX e TX no mesmo rádio (definido ao conectar)
+        self._sat_tried = False
         self._buf = b""
+
+    @property
+    def dual_band(self) -> bool:
+        return self.model in ICOM_DUAL_BAND
+
+    def use_same_rig(self, on: bool):
+        """Chamado pelo painel quando RX e TX são o mesmo ICOM."""
+        self.same_rig = bool(on)
+
+    def _band(self, main: bool):
+        self._command(0x07, b"\xD0" if main else b"\xD1")   # seleciona MAIN / SUB
+
+    def _ensure_sat_mode(self):
+        if self._sat_tried or self.model not in ICOM_SAT_MODE:
+            return
+        self._sat_tried = True
+        try:
+            self._command(0x16, b"\x5A\x01")
+            self.log(f"ICOM {self.model}: modo satélite ligado (MAIN = TX, SUB = RX)")
+        except Exception as exc:   # rádio sem o comando ou recusou: MAIN/SUB continua valendo
+            self.log(f"ICOM {self.model}: modo satélite não ligado por CI-V ({exc})")
 
     @property
     def connected(self) -> bool:
@@ -207,7 +244,7 @@ class Icom:
         except Exception:
             self.disconnect()
             raise
-        self.name = f"ICOM CI-V {self.address:02X}h"
+        self.name = f"ICOM {self.model or 'CI-V'} {self.address:02X}h"
         self.log(f"ICOM: conectado em {port} {baud} 8N1, endereço CI-V {self.address:02X}h")
 
     def disconnect(self):
@@ -286,12 +323,23 @@ class Icom:
         self._command(0x06, bytes([ICOM_MODES.get(normalize_mode(mode), ICOM_MODES["FM"])]))
 
     def set_rx(self, hz: int, mode: str):
+        if self.same_rig and self.dual_band:
+            # Downlink na SUB: muda também durante o TX (full duplex, o Doppler do RX segue no câmbio)
+            self._ensure_sat_mode()
+            self._band(main=False)
+            self._set(hz, mode)
+            return True
         if self.is_transmitting():
             return False
         self._set(hz, mode)
         return True
 
     def set_tx(self, hz: int, mode: str, same_rig_rx: bool = False):
+        if (same_rig_rx or self.same_rig) and self.dual_band:
+            self._ensure_sat_mode()
+            self._band(main=True)            # uplink na MAIN
+            self._set(hz, mode)
+            return True
         if self.is_transmitting():
             return False
         if not same_rig_rx:
@@ -305,6 +353,223 @@ class Icom:
             self._set(hz, mode)
         finally:
             self._command(0x07, b"\x00")    # volta ao VFO A (RX)
+        return True
+
+
+FT847_MODES = {"LSB": 0x00, "USB": 0x01, "CW": 0x02, "AM": 0x04, "FM": 0x08, "PKT": 0x01, "DIG": 0x01}
+FT847_MODE_NAMES = {0x00: "LSB", 0x01: "USB", 0x02: "CW", 0x03: "CWR", 0x04: "AM", 0x08: "FM",
+                    0x82: "CW", 0x83: "CWR", 0x84: "AM", 0x88: "FM"}
+
+
+class FT847:
+    """Yaesu FT-847: CAT de 5 bytes (8N2) com modo SAT nativo (RX e TX full duplex em bandas diferentes).
+
+    CAT ON (00) antes de qualquer comando. RX e TX no mesmo rádio: SAT ON (4E), downlink pelos comandos SAT RX
+    (11 frequência, 17 modo) e uplink pelos SAT TX (21, 27). Rádio só de RX ou só de TX: VFO principal (01, 07).
+    Sem PTT. A frequência do uplink é atualizada também durante o TX (é o que o modo SAT faz).
+    """
+    name = "FT-847"
+
+    def __init__(self, logger=None):
+        self.ser = None
+        self.log = logger or (lambda msg: None)
+        self.same_rig = False
+        self.sat_on = False
+
+    @property
+    def connected(self) -> bool:
+        return self.ser is not None
+
+    def use_same_rig(self, on: bool):
+        self.same_rig = bool(on)
+
+    def connect(self, port: str, baud: int = 57600, serial_factory=None):
+        if serial_factory is None:
+            import serial
+            serial_factory = lambda: serial.Serial(port, baudrate=int(baud), bytesize=8, parity="N",
+                                                   stopbits=2, timeout=0.5, write_timeout=0.5)
+        self.ser = serial_factory()
+        try:
+            self._cmd(b"\x00\x00\x00\x00\x00")   # CAT ON
+            self.read_frequency()
+        except Exception:
+            self.disconnect()
+            raise
+        self.log(f"FT-847: conectado em {port} {baud} 8N2")
+
+    def disconnect(self):
+        if self.ser is not None:
+            try:
+                self._cmd(b"\x00\x00\x00\x00\x80")   # CAT OFF (o modo SAT fica como está)
+            except Exception:
+                pass
+            try:
+                self.ser.close()
+            except Exception:
+                pass
+        self.ser, self.sat_on = None, False
+
+    def _cmd(self, data: bytes, reply: int = 0) -> bytes:
+        if self.ser is None:
+            raise ConnectionError("FT-847 desconectado")
+        self.ser.reset_input_buffer()
+        self.ser.write(data)
+        if not reply:
+            time.sleep(0.02)
+            return b""
+        answer = self.ser.read(reply)
+        if len(answer) != reply:
+            raise TimeoutError("FT-847 não respondeu ao CAT (CAT ligado no menu? 8N2, 4800/9600/57600)")
+        return answer
+
+    def read_frequency(self, op: int = 0x03) -> tuple[int, str]:
+        data = self._cmd(bytes([0, 0, 0, 0, op]), 5)
+        return parse_bcd_frequency(data), FT847_MODE_NAMES.get(data[4], f"0x{data[4]:02X}")
+
+    def is_transmitting(self) -> Optional[bool]:
+        return None   # no modo SAT o uplink acompanha o Doppler durante o TX
+
+    def _set(self, hz: int, mode: str, freq_op: int, mode_op: int):
+        self._cmd(bcd_frequency(hz) + bytes([freq_op]))
+        code = FT847_MODES.get(normalize_mode(mode), FT847_MODES["FM"])
+        self._cmd(bytes([code, 0, 0, 0, mode_op]))
+
+    def _ensure_sat(self):
+        if not self.sat_on:
+            self._cmd(b"\x00\x00\x00\x00\x4E")   # SAT ON
+            self.sat_on = True
+            self.log("FT-847: modo SAT ligado (RX = SAT RX, TX = SAT TX)")
+
+    def set_rx(self, hz: int, mode: str):
+        if self.same_rig:
+            self._ensure_sat()
+            self._set(hz, mode, 0x11, 0x17)
+        else:
+            self._set(hz, mode, 0x01, 0x07)
+        return True
+
+    def set_tx(self, hz: int, mode: str, same_rig_rx: bool = False):
+        if same_rig_rx or self.same_rig:
+            self._ensure_sat()
+            self._set(hz, mode, 0x21, 0x27)
+        else:
+            self._set(hz, mode, 0x01, 0x07)
+        return True
+
+
+# Yaesu CAT texto (FT-991/991A, FTDX10, FTDX101, FT-710, FT-891): FA/FB com 9 dígitos, MD0x, TX;
+YAESU_TEXT_MODES = {"LSB": "1", "USB": "2", "CW": "3", "FM": "4", "AM": "5", "PKT": "C", "DIG": "C"}
+YAESU_TEXT_MODE_NAMES = {"1": "LSB", "2": "USB", "3": "CW", "4": "FM", "5": "AM", "6": "RTTY", "7": "CW",
+                         "8": "DATA-L", "9": "RTTY", "A": "DATA-FM", "B": "FM-N", "C": "DATA-U", "D": "AM-N",
+                         "E": "C4FM"}
+
+
+class YaesuText:
+    """Yaesu CAT texto (FT-991/991A e família). Sem PTT.
+
+    RX ou TX isolado: VFO-A (FA, MD0). RX e TX no mesmo rádio: RX no VFO-A e TX no VFO-B (FB); o modo do VFO-B
+    é ajustado trocando A/B (SV) só fora de transmissão e só quando o modo muda. O SPLIT é ligado no rádio
+    pelo operador (tecla SPLIT): nos rádios desta família o comando de split varia de modelo para modelo.
+    """
+    name = "Yaesu CAT texto"
+
+    def __init__(self, logger=None):
+        self.ser = None
+        self.log = logger or (lambda msg: None)
+        self.same_rig = False
+        self.tx_mode = None
+
+    @property
+    def connected(self) -> bool:
+        return self.ser is not None
+
+    def use_same_rig(self, on: bool):
+        self.same_rig = bool(on)
+
+    def connect(self, port: str, baud: int = 38400, serial_factory=None):
+        if serial_factory is None:
+            import serial
+            serial_factory = lambda: serial.Serial(port, baudrate=int(baud), bytesize=8, parity="N",
+                                                   stopbits=1, timeout=0.4, write_timeout=0.5)
+        self.ser = serial_factory()
+        try:
+            self.read_frequency()
+            rid = self._query("ID;")
+            self.name = {"0570": "FT-991", "0670": "FT-991A", "0761": "FTDX10", "0681": "FTDX101D",
+                         "0682": "FTDX101MP", "0800": "FT-710", "0650": "FT-891"}.get(rid[2:6], "Yaesu CAT texto")
+        except Exception:
+            self.disconnect()
+            raise
+        self.log(f"Yaesu: {self.name} conectado em {port} {baud} 8N1")
+
+    def disconnect(self):
+        if self.ser is not None:
+            try:
+                self.ser.close()
+            except Exception:
+                pass
+        self.ser, self.tx_mode = None, None
+
+    def _write(self, text: str):
+        if self.ser is None:
+            raise ConnectionError("Yaesu desconectado")
+        self.ser.write(text.encode("ascii"))
+        time.sleep(0.02)
+
+    def _query(self, text: str) -> str:
+        if self.ser is None:
+            raise ConnectionError("Yaesu desconectado")
+        self.ser.reset_input_buffer()
+        self.ser.write(text.encode("ascii"))
+        data = b""
+        deadline = time.monotonic() + 1.0
+        while not data.endswith(b";") and time.monotonic() < deadline:
+            chunk = self.ser.read(1)
+            if chunk:
+                data += chunk
+        answer = data.decode("ascii", "replace")
+        if not answer.endswith(";") or answer == "?;":
+            raise TimeoutError(f"Yaesu não respondeu a {text} (CAT RATE/porta no menu do rádio?)")
+        return answer
+
+    def read_frequency(self) -> tuple[int, str]:
+        fa = self._query("FA;")
+        hz = int(fa[2:-1])
+        mode = "?"
+        try:
+            md = self._query("MD0;")
+            mode = YAESU_TEXT_MODE_NAMES.get(md[3:4], md[3:4])
+        except (TimeoutError, ValueError):
+            pass
+        return hz, mode
+
+    def is_transmitting(self) -> Optional[bool]:
+        try:
+            return self._query("TX;")[2:3] in ("1", "2")
+        except Exception:
+            return None
+
+    @staticmethod
+    def _mode_code(mode: str) -> str:
+        return YAESU_TEXT_MODES.get(normalize_mode(mode), YAESU_TEXT_MODES["FM"])
+
+    def set_rx(self, hz: int, mode: str):
+        if self.is_transmitting():
+            return False
+        self._write(f"FA{int(hz):09d};MD0{self._mode_code(mode)};")
+        return True
+
+    def set_tx(self, hz: int, mode: str, same_rig_rx: bool = False):
+        if self.is_transmitting():
+            return False
+        if not (same_rig_rx or self.same_rig):
+            self._write(f"FA{int(hz):09d};MD0{self._mode_code(mode)};")
+            return True
+        self._write(f"FB{int(hz):09d};")
+        code = self._mode_code(mode)
+        if code != self.tx_mode:
+            self._write(f"SV;MD0{code};SV;")   # modo do VFO-B: troca A/B, ajusta, destroca
+            self.tx_mode = code
         return True
 
 
