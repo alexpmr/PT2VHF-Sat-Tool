@@ -35,6 +35,27 @@ def normalized_satellite_search(text):
                    if c.isalnum() and not unicodedata.combining(c))
 
 
+_DESIGNATION = __import__("re").compile(r"^[A-Z]{1,3}-\d{1,3}[A-Z]?$")
+
+
+def display_name(ident, orbit) -> str:
+    """v1.9.8: nome para mostrar com a designação OSCAR quando o catálogo usa outro nome.
+
+    A CelesTrak chama o IO-86 de "LAPAN-A2"; na lista aparecia só assim (o operador procurava por IO-86).
+    Agora: "IO-86 (LAPAN-A2)". Usa os apelidos conhecidos e os nomes de outras fontes (AMSAT, R4UAB).
+    """
+    name=str((orbit or {}).get("OBJECT_NAME") or ident)
+    candidates=list(ALIASES.get(str(ident),()))+[str(n) for n in (orbit or {}).get("ALT_NAMES",[])]
+    key=normalized_satellite_search(name)
+    for alias in candidates:
+        alias=alias.strip().upper()
+        if _DESIGNATION.match(alias):
+            if normalized_satellite_search(alias) in key:
+                return name
+            return f"{alias} ({name})"
+    return name
+
+
 def satellite_search_text(ident, orbit):
     fields=[str(ident), str(orbit.get("OBJECT_NAME",""))]+list(ALIASES.get(str(ident),()))
     fields+=[str(n) for n in orbit.get("ALT_NAMES",[])]

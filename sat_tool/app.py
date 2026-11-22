@@ -33,7 +33,7 @@ from .passfmt import radial_kmh_text
 from .appearance import DEFAULTS as THEME_DEFAULTS
 from .rotor_ui import RotorUiMixin
 from .cat import TS2000, available_ports, decode_satellite_status
-from .catalog import refresh_orbits, load_orbits, refresh_transmitters, refresh_all_transmitters, load_transmitters, age_hours, satellite_search_text, normalized_satellite_search, DEFAULT_GROUPS
+from .catalog import refresh_orbits, load_orbits, refresh_transmitters, refresh_all_transmitters, load_transmitters, display_name, age_hours, satellite_search_text, normalized_satellite_search, DEFAULT_GROUPS
 from .config import Config, DEFAULT_SATELLITES, DEFAULT_SATELLITE_NAMES
 from .geolocation import GeoFix
 from .maidenhead import maidenhead_to_latlon
@@ -2452,7 +2452,7 @@ class MainWindow(RotorUiMixin, QMainWindow):
             if query and query not in satellite_search_text(ident,obj):
                 continue
             ids.append(ident)
-        ids.sort(key=lambda ident:str(self.omm[ident].get("OBJECT_NAME",ident)).casefold())
+        ids.sort(key=lambda ident:display_name(ident,self.omm[ident]).casefold())
         self._catalog_filtered_ids=ids
         shown=ids[:350]
         self._loading_catalog=True
@@ -2463,7 +2463,7 @@ class MainWindow(RotorUiMixin, QMainWindow):
                 obj=self.omm[ident]
                 orb=orbital_characteristics(obj)
                 info=operational_characteristics(load_transmitters(self.config.dir,int(ident)))
-                cols=[orb["name"],ident,
+                cols=[display_name(ident,obj),ident,
                       f"{orb['inclination_deg']:.1f}°" if orb["inclination_deg"] is not None else "—",
                       f"{orb['period_min']:.1f} min" if orb["period_min"] is not None else "—",
                       ", ".join(info["modes"]) or "—",
@@ -2547,9 +2547,9 @@ class MainWindow(RotorUiMixin, QMainWindow):
         self.sat_combo.clear()
         search=text.casefold().strip()
         enabled=set(self.enabled_satellite_ids())
-        for ident,o in sorted(self.omm.items(),key=lambda item:item[1].get('OBJECT_NAME','')):
+        for ident,o in sorted(self.omm.items(),key=lambda item:display_name(item[0],item[1]).casefold()):
             if ident not in enabled:continue
-            name=o.get('OBJECT_NAME',ident)
+            name=display_name(ident,o)
             if normalized_satellite_search(search) in satellite_search_text(ident,o):
                 self.sat_combo.addItem(f"{name}  ·  {ident}",ident)
         if selected:
@@ -2562,7 +2562,7 @@ class MainWindow(RotorUiMixin, QMainWindow):
             for row_index in range(self.sat_combo.count()):
                 ident=str(self.sat_combo.itemData(row_index))
                 sat_obj=self.omm.get(ident,{})
-                name=str(sat_obj.get("OBJECT_NAME",ident))
+                name=display_name(ident,sat_obj)
                 item=QTableWidgetItem(name[:28]+"\nNORAD "+ident)
                 item.setData(Qt.UserRole,ident)
                 mode=self.suggested_mode_text(ident)
@@ -3720,7 +3720,7 @@ class MainWindow(RotorUiMixin, QMainWindow):
                 for p in rows:
                     if p["los"]<=now_utc() or p["aos"]>end:
                         continue
-                    item=dict(p,id=ident,name=obj.get("OBJECT_NAME",ident))
+                    item=dict(p,id=ident,name=display_name(ident,obj))
                     try:
                         item["quality"]=pass_quality(sat,station,p,self.ts,norad=ident,mode=mode,
                                                      downlink_hz=downlink,alive=alive)
@@ -4721,7 +4721,7 @@ class MainWindow(RotorUiMixin, QMainWindow):
             query=normalized_satellite_search(self.tracked_search.text())
             rows=[(sid,obj) for sid,obj in self.omm.items()
                   if not query or query in satellite_search_text(sid,obj)]
-            rows.sort(key=lambda p:p[1].get("OBJECT_NAME",""))
+            rows.sort(key=lambda p:display_name(p[0],p[1]).casefold())
             self._tracked_result_count=len(rows)
             rows=rows[:350]
             self.tracked_table.setRowCount(len(rows))
@@ -4731,7 +4731,7 @@ class MainWindow(RotorUiMixin, QMainWindow):
                 checkbox.setData(Qt.UserRole,ident)
                 checkbox.setCheckState(Qt.Checked if ident in selected else Qt.Unchecked)
                 self.tracked_table.setItem(i,0,checkbox)
-                self.tracked_table.setItem(i,1,QTableWidgetItem(f'{obj.get("OBJECT_NAME",ident)} ({ident})'))
+                self.tracked_table.setItem(i,1,QTableWidgetItem(f'{display_name(ident,obj)} ({ident})'))
                 info=capability(ident,load_transmitters(self.config.dir,int(ident)),
                                 self.config.values.get("radio_modes",[]),
                                 self.config.values.get("radio_bands",[]))

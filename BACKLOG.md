@@ -182,6 +182,12 @@
 
 ## Pendentes
 
+- **IO-86 aparece como "LAPAN-A2" nas listas** (registrado em 22/11/2026; o operador procurou "IO-86" e depois achou)
+  - A CelesTrak chama o IO-86 de LAPAN-A2, e as listas mostravam só esse nome. **Feito (próxima versão):**
+    `catalog.display_name` mostra "IO-86 (LAPAN-A2)" quando a designação OSCAR vem dos apelidos ou de outra fonte
+    (AMSAT/R4UAB); vale na lista da Operação, na aba Satélites, nos marcados e nas passagens. Teste
+    tests/test_v198_display_name.py. Ainda não publicado.
+
 - **Atualizar frequências demorava horas ("SatNOGS: 14 de 12535 satélites", 6h40)** (registrado em 22/11/2026, relato do operador)
   - Causa: o botão consultava o SatNOGS um satélite por vez para o catálogo inteiro (~12.500 requisições com pausa de
     0,4 s); o SatNOGS também recusa consultas em sequência (provável causa da falha no NORAD 27848).
