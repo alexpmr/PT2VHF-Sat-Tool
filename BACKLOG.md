@@ -386,7 +386,8 @@
     O buffer de 300 ms esvazia em ~2,4 s, falta áudio e ele espera reabastecer (o corte). Bate com a gravação.
   - Correção (1.9.1): leitura assíncrona contínua do librtlsdr (15 buffers USB) numa thread própria; a demodulação
     pega os blocos de uma fila. rtl_tcp continua síncrono (o TCP guarda os dados). De quebra: o demodulador AFSK
-    deixou de ser recriado a cada 250 ms. O debug fica para confirmar no equipamento real.
+    deixou de ser recriado a cada 250 ms.
+  - **Homologado:** áudio do RTL-SDR OK no equipamento real (confirmado pelo operador em 24/11/2026).
 - **SAT Tool fechando do nada** (registrado em 14/11/2026, relato do operador, provavelmente na 1.9.0)
   - Aguardando o log: aba "LOGs / CAT" → "Baixar log completo (ZIP)" depois de reabrir, ou a pasta
     %LOCALAPPDATA%\PT2VHF\SatTool\diagnostics (native-crash.log e events.log, com as versões .previous).
@@ -607,7 +608,7 @@
   - Testes: migração das configurações atuais do rotor sem perda; PARAR acessível; simulador GS-232 na calibração e
     no ajuste manual.
 
-- **Destacar só o display para outro monitor** (registrado em 07/11/2026) — **implementado na v1.7.1**; falta testar com 2 monitores reais
+- **Destacar só o display para outro monitor** (registrado em 07/11/2026) — **implementado na v1.7.1**; **homologado com 2 monitores reais (operador, 24/11/2026)**
   - Botão/tecla "Destacar display" (e menu de contexto do display): abre **só o display** (com ou sem a moldura do
     painel realista) numa janela própria, que pode ser arrastada para **outro monitor**; voltar ao lugar com o mesmo
     botão ou fechando a janela (mesmo padrão do waterfall/telemetria destacáveis do painel SDR).

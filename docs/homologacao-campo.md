@@ -27,12 +27,13 @@ aconteceu) ou **Não testado**. Em caso de falha: aba **LOGs / CAT → "Baixar l
 - [ ] WiSpDDE (Windows): "Receive DDE from Orbitron" recebe satélite e frequências.
 
 ## 4. RTL-SDR
-- [ ] Áudio de RX contínuo, **sem cortes a cada ~2 s** (se houver corte: ligar "Debug do áudio RX" e mandar o log).
+- [x] Áudio de RX contínuo, **sem cortes a cada ~2 s** — **OK, confirmado pelo operador em 24/11/2026.**
 - [ ] Waterfall no painel SDR e escopo no display (modelos com escopo); clique no escopo sintoniza.
 
 ## 5. Tela e display
 - [ ] Escala automática (1.9.3): na tela do PU2MUS (1366×768) a aba Operação cabe sem rolagem.
-- [ ] Display destacado em **2 monitores** (DPI diferentes): move, tela cheia (F11), lembra o monitor ao reabrir.
+- [x] Display destacado em **2 monitores** (DPI diferentes): move, tela cheia (F11), lembra o monitor ao reabrir —
+  **OK, confirmado pelo operador em 24/11/2026.**
 - [ ] Moldura de rádio (Configurações → Aparência) com etiqueta: teclas A/B, RX ONLY, TIPO e LUZ funcionam.
 
 ## 6. Rede e idiomas
