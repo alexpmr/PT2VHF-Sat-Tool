@@ -1,0 +1,63 @@
+{
+  "generated_at": "2026-11-27T15:40:00Z",
+  "project_root": "PT2VHF-Sat-Tool",
+  "languages": [
+    { "name": "Python", "extensions": [".py"], "file_count": 143 },
+    { "name": "PowerShell", "extensions": [".ps1"], "file_count": 3 },
+    { "name": "Batch", "extensions": [".cmd"], "file_count": 2 },
+    { "name": "Inno Setup", "extensions": [".iss"], "file_count": 1 },
+    { "name": "HTML/JavaScript", "extensions": [".html"], "file_count": 1 },
+    { "name": "YAML", "extensions": [".yml"], "file_count": 1 }
+  ],
+  "primary_language": "Python",
+  "frameworks": [
+    { "name": "PySide6 (Qt 6)", "version": ">=6.7,<6.10", "source": "requirements-win11.txt" },
+    { "name": "PySide2 (Qt 5, legado Win7)", "version": "5.15.2.1", "source": "requirements-win7.txt" },
+    { "name": "Skyfield", "version": "1.49", "source": "requirements-win11.txt" },
+    { "name": "NumPy", "version": "1.26.4", "source": "requirements-win11.txt" },
+    { "name": "pyserial", "version": "3.5", "source": "requirements-win11.txt" },
+    { "name": "requests", "version": "2.31.0", "source": "requirements-win11.txt" },
+    { "name": "pyrtlsdr", "version": "0.5.1", "source": "requirements-win11.txt" },
+    { "name": "satnogs-decoders", "version": "1.132.0", "source": "requirements-win11.txt" },
+    { "name": "aprslib", "version": "0.7.2", "source": "requirements-win11.txt" },
+    { "name": "psutil", "version": "6.1.1", "source": "requirements-win11.txt" },
+    { "name": "PyInstaller", "version": "6.13.0", "source": ".github/workflows/windows.yml" },
+    { "name": "pytest", "version": "8.3.5", "source": ".github/workflows/windows.yml" }
+  ],
+  "package_manager": "pip",
+  "entry_points": [
+    { "path": "run.py", "type": "app_entry" },
+    { "path": "sat_tool/app.py:main", "type": "gui_entry" },
+    { "path": "sat_tool/diagnostics.py:run_self_test", "type": "self_test_entry" },
+    { "path": "scripts/apply-update.ps1", "type": "ota_helper" },
+    { "path": "scripts/publish_sat_to_site.py", "type": "ci_publish" },
+    { "path": "scripts/build_deb.py", "type": "ci_package" }
+  ],
+  "config_files": [
+    "requirements.txt", "requirements-win11.txt", "requirements-win7.txt",
+    "installer/setup.iss", "sat_tool/config.py", "linux/rtl-sdr.rules"
+  ],
+  "ci_cd": [ ".github/workflows/windows.yml" ],
+  "database_hints": [
+    { "path": "sat_tool/config.py", "type": "json_settings_file" },
+    { "path": "sat_tool/catalog.py", "type": "json_file_cache (OMM/TLE/SatNOGS)" }
+  ],
+  "test_framework": "pytest",
+  "test_file_count": 84,
+  "modules": [
+    "orbita-e-passagens", "catalogo-e-tle", "cat-e-doppler", "rotor", "display-lcd",
+    "sdr-e-telemetria", "sstv", "atualizacao-ota", "painel-web", "interface-e-idiomas",
+    "diagnostico", "build-e-publicacao"
+  ],
+  "total_files": 205,
+  "organization_suggestion": {
+    "granularity": "feature",
+    "rationale": "Pacote Python plano (sat_tool/) sem pastas por domínio nem rotas; as specs ficam melhores agrupadas pelas funcionalidades do programa.",
+    "signals": [],
+    "features": [
+      "orbita-e-passagens", "catalogo-e-tle", "cat-e-doppler", "rotor", "display-lcd",
+      "sdr-e-telemetria", "sstv", "atualizacao-ota", "painel-web", "interface-e-idiomas",
+      "diagnostico", "build-e-publicacao"
+    ]
+  }
+}

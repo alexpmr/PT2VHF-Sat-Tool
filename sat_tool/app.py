@@ -222,6 +222,9 @@ class MainWindow(RotorUiMixin, QMainWindow):
         # v1.7.2: ao abrir, atualiza os TLE/OMM em segundo plano (sem janela modal) enquanto o app é usado.
         # O cache só é reaproveitado se tiver menos de 2 h (limite de download do CelesTrak).
         QTimer.singleShot(1500, self.startup_refresh_catalog)
+        from . import config as _config_module
+        for _bad, _why in _config_module.RECOVERIES:
+            self.log(f"Configuração ilegível ({_why}); o programa abriu com os padrões. Cópia do arquivo antigo: {_bad}")
         self.tick_timer = QTimer(self)
         self.tick_timer.timeout.connect(self.tick)
         self.tick_timer.start(1000)

@@ -182,6 +182,29 @@
 
 ## Pendentes
 
+- **Achados da análise Reversa (27/11/2026)** (registrado em 27/11/2026; operador pediu "gere nova versão completa"
+  após rodar o /reversa; specs em `_reversa_sdd/`, detalhes em `_reversa_sdd/gaps.md`)
+  - [x] A1 · SDR: o gravador é pego sob o lock mas escrito fora dele em `SdrReceiver._process`; parar a gravação no meio
+    de um `write()` pode derrubar a thread de recepção (o SDR para depois de gravar uma passagem).
+  - [x] A2 · FT-817/818: se a leitura inicial falha em `FT817.connect`, a porta fica aberta e a próxima tentativa acusa
+    "porta em uso".
+  - [x] A3 · rigctld: falha na leitura inicial deixa o socket aberto; timeout no meio de uma resposta deixa bytes no
+    buffer e as respostas seguintes saem defasadas.
+  - [x] A4 · `settings.json` com JSON quebrado impede o programa de abrir: abrir com os padrões e guardar uma cópia do
+    arquivo ruim.
+  - [x] A5 · Painel web em modo só localhost não confere o cabeçalho `Host` (DNS rebinding poderia ler `/api/status`;
+    controles continuam com PIN).
+  - [x] A6 · User-Agent do catálogo fixo em `PT2VHF-Sat-Tool/1.3.0`: usar a versão real.
+  - [x] A7 · Telemetria sem rede tenta o SatNOGS a cada quadro (até 15 s por quadro): lembrar a falha por um tempo.
+  - [x] A8 · `.reversa/config.user.toml` (arquivo pessoal do Reversa) versionado: tirar do Git e pôr no `.gitignore`.
+  - **Feito (1.9.8):** os oito itens acima, com testes em tests/test_v198_reversa_fixes.py (configuração corrompida vira
+    `settings.corrompido-<data>.json` e o programa abre com os padrões; gravação do SDR sob o mesmo lock de parar; FT-817 e
+    rigctld liberam porta/socket na falha e o rigctld reabre a conexão depois de um timeout; Host conferido no painel
+    só-localhost (421); User-Agent com a versão real; telemetria sem rede tenta de novo só após 10 min; config.user.toml
+    fora do Git).
+  - Perguntas ao operador (sem implementar): leitura AZ 140° EL 175° do rotor; faixa UHF 420 vs 430 MHz; bloquear
+    segunda instância do programa; edição Windows 7 ainda suportada? (`_reversa_sdd/questions.md`)
+
 - **Atualizar frequências demorava horas ("SatNOGS: 14 de 12535 satélites", 6h40)** (registrado em 22/11/2026, relato do operador)
   - Causa: o botão consultava o SatNOGS um satélite por vez para o catálogo inteiro (~12.500 requisições com pausa de
     0,4 s); o SatNOGS também recusa consultas em sequência (provável causa da falha no NORAD 27848).

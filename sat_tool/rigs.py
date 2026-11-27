@@ -80,7 +80,12 @@ class FT817:
             serial_factory = lambda: serial.Serial(port, baudrate=int(baud), bytesize=8, parity="N",
                                                    stopbits=2, timeout=0.5, write_timeout=0.5)
         self.ser = serial_factory()
-        self.read_frequency()  # valida a comunicação
+        try:
+            self.read_frequency()  # valida a comunicação
+        except Exception:
+            # v1.9.8: sem resposta, fecha a porta (antes ficava aberta e a nova tentativa acusava "porta em uso")
+            self.disconnect()
+            raise
         self.log(f"FT-817: conectado em {port} {baud} 8N2")
 
     def disconnect(self):
@@ -704,34 +709,59 @@ class Rigctld:
         self.log = logger or (lambda msg: None)
         self.split = False
         self._buf = b""
+        self._opener = None   # v1.9.8: reabre sozinho depois de uma resposta perdida
 
     @property
     def connected(self) -> bool:
-        return self.sock is not None
+        return self.sock is not None or self._opener is not None
 
     def connect(self, host: str = "127.0.0.1", port: int = 4532, sock_factory=None):
-        self.sock = sock_factory() if sock_factory else socket.create_connection((host, int(port)), timeout=2)
-        self.sock.settimeout(2)
-        self.query("f")
+        opener = sock_factory or (lambda: socket.create_connection((host, int(port)), timeout=2))
+        self._open(opener)
+        try:
+            self.query("f")
+        except Exception:
+            # v1.9.8: sem resposta, fecha o socket (antes ficava aberto)
+            self.disconnect()
+            raise
+        self._opener = opener
         self.log(f"rigctld: conectado a {host}:{port}")
 
-    def disconnect(self):
+    def _open(self, opener):
+        self.sock = opener()
+        self.sock.settimeout(2)
+        self._buf, self.split = b"", False
+
+    def _drop(self):
         if self.sock:
             try:
                 self.sock.close()
             except Exception:
                 pass
-        self.sock, self.split = None, False
+        self.sock, self.split, self._buf = None, False, b""
+
+    def disconnect(self):
+        self._drop()
+        self._opener = None
 
     def query(self, command: str) -> str:
         if self.sock is None:
-            raise ConnectionError("rigctld desconectado")
-        self.sock.sendall((command + "\n").encode("ascii"))
-        while b"\n" not in self._buf:
-            chunk = self.sock.recv(4096)
-            if not chunk:
-                raise ConnectionError("rigctld encerrou a conexão")
-            self._buf += chunk
+            if self._opener is None:
+                raise ConnectionError("rigctld desconectado")
+            self._open(self._opener)
+            self.log("rigctld: conexão reaberta")
+        try:
+            self.sock.sendall((command + "\n").encode("ascii"))
+            while b"\n" not in self._buf:
+                chunk = self.sock.recv(4096)
+                if not chunk:
+                    raise ConnectionError("rigctld encerrou a conexão")
+                self._buf += chunk
+        except OSError as exc:
+            # v1.9.8: timeout no meio de uma resposta deixava bytes no buffer e as respostas seguintes saíam
+            # defasadas (a resposta de "f" lida como a de "t"). Fecha e reabre na próxima consulta.
+            self._drop()
+            raise ConnectionError(f"rigctld não respondeu a '{command}': {exc}") from exc
         line, _, self._buf = self._buf.partition(b"\n")
         text = line.decode("ascii", "replace").strip()
         if text.startswith("RPRT") and text != "RPRT 0":
