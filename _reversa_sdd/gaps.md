@@ -17,3 +17,8 @@
 | A7 | Telemetria sem rede consulta a cada quadro | sdr-e-telemetria | 🟢 desempenho | cosmético |
 | A8 | `config.user.toml` versionado | — | 🟢 repositório | cosmético |
 | H1 | ICOM, TS-790, WiSpDDE, rotctld e SSTV sem teste em hardware | vários | 🟡 | moderado |
+
+## Situação na 1.9.8
+A1 a A8 corrigidos na v1.9.8 (testes em `tests/test_v198_reversa_fixes.py`). G1 a G4 e H1 seguem com o operador
+(`questions.md`). As specs acima descrevem o comportamento da 1.9.7 extraído do código; as tarefas "corrigir A…" nos
+`tasks.md` das units ficam atendidas pela 1.9.8.

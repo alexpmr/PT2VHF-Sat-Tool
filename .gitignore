@@ -10,3 +10,6 @@ data/
 *.tmp
 
 .build-venv-*/
+
+# Reversa: configuração pessoal (não versionar)
+.reversa/config.user.toml

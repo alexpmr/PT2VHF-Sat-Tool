@@ -86,14 +86,19 @@ except Exception:  # pragma: no cover - appearance é puro Python; só por segur
     pass
 
 
+# v1.9.8: arquivos de configuração ilegíveis recuperados nesta execução (a janela avisa no log ao abrir).
+RECOVERIES: list = []
+
+
 class Config:
     def __init__(self, path: Path | None = None):
         self.dir = path or application_dir()
         self.dir.mkdir(parents=True, exist_ok=True)
         self.file = self.dir / "settings.json"
         self.values = dict(DEFAULTS)
-        if self.file.exists():
-            data = json.loads(self.file.read_text(encoding="utf-8"))
+        self.recovered_from = None
+        data = self._read_settings()
+        if data is not None:
             self.values.update({k:v for k,v in data.items() if k in DEFAULTS})
             # Auto CAT always follows Doppler outside the horizon. Older
             # versions could persist False and allow only the initial tune.
@@ -141,6 +146,30 @@ class Config:
                     self.values["satellite_selection"] = merged
                 self.values["default_satellites_v1316_migrated"] = True
                 self.save()
+
+    def _read_settings(self):
+        """v1.9.8: settings.json ilegível (JSON quebrado, arquivo truncado) não impede mais o programa de abrir.
+
+        O arquivo ruim é guardado como settings.corrompido-<data>.json e o programa abre com os padrões.
+        """
+        if not self.file.exists():
+            return None
+        try:
+            data = json.loads(self.file.read_text(encoding="utf-8"))
+            if not isinstance(data, dict):
+                raise ValueError("settings.json não é um objeto JSON")
+            return data
+        except (ValueError, UnicodeDecodeError) as exc:
+            from datetime import datetime
+            backup = self.dir / f"settings.corrompido-{datetime.now():%Y%m%d-%H%M%S}.json"
+            try:
+                self.file.replace(backup)
+                self.recovered_from = backup
+            except OSError:
+                self.recovered_from = self.file
+            self.recovery_error = str(exc)
+            RECOVERIES.append((self.recovered_from, self.recovery_error))
+            return None
 
     def save(self):
         tmp = self.file.with_suffix(".tmp")

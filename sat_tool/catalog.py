@@ -1,10 +1,11 @@
-from __future__ import annotations
 """Catalog cache and network sources. OMM JSON supports six-digit NORAD IDs."""
+from __future__ import annotations
 from pathlib import Path
 from datetime import datetime, timezone
 import json
 import requests
 
+from . import __version__
 from .config import DEFAULT_SATELLITES
 
 # CelesTrak group feeds return batches; per-NORAD requests only for missing default satellites.
@@ -17,7 +18,7 @@ ALL_GROUPS = DEFAULT_GROUPS + ("active",)
 CELESTRAK_OMM = "https://celestrak.org/NORAD/elements/gp.php?GROUP=amateur&FORMAT=json"
 CELESTRAK_TLE = "https://celestrak.org/NORAD/elements/gp.php?GROUP=amateur&FORMAT=tle"
 SATNOGS_TRANSMITTERS = "https://db.satnogs.org/api/transmitters/"
-HEADERS = {"User-Agent": "PT2VHF-Sat-Tool/1.3.0 (radio amateur tracking tool)",
+HEADERS = {"User-Agent": f"PT2VHF-Sat-Tool/{__version__} (radio amateur tracking tool)",  # v1.9.8: era fixo em 1.3.0
            "Accept": "application/json"}
 ALIASES = {"27607": ("SO-50", "SO50", "SAUDISAT 1C", "SAUDISAT-1C"),
            "25544": ("ISS", "ARISS", "ZARYA"),

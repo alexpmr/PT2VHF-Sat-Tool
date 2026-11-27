@@ -185,6 +185,17 @@ def client_allowed(raw):
     return bool(ip.is_loopback or (ip.is_private and not ip.is_unspecified))
 
 
+def local_host_header(host, port):
+    """v1.9.8: Host aceito no modo só-localhost: 127.0.0.1, localhost ou [::1], com ou sem a porta do painel."""
+    host = str(host or "").strip().lower()
+    if not host:
+        return False
+    for name in ("127.0.0.1", "localhost", "[::1]"):
+        if host == name or host == f"{name}:{int(port)}":
+            return True
+    return False
+
+
 def pin_hash(pin, salt):
     return hashlib.pbkdf2_hmac("sha256", str(pin).encode("utf-8"), str(salt).encode("utf-8"), 120_000).hex()
 
@@ -439,6 +450,12 @@ class LocalStatusServer:
                     self.respond(HTTPStatus.FORBIDDEN, "Endereço externo bloqueado")
                     return False
                 if not owner.lan:
+                    # v1.9.8: só localhost não tem chave; o Host precisa ser o próprio computador, senão uma página
+                    # maliciosa com DNS rebinding (nome dela apontando para 127.0.0.1) leria /api/status.
+                    if not local_host_header(self.headers.get("Host", ""), owner.port):
+                        owner._event("Pedido recusado: cabeçalho Host não local " + repr(self.headers.get("Host", "")))
+                        self.respond(HTTPStatus.MISDIRECTED_REQUEST, "Use http://127.0.0.1:" + str(owner.port) + "/")
+                        return False
                     owner.note_remote_request(ip)
                     return True
                 cookies = SimpleCookie()

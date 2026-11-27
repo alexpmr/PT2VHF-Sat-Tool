@@ -22,7 +22,11 @@ from . import ax25
 
 SATNOGS_SATELLITES = "https://db.satnogs.org/api/satellites/"
 SATNOGS_TELEMETRY = "https://db.satnogs.org/api/telemetry/"
-HEADERS = {"User-Agent": "PT2VHF-Sat-Tool (radio amateur tracking tool)", "Accept": "application/json"}
+from . import __version__
+
+HEADERS = {"User-Agent": f"PT2VHF-Sat-Tool/{__version__} (radio amateur tracking tool)", "Accept": "application/json"}
+# v1.9.8: sem rede, não consulta o SatNOGS de novo para o mesmo satélite antes deste prazo (antes era a cada quadro).
+RETRY_AFTER_S = 600.0
 
 
 def pipeline_for(row: dict) -> str:
@@ -98,18 +102,23 @@ class KissTcpClient:
 class TelemetryDecoder:
     """Associa NORAD → decodificador do satnogs-decoders (consulta ao SatNOGS DB com cache)."""
 
-    def __init__(self, data_dir: Path):
+    def __init__(self, data_dir: Path, clock: Callable[[], float] = time.monotonic):
         self.cache_file = Path(data_dir) / "satnogs_decoders.json"
         try:
             self.cache = json.loads(self.cache_file.read_text(encoding="utf-8"))
         except Exception:
             self.cache = {}
+        self._clock = clock
+        self._failed_at: dict[str, float] = {}
 
     def decoder_names(self, norad: str, fetch: bool = True) -> list[str]:
         norad = str(norad)
         if norad in self.cache:
             return self.cache[norad]
         if not fetch:
+            return []
+        failed = self._failed_at.get(norad)
+        if failed is not None and self._clock() - failed < RETRY_AFTER_S:
             return []
         names: list[str] = []
         try:
@@ -119,7 +128,9 @@ class TelemetryDecoder:
             for sat in r.json():
                 names += [t.get("decoder") for t in sat.get("telemetries") or [] if t.get("decoder")]
         except Exception:
+            self._failed_at[norad] = self._clock()
             return []
+        self._failed_at.pop(norad, None)
         self.cache[norad] = names
         try:
             self.cache_file.write_text(json.dumps(self.cache), encoding="utf-8")

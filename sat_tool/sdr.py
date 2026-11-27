@@ -401,17 +401,37 @@ class SdrReceiver:
                 except Exception:
                     pass
 
+    def _record(self, audio: np.ndarray, channel: Optional[np.ndarray]):
+        """v1.9.8: grava sob o mesmo lock de stop_recording().
+
+        Antes o gravador era pego sob o lock e escrito fora dele: parar a gravação no meio de um write() fechava o
+        WAV por baixo e a exceção derrubava a thread de recepção. Um erro de disco agora encerra só a gravação.
+        """
+        with self._lock:
+            recorder = self._recorder
+            if recorder is None:
+                return
+            try:
+                recorder.write(audio, channel)
+            except (OSError, ValueError, AttributeError) as exc:
+                self._recorder = None
+                self.status.recording = ""
+                self.status.error = f"Gravação interrompida: {exc}"
+                try:
+                    recorder.close()
+                except Exception:
+                    pass
+
     def _process(self, iq: np.ndarray, target: int):
         with self._lock:
             audio = self.demod.process(iq)
+            channel = self.demod.last_channel
             afsk = self.afsk
-            recorder = self._recorder
         st = self.status
         st.center_hz, st.channel_hz, st.level_db = self._center, target, self.demod.level_db
         st.quality = self.demod.quality
         self.on_audio(audio)
-        if recorder is not None:
-            recorder.write(audio, self.demod.last_channel)
+        self._record(audio, channel)
         if afsk is not None:
             try:
                 self._dec_q.put_nowait((afsk, audio))
