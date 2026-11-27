@@ -1,0 +1,5260 @@
+{
+ "generated_at": "2026-11-27T15:21:20Z",
+ "modules": [
+  {
+   "name": "orbita-e-passagens",
+   "path": "sat_tool/",
+   "purpose": "Propagação orbital, passagens, Doppler previsto, qualidade, avisos de AOS e localização da estação",
+   "primary_files": [
+    "sat_tool/core.py",
+    "sat_tool/operations.py",
+    "sat_tool/quality.py",
+    "sat_tool/forecast.py",
+    "sat_tool/passfmt.py",
+    "sat_tool/alerts.py",
+    "sat_tool/maidenhead.py",
+    "sat_tool/geolocation.py",
+    "sat_tool/location_map.py"
+   ],
+   "functions": [
+    {
+     "name": "doppler_frequencies",
+     "file": "sat_tool/core.py",
+     "params": [
+      "uplink_hz",
+      "downlink_hz",
+      "radial_m_s"
+     ],
+     "line": 28,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "paired_linear_uplink",
+     "file": "sat_tool/core.py",
+     "params": [
+      "downlink_hz",
+      "dl_low",
+      "dl_high",
+      "ul_low",
+      "ul_high",
+      "inverted"
+     ],
+     "line": 39,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "make_satellite",
+     "file": "sat_tool/core.py",
+     "params": [
+      "omm",
+      "ts"
+     ],
+     "line": 51,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "now_utc",
+     "file": "sat_tool/core.py",
+     "params": [],
+     "line": 59,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "position",
+     "file": "sat_tool/core.py",
+     "params": [
+      "sat",
+      "station",
+      "when",
+      "ts"
+     ],
+     "line": 63,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "ground_track",
+     "file": "sat_tool/core.py",
+     "params": [
+      "sat",
+      "start"
+     ],
+     "line": 87,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "footprint",
+     "file": "sat_tool/core.py",
+     "params": [
+      "lat",
+      "lon",
+      "angular_radius_deg",
+      "points"
+     ],
+     "line": 105,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "predict_passes",
+     "file": "sat_tool/core.py",
+     "params": [
+      "sat",
+      "station",
+      "now",
+      "hours",
+      "ts"
+     ],
+     "line": 123,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "transponder_options",
+     "file": "sat_tool/core.py",
+     "params": [
+      "rows"
+     ],
+     "line": 157,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "ground_track_between",
+     "file": "sat_tool/core.py",
+     "params": [
+      "sat",
+      "begin",
+      "end"
+     ],
+     "line": 180,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "track_period_bounds",
+     "file": "sat_tool/core.py",
+     "params": [
+      "now",
+      "period_hours",
+      "direction",
+      "last_pass"
+     ],
+     "line": 212,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "select_channel",
+     "file": "sat_tool/operations.py",
+     "params": [
+      "rows",
+      "selected_modes",
+      "available_bands"
+     ],
+     "line": 12,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "select_next_pass",
+     "file": "sat_tool/operations.py",
+     "params": [
+      "passes",
+      "rows_by_norad",
+      "selected_modes",
+      "available_bands",
+      "now",
+      "enabled_ids"
+     ],
+     "line": 49,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "select_selected_satellite_pass",
+     "file": "sat_tool/operations.py",
+     "params": [
+      "passes",
+      "selected_norad",
+      "channel",
+      "now"
+     ],
+     "line": 72,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "clock_text",
+     "file": "sat_tool/operations.py",
+     "params": [
+      "seconds"
+     ],
+     "line": 92,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "status_at",
+     "file": "sat_tool/operations.py",
+     "params": [
+      "p",
+      "when"
+     ],
+     "line": 100,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "frequency_prediction",
+     "file": "sat_tool/operations.py",
+     "params": [
+      "channel",
+      "radial_m_s"
+     ],
+     "line": 108,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "orbital_age_days",
+     "file": "sat_tool/operations.py",
+     "params": [
+      "epoch",
+      "when"
+     ],
+     "line": 125,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "sun_unit_vector",
+     "file": "sat_tool/quality.py",
+     "params": [
+      "when"
+     ],
+     "line": 39,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "in_shadow",
+     "file": "sat_tool/quality.py",
+     "params": [
+      "sat_km",
+      "sun_hat"
+     ],
+     "line": 50,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "sample_pass",
+     "file": "sat_tool/quality.py",
+     "params": [
+      "sat",
+      "station",
+      "p",
+      "ts",
+      "step_s"
+     ],
+     "line": 56,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "score_pass",
+     "file": "sat_tool/quality.py",
+     "params": [
+      "samples"
+     ],
+     "line": 74,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "pass_quality",
+     "file": "sat_tool/quality.py",
+     "params": [
+      "sat",
+      "station",
+      "p",
+      "ts"
+     ],
+     "line": 139,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "forecast_passes",
+     "file": "sat_tool/forecast.py",
+     "params": [
+      "orbits",
+      "ids",
+      "station"
+     ],
+     "line": 15,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "local",
+     "file": "sat_tool/forecast.py",
+     "params": [
+      "moment"
+     ],
+     "line": 43,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "duration_text",
+     "file": "sat_tool/forecast.py",
+     "params": [
+      "seconds"
+     ],
+     "line": 49,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "write_csv",
+     "file": "sat_tool/forecast.py",
+     "params": [
+      "path",
+      "passes"
+     ],
+     "line": 54,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "open_forecast",
+     "file": "sat_tool/forecast.py",
+     "params": [
+      "window"
+     ],
+     "line": 63,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_words",
+     "file": "sat_tool/passfmt.py",
+     "params": [
+      "lang"
+     ],
+     "line": 10,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "aos_label",
+     "file": "sat_tool/passfmt.py",
+     "params": [
+      "aos",
+      "today",
+      "lang"
+     ],
+     "line": 14,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "time_label",
+     "file": "sat_tool/passfmt.py",
+     "params": [
+      "moment",
+      "aos"
+     ],
+     "line": 23,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "full_tooltip",
+     "file": "sat_tool/passfmt.py",
+     "params": [
+      "moment"
+     ],
+     "line": 35,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "radial_kmh_text",
+     "file": "sat_tool/passfmt.py",
+     "params": [
+      "radial_m_s",
+      "lang"
+     ],
+     "line": 41,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "eta_seconds",
+     "file": "sat_tool/alerts.py",
+     "params": [
+      "completed",
+      "total",
+      "elapsed"
+     ],
+     "line": 5,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "format_duration",
+     "file": "sat_tool/alerts.py",
+     "params": [
+      "seconds"
+     ],
+     "line": 14,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "selected_aos_alarm",
+     "file": "sat_tool/alerts.py",
+     "params": [
+      "passes",
+      "selected_norad",
+      "now",
+      "seen",
+      "seconds"
+     ],
+     "line": 23,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_parse",
+     "file": "sat_tool/alerts.py",
+     "params": [
+      "value"
+     ],
+     "line": 43,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "find_alert",
+     "file": "sat_tool/alerts.py",
+     "params": [
+      "alerts",
+      "norad",
+      "aos",
+      "tolerance_s"
+     ],
+     "line": 47,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "add_alert",
+     "file": "sat_tool/alerts.py",
+     "params": [
+      "alerts",
+      "row",
+      "leads"
+     ],
+     "line": 55,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "remove_alert",
+     "file": "sat_tool/alerts.py",
+     "params": [
+      "alerts",
+      "norad",
+      "aos"
+     ],
+     "line": 67,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "sync_with_passes",
+     "file": "sat_tool/alerts.py",
+     "params": [
+      "alerts",
+      "passes"
+     ],
+     "line": 74,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "due_alerts",
+     "file": "sat_tool/alerts.py",
+     "params": [
+      "alerts",
+      "now"
+     ],
+     "line": 83,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "maidenhead_to_latlon",
+     "file": "sat_tool/maidenhead.py",
+     "params": [
+      "locator"
+     ],
+     "line": 8,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "lookup_approximate_ip",
+     "file": "sat_tool/geolocation.py",
+     "params": [],
+     "line": 39,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "nmea_checksum_valid",
+     "file": "sat_tool/geolocation.py",
+     "params": [
+      "line"
+     ],
+     "line": 70,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_nmea_degrees",
+     "file": "sat_tool/geolocation.py",
+     "params": [
+      "value",
+      "hemisphere",
+      "latitude"
+     ],
+     "line": 86,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "parse_nmea_position",
+     "file": "sat_tool/geolocation.py",
+     "params": [
+      "line"
+     ],
+     "line": 102,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "read_gps_serial",
+     "file": "sat_tool/geolocation.py",
+     "params": [
+      "port"
+     ],
+     "line": 134,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "valid_coordinates",
+     "file": "sat_tool/location_map.py",
+     "params": [
+      "lat",
+      "lon"
+     ],
+     "line": 6,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "parse_coordinate_fields",
+     "file": "sat_tool/location_map.py",
+     "params": [
+      "lat_text",
+      "lon_text"
+     ],
+     "line": 19,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "sanitize_map_pick",
+     "file": "sat_tool/location_map.py",
+     "params": [
+      "pick"
+     ],
+     "line": 29,
+     "confidence": "confirmed"
+    }
+   ],
+   "entities": [
+    {
+     "name": "Station",
+     "file": "sat_tool/core.py",
+     "line": 14,
+     "bases": [],
+     "methods": [
+      "validate"
+     ],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "PassQuality",
+     "file": "sat_tool/quality.py",
+     "line": 25,
+     "bases": [],
+     "methods": [
+      "label",
+      "tooltip"
+     ],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "GeoFix",
+     "file": "sat_tool/geolocation.py",
+     "line": 18,
+     "bases": [],
+     "methods": [
+      "validate"
+     ],
+     "confidence": "confirmed"
+    }
+   ],
+   "business_rules": [
+    {
+     "description": "Doppler: RX = f·(1−v/c), TX = f/(1−v/c); |v| ≤ 20 km/s",
+     "location": "sat_tool/core.py:28",
+     "confidence": "confirmed"
+    },
+    {
+     "description": "Canal com uplink tem prioridade; FM > SSB > CW; beacon nunca vira TX",
+     "location": "sat_tool/operations.py:12",
+     "confidence": "confirmed"
+    },
+    {
+     "description": "Aviso de passagem dispara uma vez por antecedência; mesma passagem = AOS a ±5 min",
+     "location": "sat_tool/alerts.py:47",
+     "confidence": "confirmed"
+    },
+    {
+     "description": "Elevação mínima 0–90°, lat ±90, lon ±180",
+     "location": "sat_tool/core.py:21",
+     "confidence": "confirmed"
+    }
+   ],
+   "dependencies": [
+    "catalogo-e-tle"
+   ],
+   "algorithms": [
+    "SGP4 (Skyfield)",
+    "velocidade radial por diferença central",
+    "qualidade composta 1–5 estrelas"
+   ],
+   "complexity": "medium"
+  },
+  {
+   "name": "catalogo-e-tle",
+   "path": "sat_tool/",
+   "purpose": "Catálogo orbital (CelesTrak/AMSAT/R4UAB/SatNOGS), transmissores SatNOGS, satélites padrão e seleção",
+   "primary_files": [
+    "sat_tool/catalog.py",
+    "sat_tool/selection.py",
+    "sat_tool/profile.py",
+    "sat_tool/transponder.py",
+    "sat_tool/satellite_info.py",
+    "sat_tool/satinfo.py",
+    "sat_tool/media.py",
+    "sat_tool/config.py"
+   ],
+   "functions": [
+    {
+     "name": "normalized_satellite_search",
+     "file": "sat_tool/catalog.py",
+     "params": [
+      "text"
+     ],
+     "line": 32,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "satellite_search_text",
+     "file": "sat_tool/catalog.py",
+     "params": [
+      "ident",
+      "orbit"
+     ],
+     "line": 38,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "merge_orbits",
+     "file": "sat_tool/catalog.py",
+     "params": [
+      "groups"
+     ],
+     "line": 44,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "refresh_group_omm",
+     "file": "sat_tool/catalog.py",
+     "params": [
+      "data_dir",
+      "group"
+     ],
+     "line": 71,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_satnogs_tle_omm",
+     "file": "sat_tool/catalog.py",
+     "params": [
+      "ident"
+     ],
+     "line": 96,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "refresh_catnr_omm",
+     "file": "sat_tool/catalog.py",
+     "params": [
+      "data_dir",
+      "ident"
+     ],
+     "line": 116,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "load_group_omm",
+     "file": "sat_tool/catalog.py",
+     "params": [
+      "data_dir",
+      "group"
+     ],
+     "line": 150,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "refresh_multi_omm",
+     "file": "sat_tool/catalog.py",
+     "params": [
+      "data_dir",
+      "groups",
+      "progress"
+     ],
+     "line": 156,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "cache_path",
+     "file": "sat_tool/catalog.py",
+     "params": [
+      "data_dir",
+      "name"
+     ],
+     "line": 197,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "refresh_omm",
+     "file": "sat_tool/catalog.py",
+     "params": [
+      "data_dir"
+     ],
+     "line": 202,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "load_omm",
+     "file": "sat_tool/catalog.py",
+     "params": [
+      "data_dir"
+     ],
+     "line": 209,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_fetch_transmitter_pages",
+     "file": "sat_tool/catalog.py",
+     "params": [
+      "params",
+      "max_pages",
+      "progress",
+      "cancel"
+     ],
+     "line": 214,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_unique_transmitters",
+     "file": "sat_tool/catalog.py",
+     "params": [
+      "rows"
+     ],
+     "line": 246,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_write_transmitters",
+     "file": "sat_tool/catalog.py",
+     "params": [
+      "data_dir",
+      "norad",
+      "rows"
+     ],
+     "line": 255,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "refresh_transmitters",
+     "file": "sat_tool/catalog.py",
+     "params": [
+      "data_dir",
+      "norad"
+     ],
+     "line": 262,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "refresh_all_transmitters",
+     "file": "sat_tool/catalog.py",
+     "params": [
+      "data_dir",
+      "ids",
+      "progress",
+      "cancel"
+     ],
+     "line": 269,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "load_transmitters",
+     "file": "sat_tool/catalog.py",
+     "params": [
+      "data_dir",
+      "norad"
+     ],
+     "line": 308,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "age_hours",
+     "file": "sat_tool/catalog.py",
+     "params": [
+      "data_dir",
+      "name"
+     ],
+     "line": 313,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "tle_catalog_number",
+     "file": "sat_tool/catalog.py",
+     "params": [
+      "field"
+     ],
+     "line": 323,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "parse_tle",
+     "file": "sat_tool/catalog.py",
+     "params": [
+      "text"
+     ],
+     "line": 333,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_tle_float",
+     "file": "sat_tool/catalog.py",
+     "params": [
+      "text"
+     ],
+     "line": 361,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "tle_to_omm",
+     "file": "sat_tool/catalog.py",
+     "params": [
+      "row"
+     ],
+     "line": 375,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "refresh_tle",
+     "file": "sat_tool/catalog.py",
+     "params": [
+      "data_dir"
+     ],
+     "line": 399,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "load_tle",
+     "file": "sat_tool/catalog.py",
+     "params": [
+      "data_dir"
+     ],
+     "line": 410,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "refresh_orbits",
+     "file": "sat_tool/catalog.py",
+     "params": [
+      "data_dir",
+      "groups",
+      "progress"
+     ],
+     "line": 415,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "load_orbits",
+     "file": "sat_tool/catalog.py",
+     "params": [
+      "data_dir"
+     ],
+     "line": 429,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "change_selection",
+     "file": "sat_tool/selection.py",
+     "params": [
+      "orbit_objects",
+      "filtered_ids",
+      "current_ids",
+      "select",
+      "filtered"
+     ],
+     "line": 5,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "transmitter_batch_ids",
+     "file": "sat_tool/selection.py",
+     "params": [
+      "scope",
+      "chosen_id",
+      "enabled_ids",
+      "filtered_ids",
+      "orbit_objects"
+     ],
+     "line": 17,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "cat_doppler_allowed",
+     "file": "sat_tool/selection.py",
+     "params": [
+      "visible",
+      "explicit_outside_permission"
+     ],
+     "line": 36,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "normalize_modes",
+     "file": "sat_tool/profile.py",
+     "params": [
+      "modes"
+     ],
+     "line": 25,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "row_modes",
+     "file": "sat_tool/profile.py",
+     "params": [
+      "row"
+     ],
+     "line": 30,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "freq_band",
+     "file": "sat_tool/profile.py",
+     "params": [
+      "hz"
+     ],
+     "line": 45,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "capability",
+     "file": "sat_tool/profile.py",
+     "params": [
+      "norad",
+      "rows",
+      "modes",
+      "bands"
+     ],
+     "line": 58,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "choose_satellites",
+     "file": "sat_tool/profile.py",
+     "params": [
+      "orbit_objects",
+      "rows_by_norad",
+      "modes",
+      "bands",
+      "manual_selection"
+     ],
+     "line": 94,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "render_service",
+     "file": "sat_tool/profile.py",
+     "params": [
+      "modes"
+     ],
+     "line": 106,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "cat_band",
+     "file": "sat_tool/transponder.py",
+     "params": [
+      "hz"
+     ],
+     "line": 17,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "cat_pair_diagnostic",
+     "file": "sat_tool/transponder.py",
+     "params": [
+      "uplink_hz",
+      "downlink_hz"
+     ],
+     "line": 26,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "prioritized_transponders",
+     "file": "sat_tool/transponder.py",
+     "params": [
+      "norad",
+      "options"
+     ],
+     "line": 59,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "orbital_characteristics",
+     "file": "sat_tool/satellite_info.py",
+     "params": [
+      "item"
+     ],
+     "line": 6,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "operational_characteristics",
+     "file": "sat_tool/satellite_info.py",
+     "params": [
+      "rows"
+     ],
+     "line": 29,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "characteristics_text",
+     "file": "sat_tool/satellite_info.py",
+     "params": [
+      "item",
+      "rows"
+     ],
+     "line": 39,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "cache_dir",
+     "file": "sat_tool/satinfo.py",
+     "params": [
+      "data_dir"
+     ],
+     "line": 26,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "load_cached",
+     "file": "sat_tool/satinfo.py",
+     "params": [
+      "data_dir",
+      "norad"
+     ],
+     "line": 32,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_wikipedia_summary",
+     "file": "sat_tool/satinfo.py",
+     "params": [
+      "name",
+      "lang"
+     ],
+     "line": 39,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "fetch_info",
+     "file": "sat_tool/satinfo.py",
+     "params": [
+      "data_dir",
+      "norad",
+      "name",
+      "lang",
+      "force"
+     ],
+     "line": 59,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_date",
+     "file": "sat_tool/satinfo.py",
+     "params": [
+      "value"
+     ],
+     "line": 100,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "image_data_uri",
+     "file": "sat_tool/satinfo.py",
+     "params": [
+      "info",
+      "limit"
+     ],
+     "line": 104,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "info_html",
+     "file": "sat_tool/satinfo.py",
+     "params": [
+      "info"
+     ],
+     "line": 116,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_plain",
+     "file": "sat_tool/media.py",
+     "params": [
+      "html"
+     ],
+     "line": 12,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "find_photo",
+     "file": "sat_tool/media.py",
+     "params": [
+      "cache_dir",
+      "name",
+      "norad"
+     ],
+     "line": 16,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "photo_html",
+     "file": "sat_tool/media.py",
+     "params": [
+      "photo"
+     ],
+     "line": 63,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "application_dir",
+     "file": "sat_tool/config.py",
+     "params": [],
+     "line": 57,
+     "confidence": "confirmed"
+    }
+   ],
+   "entities": [
+    {
+     "name": "Config",
+     "file": "sat_tool/config.py",
+     "line": 89,
+     "bases": [],
+     "methods": [
+      "__init__",
+      "save"
+     ],
+     "confidence": "confirmed"
+    }
+   ],
+   "business_rules": [
+    {
+     "description": "Cache de grupo CelesTrak reaproveitado por 2 h",
+     "location": "sat_tool/catalog.py:165",
+     "confidence": "confirmed"
+    },
+    {
+     "description": "Satélite padrão fora dos grupos: NORAD na CelesTrak, reserva no SatNOGS",
+     "location": "sat_tool/catalog.py:116",
+     "confidence": "confirmed"
+    },
+    {
+     "description": "SO-50 usa o par AMSAT fixo 145,850/436,795 FM",
+     "location": "sat_tool/transponder.py:44",
+     "confidence": "confirmed"
+    },
+    {
+     "description": "Elementos substituídos só com EPOCH igual ou mais novo",
+     "location": "sat_tool/catalog.py:57",
+     "confidence": "confirmed"
+    },
+    {
+     "description": "Paginação SatNOGS só em https://db.satnogs.org",
+     "location": "sat_tool/catalog.py:239",
+     "confidence": "confirmed"
+    }
+   ],
+   "dependencies": [],
+   "algorithms": [
+    "merge por NORAD com EPOCH",
+    "Alpha-5",
+    "TLE→OMM"
+   ],
+   "complexity": "medium"
+  },
+  {
+   "name": "cat-e-doppler",
+   "path": "sat_tool/",
+   "purpose": "Controle CAT de rádios (TS-2000 SAT, Yaesu, ICOM, Kenwood, rigctld), Auto CAT Doppler e DDE",
+   "primary_files": [
+    "sat_tool/cat.py",
+    "sat_tool/rigs.py",
+    "sat_tool/cat_scan.py",
+    "sat_tool/dde_server.py"
+   ],
+   "functions": [
+    {
+     "name": "available_ports",
+     "file": "sat_tool/cat.py",
+     "params": [],
+     "line": 16,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "frequency_command",
+     "file": "sat_tool/cat.py",
+     "params": [
+      "channel",
+      "freq_hz"
+     ],
+     "line": 21,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "parse_frequency",
+     "file": "sat_tool/cat.py",
+     "params": [
+      "answer",
+      "channel"
+     ],
+     "line": 29,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "decode_satellite_status",
+     "file": "sat_tool/cat.py",
+     "params": [
+      "answer"
+     ],
+     "line": 39,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "satellite_mode_command",
+     "file": "sat_tool/cat.py",
+     "params": [
+      "answer"
+     ],
+     "line": 63,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "parse_extra",
+     "file": "sat_tool/cat.py",
+     "params": [
+      "name",
+      "answer"
+     ],
+     "line": 78,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "parse_smeter",
+     "file": "sat_tool/cat.py",
+     "params": [
+      "answer",
+      "receiver"
+     ],
+     "line": 100,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "parse_power_setting",
+     "file": "sat_tool/cat.py",
+     "params": [
+      "answer"
+     ],
+     "line": 112,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "parse_meter",
+     "file": "sat_tool/cat.py",
+     "params": [
+      "answer"
+     ],
+     "line": 121,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "classify_port_error",
+     "file": "sat_tool/cat.py",
+     "params": [
+      "message"
+     ],
+     "line": 504,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "port_error_text",
+     "file": "sat_tool/cat.py",
+     "params": [
+      "message",
+      "port"
+     ],
+     "line": 514,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "normalize_mode",
+     "file": "sat_tool/rigs.py",
+     "params": [
+      "mode"
+     ],
+     "line": 31,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "bcd_frequency",
+     "file": "sat_tool/rigs.py",
+     "params": [
+      "hz"
+     ],
+     "line": 44,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "parse_bcd_frequency",
+     "file": "sat_tool/rigs.py",
+     "params": [
+      "data"
+     ],
+     "line": 52,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "icom_model_for_address",
+     "file": "sat_tool/rigs.py",
+     "params": [
+      "address"
+     ],
+     "line": 164,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "civ_frequency",
+     "file": "sat_tool/rigs.py",
+     "params": [
+      "hz"
+     ],
+     "line": 174,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "parse_civ_frequency",
+     "file": "sat_tool/rigs.py",
+     "params": [
+      "data"
+     ],
+     "line": 183,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "civ_frame",
+     "file": "sat_tool/rigs.py",
+     "params": [
+      "address",
+      "command",
+      "payload",
+      "controller"
+     ],
+     "line": 187,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_open",
+     "file": "sat_tool/cat_scan.py",
+     "params": [
+      "factory",
+      "port",
+      "baud",
+      "stopbits"
+     ],
+     "line": 27,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "probe_ts2000",
+     "file": "sat_tool/cat_scan.py",
+     "params": [
+      "ser"
+     ],
+     "line": 35,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_ft817_read",
+     "file": "sat_tool/cat_scan.py",
+     "params": [
+      "ser"
+     ],
+     "line": 50,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "probe_ft817",
+     "file": "sat_tool/cat_scan.py",
+     "params": [
+      "ser"
+     ],
+     "line": 65,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "scan",
+     "file": "sat_tool/cat_scan.py",
+     "params": [
+      "ports"
+     ],
+     "line": 73,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "tracking_text",
+     "file": "sat_tool/dde_server.py",
+     "params": [
+      "snap"
+     ],
+     "line": 15,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "dde_mode",
+     "file": "sat_tool/dde_server.py",
+     "params": [
+      "mode"
+     ],
+     "line": 33,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "available",
+     "file": "sat_tool/dde_server.py",
+     "params": [],
+     "line": 42,
+     "confidence": "confirmed"
+    }
+   ],
+   "entities": [
+    {
+     "name": "RadioState",
+     "file": "sat_tool/cat.py",
+     "line": 131,
+     "bases": [],
+     "methods": [],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "TS2000",
+     "file": "sat_tool/cat.py",
+     "line": 150,
+     "bases": [],
+     "methods": [
+      "__init__",
+      "connected",
+      "_exchange",
+      "connect",
+      "disconnect",
+      "poll",
+      "poll_telemetry",
+      "read_diagnostics",
+      "enable_satellite_mode",
+      "poll_tracking",
+      "set_frequencies",
+      "set_satellite_channel",
+      "set_orientation",
+      "set_rx_only",
+      "set_main_mode"
+     ],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "FT817",
+     "file": "sat_tool/rigs.py",
+     "line": 56,
+     "bases": [],
+     "methods": [
+      "__init__",
+      "connected",
+      "connect",
+      "disconnect",
+      "_cmd",
+      "read_frequency",
+      "is_transmitting",
+      "_set",
+      "set_rx",
+      "set_tx"
+     ],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "Icom",
+     "file": "sat_tool/rigs.py",
+     "line": 193,
+     "bases": [],
+     "methods": [
+      "__init__",
+      "dual_band",
+      "use_same_rig",
+      "_band",
+      "_ensure_sat_mode",
+      "connected",
+      "connect",
+      "disconnect",
+      "_frames",
+      "_command",
+      "read_frequency",
+      "is_transmitting",
+      "_set",
+      "set_rx",
+      "set_tx"
+     ],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "FT847",
+     "file": "sat_tool/rigs.py",
+     "line": 364,
+     "bases": [],
+     "methods": [
+      "__init__",
+      "connected",
+      "use_same_rig",
+      "connect",
+      "disconnect",
+      "_cmd",
+      "read_frequency",
+      "is_transmitting",
+      "_set",
+      "_ensure_sat",
+      "set_rx",
+      "set_tx"
+     ],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "YaesuText",
+     "file": "sat_tool/rigs.py",
+     "line": 467,
+     "bases": [],
+     "methods": [
+      "__init__",
+      "connected",
+      "use_same_rig",
+      "connect",
+      "disconnect",
+      "_write",
+      "_query",
+      "read_frequency",
+      "is_transmitting",
+      "_mode_code",
+      "set_rx",
+      "set_tx"
+     ],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "KenwoodText",
+     "file": "sat_tool/rigs.py",
+     "line": 579,
+     "bases": [],
+     "methods": [
+      "__init__",
+      "connected",
+      "connect",
+      "disconnect",
+      "_write",
+      "_query",
+      "read_frequency",
+      "is_transmitting",
+      "_set",
+      "set_rx",
+      "set_tx"
+     ],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "Rigctld",
+     "file": "sat_tool/rigs.py",
+     "line": 698,
+     "bases": [],
+     "methods": [
+      "__init__",
+      "connected",
+      "connect",
+      "disconnect",
+      "query",
+      "is_transmitting",
+      "_passband",
+      "set_rx",
+      "set_tx"
+     ],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "DopplerDispatcher",
+     "file": "sat_tool/rigs.py",
+     "line": 773,
+     "bases": [],
+     "methods": [
+      "__init__",
+      "due",
+      "mark",
+      "reset"
+     ],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "ScanResult",
+     "file": "sat_tool/cat_scan.py",
+     "line": 19,
+     "bases": [],
+     "methods": [],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "DdeServer",
+     "file": "sat_tool/dde_server.py",
+     "line": 46,
+     "bases": [],
+     "methods": [
+      "__init__",
+      "start",
+      "_same",
+      "_data",
+      "_on_dde",
+      "update",
+      "stop"
+     ],
+     "confidence": "confirmed"
+    }
+   ],
+   "business_rules": [
+    {
+     "description": "Nunca enviar PTT/TX",
+     "location": "sat_tool/cat.py:1",
+     "confidence": "confirmed"
+    },
+    {
+     "description": "Escrita de frequência só com SAT ligado e orientação MAIN/SUB conferida; confirmação por readback",
+     "location": "sat_tool/cat.py:347",
+     "confidence": "confirmed"
+    },
+    {
+     "description": "Leituras opcionais no máximo a cada 5–6 s",
+     "location": "sat_tool/cat.py:232",
+     "confidence": "confirmed"
+    },
+    {
+     "description": "ICOM dual-band: SUB = RX, MAIN = TX",
+     "location": "sat_tool/rigs.py:158",
+     "confidence": "confirmed"
+    },
+    {
+     "description": "Sem mudança de frequência durante TX (exceto modo SAT)",
+     "location": "sat_tool/rigs.py:126",
+     "confidence": "confirmed"
+    }
+   ],
+   "dependencies": [
+    "orbita-e-passagens",
+    "catalogo-e-tle"
+   ],
+   "algorithms": [
+    "remontagem de quadros CAT até ';'",
+    "BCD/CI-V"
+   ],
+   "complexity": "high"
+  },
+  {
+   "name": "rotor",
+   "path": "sat_tool/",
+   "purpose": "Controle de rotor az/el GS-232A/B e Hamlib rotctld, plano de passagem com flip, modos e interface",
+   "primary_files": [
+    "sat_tool/rotor.py",
+    "sat_tool/rotor_ui.py",
+    "sat_tool/rotor_widgets.py"
+   ],
+   "functions": [
+    {
+     "name": "parse_position",
+     "file": "sat_tool/rotor.py",
+     "params": [
+      "answer"
+     ],
+     "line": 43,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "move_command",
+     "file": "sat_tool/rotor.py",
+     "params": [
+      "az",
+      "el"
+     ],
+     "line": 51,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_unwrap",
+     "file": "sat_tool/rotor.py",
+     "params": [
+      "seq"
+     ],
+     "line": 56,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "plan_pass",
+     "file": "sat_tool/rotor.py",
+     "params": [
+      "track",
+      "profile",
+      "prefer"
+     ],
+     "line": 64,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "to_rotor",
+     "file": "sat_tool/rotor.py",
+     "params": [
+      "az",
+      "el",
+      "plan",
+      "profile",
+      "when",
+      "current_az"
+     ],
+     "line": 106,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "needs_move",
+     "file": "sat_tool/rotor.py",
+     "params": [
+      "target",
+      "current",
+      "profile"
+     ],
+     "line": 131,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "probe_port",
+     "file": "sat_tool/rotor.py",
+     "params": [
+      "port",
+      "baud",
+      "opener"
+     ],
+     "line": 219,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "parse_address",
+     "file": "sat_tool/rotor.py",
+     "params": [
+      "text",
+      "default_port"
+     ],
+     "line": 234,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "probe_rotctld",
+     "file": "sat_tool/rotor.py",
+     "params": [
+      "address",
+      "opener"
+     ],
+     "line": 355,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "make_rotor",
+     "file": "sat_tool/rotor.py",
+     "params": [
+      "protocol",
+      "logger"
+     ],
+     "line": 366,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "calibrated_north_offset",
+     "file": "sat_tool/rotor.py",
+     "params": [
+      "read_az",
+      "true_az",
+      "current_offset"
+     ],
+     "line": 370,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "jog_target",
+     "file": "sat_tool/rotor.py",
+     "params": [
+      "position",
+      "d_az",
+      "d_el",
+      "profile"
+     ],
+     "line": 377,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "antenna_line",
+     "file": "sat_tool/rotor.py",
+     "params": [
+      "lat",
+      "lon",
+      "az",
+      "km",
+      "steps"
+     ],
+     "line": 385,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "cardinal",
+     "file": "sat_tool/rotor_widgets.py",
+     "params": [
+      "lab"
+     ],
+     "line": 36,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_fmt",
+     "file": "sat_tool/rotor_widgets.py",
+     "params": [
+      "v"
+     ],
+     "line": 42,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_pen",
+     "file": "sat_tool/rotor_widgets.py",
+     "params": [
+      "color",
+      "width",
+      "dashed"
+     ],
+     "line": 46,
+     "confidence": "confirmed"
+    }
+   ],
+   "entities": [
+    {
+     "name": "RotorProfile",
+     "file": "sat_tool/rotor.py",
+     "line": 23,
+     "bases": [],
+     "methods": [],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "GS232Rotor",
+     "file": "sat_tool/rotor.py",
+     "line": 137,
+     "bases": [],
+     "methods": [
+      "__init__",
+      "connected",
+      "connect",
+      "close",
+      "_send",
+      "read_position",
+      "move",
+      "stop",
+      "park"
+     ],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "RotctldRotor",
+     "file": "sat_tool/rotor.py",
+     "line": 248,
+     "bases": [
+      "GS232Rotor"
+     ],
+     "methods": [
+      "__init__",
+      "connected",
+      "connect",
+      "close",
+      "_readline",
+      "_send",
+      "read_position",
+      "move",
+      "stop"
+     ],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "RotorUiMixin",
+     "file": "sat_tool/rotor_ui.py",
+     "line": 26,
+     "bases": [],
+     "methods": [
+      "rotor_init",
+      "rotor_auto",
+      "rotor_auto",
+      "rotor_cfg",
+      "rotor_profile",
+      "rotor_log",
+      "build_rotor_settings",
+      "rotor_manual_move",
+      "rotor_jog",
+      "rotor_calibrate",
+      "rotor_short_test",
+      "rotor_apply_model",
+      "rotor_protocol_is_rotctld",
+      "rotor_where",
+      "rotor_protocol_changed",
+      "rotor_update_ports",
+      "rotor_save",
+      "rotor_autodetect",
+      "build_rotor_top_button",
+      "rotor_set_top",
+      "rotor_top_clicked",
+      "rotor_bar_shown",
+      "rotor_show_bar",
+      "rotor_control_clicked",
+      "rotor_set_enabled",
+      "rotor_toggle_connection",
+      "build_rotor_bar",
+      "rotor_shortcut_stop",
+      "rotor_change_active",
+      "rotor_refresh_bar_title",
+      "rotor_set_chips",
+      "rotor_show_position",
+      "rotor_set_state_button",
+      "rotor_state_clicked",
+      "rotor_set_mode",
+      "rotor_set_auto",
+      "rotor_bar_step_changed",
+      "rotor_bar_jog_move",
+      "rotor_toggle_tracking",
+      "rotor_stop",
+      "rotor_park_manual",
+      "rotor_park",
+      "rotor_request_read",
+      "rotor_make_plan",
+      "rotor_tick",
+      "rotor_update_target_label",
+      "rotor_map_payload",
+      "rotor_result",
+      "rotor_failed",
+      "rotor_shutdown"
+     ],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_Gauge",
+     "file": "sat_tool/rotor_widgets.py",
+     "line": 54,
+     "bases": [
+      "QWidget"
+     ],
+     "methods": [
+      "__init__",
+      "set_values",
+      "accessible_text",
+      "_font",
+      "caption_height",
+      "_caption"
+     ],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "AzimuthGauge",
+     "file": "sat_tool/rotor_widgets.py",
+     "line": 96,
+     "bases": [
+      "_Gauge"
+     ],
+     "methods": [
+      "__init__",
+      "paintEvent"
+     ],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "ElevationGauge",
+     "file": "sat_tool/rotor_widgets.py",
+     "line": 144,
+     "bases": [
+      "_Gauge"
+     ],
+     "methods": [
+      "__init__",
+      "paintEvent"
+     ],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "RotorCompass",
+     "file": "sat_tool/rotor_widgets.py",
+     "line": 198,
+     "bases": [
+      "QWidget"
+     ],
+     "methods": [
+      "__init__",
+      "set_values",
+      "accessible_text",
+      "pointing"
+     ],
+     "confidence": "confirmed"
+    }
+   ],
+   "business_rules": [
+    {
+     "description": "Nenhum movimento por simples seleção; PARAR em erro e ao fechar",
+     "location": "sat_tool/rotor.py:7",
+     "confidence": "confirmed"
+    },
+    {
+     "description": "Flip só com elevação até 180°",
+     "location": "sat_tool/rotor.py:84",
+     "confidence": "confirmed"
+    },
+    {
+     "description": "Move só se o erro passar da tolerância e após o intervalo mínimo",
+     "location": "sat_tool/rotor_ui.py:869",
+     "confidence": "confirmed"
+    },
+    {
+     "description": "3 falhas de leitura desarmam o automático",
+     "location": "sat_tool/rotor_ui.py:810",
+     "confidence": "confirmed"
+    }
+   ],
+   "dependencies": [
+    "orbita-e-passagens"
+   ],
+   "algorithms": [
+    "unwrap de azimute",
+    "plano normal/flip/reposiciona"
+   ],
+   "complexity": "high"
+  },
+  {
+   "name": "display-lcd",
+   "path": "sat_tool/",
+   "purpose": "Display de rádio simulado (vários modelos), moldura e janela destacável",
+   "primary_files": [
+    "sat_tool/lcd.py",
+    "sat_tool/lcd_radios.py",
+    "sat_tool/lcd_bezel.py",
+    "sat_tool/display_window.py"
+   ],
+   "functions": [
+    {
+     "name": "text_width",
+     "file": "sat_tool/lcd.py",
+     "params": [
+      "text"
+     ],
+     "line": 70,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "format_radio_hz",
+     "file": "sat_tool/lcd.py",
+     "params": [
+      "hz"
+     ],
+     "line": 75,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "themes_for",
+     "file": "sat_tool/lcd.py",
+     "params": [
+      "model"
+     ],
+     "line": 116,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "next_in",
+     "file": "sat_tool/lcd.py",
+     "params": [
+      "seq",
+      "current",
+      "step"
+     ],
+     "line": 127,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "countdown_text",
+     "file": "sat_tool/lcd.py",
+     "params": [
+      "seconds"
+     ],
+     "line": 135,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "countdown_parts",
+     "file": "sat_tool/lcd.py",
+     "params": [
+      "seconds"
+     ],
+     "line": 145,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "smeter_text",
+     "file": "sat_tool/lcd.py",
+     "params": [
+      "signal"
+     ],
+     "line": 155,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "indicator_tags",
+     "file": "sat_tool/lcd.py",
+     "params": [
+      "st"
+     ],
+     "line": 188,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "sides",
+     "file": "sat_tool/lcd.py",
+     "params": [
+      "st"
+     ],
+     "line": 220,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "freq_parts",
+     "file": "sat_tool/lcd.py",
+     "params": [
+      "hz"
+     ],
+     "line": 232,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_seg_polys",
+     "file": "sat_tool/lcd.py",
+     "params": [
+      "x",
+      "y",
+      "w",
+      "h",
+      "t"
+     ],
+     "line": 487,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "make_style",
+     "file": "sat_tool/lcd.py",
+     "params": [
+      "model",
+      "p",
+      "w",
+      "h",
+      "u",
+      "theme",
+      "font"
+     ],
+     "line": 625,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "paint_ts2000",
+     "file": "sat_tool/lcd.py",
+     "params": [
+      "style",
+      "st"
+     ],
+     "line": 635,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "paint_classic",
+     "file": "sat_tool/lcd.py",
+     "params": [
+      "style",
+      "st"
+     ],
+     "line": 751,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "theme_for",
+     "file": "sat_tool/lcd_radios.py",
+     "params": [
+      "model",
+      "theme"
+     ],
+     "line": 24,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_signal_frac",
+     "file": "sat_tool/lcd_radios.py",
+     "params": [
+      "st"
+     ],
+     "line": 32,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_count",
+     "file": "sat_tool/lcd_radios.py",
+     "params": [
+      "st"
+     ],
+     "line": 39,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_short_freq",
+     "file": "sat_tool/lcd_radios.py",
+     "params": [
+      "hz"
+     ],
+     "line": 47,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_meter",
+     "file": "sat_tool/lcd_radios.py",
+     "params": [
+      "style",
+      "x",
+      "y",
+      "w",
+      "frac",
+      "labels",
+      "hh",
+      "tx"
+     ],
+     "line": 52,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_scope_color",
+     "file": "sat_tool/lcd_radios.py",
+     "params": [
+      "v"
+     ],
+     "line": 65,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_scope",
+     "file": "sat_tool/lcd_radios.py",
+     "params": [
+      "style",
+      "rect",
+      "st",
+      "ink",
+      "grid",
+      "waterfall",
+      "fill"
+     ],
+     "line": 76,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_keys",
+     "file": "sat_tool/lcd_radios.py",
+     "params": [
+      "style",
+      "x",
+      "y",
+      "x_max",
+      "order",
+      "prefix"
+     ],
+     "line": 124,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_tags",
+     "file": "sat_tool/lcd_radios.py",
+     "params": [
+      "style",
+      "x",
+      "y",
+      "x_max",
+      "items"
+     ],
+     "line": 140,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_status_items",
+     "file": "sat_tool/lcd_radios.py",
+     "params": [
+      "st"
+     ],
+     "line": 150,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_tx_text",
+     "file": "sat_tool/lcd_radios.py",
+     "params": [
+      "sub"
+     ],
+     "line": 168,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "paint_ic706",
+     "file": "sat_tool/lcd_radios.py",
+     "params": [
+      "style",
+      "st"
+     ],
+     "line": 175,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "paint_ic7100",
+     "file": "sat_tool/lcd_radios.py",
+     "params": [
+      "style",
+      "st"
+     ],
+     "line": 231,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "paint_ft897",
+     "file": "sat_tool/lcd_radios.py",
+     "params": [
+      "style",
+      "st"
+     ],
+     "line": 285,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "paint_ic910",
+     "file": "sat_tool/lcd_radios.py",
+     "params": [
+      "style",
+      "st"
+     ],
+     "line": 323,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "paint_tft",
+     "file": "sat_tool/lcd_radios.py",
+     "params": [
+      "style",
+      "st",
+      "variant"
+     ],
+     "line": 360,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_vfo_freq",
+     "file": "sat_tool/lcd_radios.py",
+     "params": [
+      "style",
+      "x",
+      "y",
+      "hz",
+      "size",
+      "x_max",
+      "letter"
+     ],
+     "line": 427,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "paint_ft847",
+     "file": "sat_tool/lcd_radios.py",
+     "params": [
+      "style",
+      "st"
+     ],
+     "line": 440,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "paint_ft817",
+     "file": "sat_tool/lcd_radios.py",
+     "params": [
+      "style",
+      "st"
+     ],
+     "line": 511,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "paint_ts790",
+     "file": "sat_tool/lcd_radios.py",
+     "params": [
+      "style",
+      "st"
+     ],
+     "line": 583,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "paint_ic705",
+     "file": "sat_tool/lcd_radios.py",
+     "params": [
+      "style",
+      "st"
+     ],
+     "line": 670,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "make_radio_style",
+     "file": "sat_tool/lcd_radios.py",
+     "params": [
+      "model",
+      "p",
+      "w",
+      "h",
+      "u",
+      "theme"
+     ],
+     "line": 736,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "paint_radio",
+     "file": "sat_tool/lcd_radios.py",
+     "params": [
+      "model",
+      "style",
+      "st"
+     ],
+     "line": 751,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "layout",
+     "file": "sat_tool/lcd_bezel.py",
+     "params": [
+      "w",
+      "h"
+     ],
+     "line": 33,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_font",
+     "file": "sat_tool/lcd_bezel.py",
+     "params": [
+      "px",
+      "bold",
+      "stretch",
+      "spacing"
+     ],
+     "line": 42,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_text",
+     "file": "sat_tool/lcd_bezel.py",
+     "params": [
+      "p",
+      "rect",
+      "s",
+      "px",
+      "color",
+      "align",
+      "bold",
+      "stretch",
+      "spacing"
+     ],
+     "line": 55,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_knob",
+     "file": "sat_tool/lcd_bezel.py",
+     "params": [
+      "p",
+      "cx",
+      "cy",
+      "r",
+      "big"
+     ],
+     "line": 61,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "paint_background",
+     "file": "sat_tool/lcd_bezel.py",
+     "params": [
+      "w",
+      "h",
+      "label",
+      "sublabel",
+      "dpr"
+     ],
+     "line": 91,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "paint_overlay",
+     "file": "sat_tool/lcd_bezel.py",
+     "params": [
+      "p",
+      "w",
+      "h",
+      "state",
+      "active"
+     ],
+     "line": 154,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "glass",
+     "file": "sat_tool/lcd_bezel.py",
+     "params": [
+      "p",
+      "r"
+     ],
+     "line": 187,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "fit_aspect",
+     "file": "sat_tool/display_window.py",
+     "params": [
+      "width",
+      "height",
+      "aspect"
+     ],
+     "line": 16,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "screen_for",
+     "file": "sat_tool/display_window.py",
+     "params": [
+      "saved_name",
+      "saved_rect",
+      "screens",
+      "primary"
+     ],
+     "line": 26,
+     "confidence": "confirmed"
+    }
+   ],
+   "entities": [
+    {
+     "name": "LcdState",
+     "file": "sat_tool/lcd.py",
+     "line": 161,
+     "bases": [],
+     "methods": [],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_Style",
+     "file": "sat_tool/lcd.py",
+     "line": 237,
+     "bases": [],
+     "methods": [
+      "__init__",
+      "font",
+      "text_w",
+      "label",
+      "tag_w",
+      "tag",
+      "key_w",
+      "swap_icon",
+      "key",
+      "bar",
+      "bar_color",
+      "separator",
+      "digit_h",
+      "unit_px",
+      "unit_w",
+      "unit",
+      "countdown_w",
+      "countdown",
+      "digits_w",
+      "digits"
+     ],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_Matrix",
+     "file": "sat_tool/lcd.py",
+     "line": 363,
+     "bases": [
+      "_Style"
+     ],
+     "methods": [
+      "__init__",
+      "background",
+      "glyph",
+      "mtext",
+      "label",
+      "text_w",
+      "tag",
+      "tag_w",
+      "key_w",
+      "swap_icon",
+      "key",
+      "bar",
+      "digits_w",
+      "digit_h",
+      "_unit_pitch",
+      "unit_w",
+      "unit",
+      "countdown_w",
+      "countdown",
+      "digits"
+     ],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_Seven",
+     "file": "sat_tool/lcd.py",
+     "line": 506,
+     "bases": [
+      "_Style"
+     ],
+     "methods": [
+      "__init__",
+      "background",
+      "_metrics",
+      "digits_w",
+      "_seven",
+      "digits"
+     ],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_Digital",
+     "file": "sat_tool/lcd.py",
+     "line": 586,
+     "bases": [
+      "_Style"
+     ],
+     "methods": [
+      "__init__",
+      "background",
+      "dfont",
+      "digits_w",
+      "digits",
+      "bar_color"
+     ],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "LcdDisplay",
+     "file": "sat_tool/lcd.py",
+     "line": 799,
+     "bases": [
+      "QWidget"
+     ],
+     "methods": [
+      "__init__",
+      "set_theme",
+      "set_model",
+      "push_scope",
+      "docked_heights",
+      "set_bezel",
+      "set_dim",
+      "set_font_style",
+      "set_state",
+      "accessible_text",
+      "render_image",
+      "_render_core",
+      "paintEvent",
+      "key_at",
+      "mouseMoveEvent",
+      "mousePressEvent",
+      "mouseDoubleClickEvent",
+      "context_menu",
+      "contextMenuEvent"
+     ],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_Seven847",
+     "file": "sat_tool/lcd_radios.py",
+     "line": 412,
+     "bases": [
+      "_Seven"
+     ],
+     "methods": [
+      "__init__",
+      "digits"
+     ],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_Vfd790",
+     "file": "sat_tool/lcd_radios.py",
+     "line": 561,
+     "bases": [
+      "_Seven"
+     ],
+     "methods": [
+      "__init__",
+      "set_ink",
+      "background"
+     ],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_Tft705",
+     "file": "sat_tool/lcd_radios.py",
+     "line": 647,
+     "bases": [
+      "_Digital"
+     ],
+     "methods": [
+      "background",
+      "dfont",
+      "digits_w",
+      "bar_color"
+     ],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "DisplayWindow",
+     "file": "sat_tool/display_window.py",
+     "line": 41,
+     "bases": [
+      "QWidget"
+     ],
+     "methods": [
+      "__init__",
+      "flag",
+      "apply_flags",
+      "toggle",
+      "toggle_fullscreen",
+      "restore_placement",
+      "save_placement",
+      "resizeEvent",
+      "keyPressEvent",
+      "contextMenuEvent",
+      "menu",
+      "add_window_actions",
+      "closeEvent"
+     ],
+     "confidence": "confirmed"
+    }
+   ],
+   "business_rules": [
+    {
+     "description": "Display só exibe dados; teclas apenas emitem sinais",
+     "location": "sat_tool/lcd.py:1",
+     "confidence": "confirmed"
+    }
+   ],
+   "dependencies": [],
+   "algorithms": [],
+   "complexity": "medium"
+  },
+  {
+   "name": "sdr-e-telemetria",
+   "path": "sat_tool/",
+   "purpose": "Receptor RTL-SDR, DSP, áudio, AX.25/APRS, KISS, telemetria SatNOGS e painel SDR/equipamentos",
+   "primary_files": [
+    "sat_tool/sdr.py",
+    "sat_tool/dsp.py",
+    "sat_tool/audio_ring.py",
+    "sat_tool/rtl_driver.py",
+    "sat_tool/rx_debug.py",
+    "sat_tool/ax25.py",
+    "sat_tool/aprs_info.py",
+    "sat_tool/telemetry.py",
+    "sat_tool/sdr_panel.py"
+   ],
+   "functions": [
+    {
+     "name": "_librtlsdr",
+     "file": "sat_tool/sdr.py",
+     "params": [],
+     "line": 51,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_usb_strings",
+     "file": "sat_tool/sdr.py",
+     "params": [
+      "lib",
+      "index"
+     ],
+     "line": 60,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "detect_devices",
+     "file": "sat_tool/sdr.py",
+     "params": [],
+     "line": 72,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "open_error_help",
+     "file": "sat_tool/sdr.py",
+     "params": [
+      "exc"
+     ],
+     "line": 94,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "lowpass_taps",
+     "file": "sat_tool/dsp.py",
+     "params": [
+      "cutoff_hz",
+      "rate",
+      "taps"
+     ],
+     "line": 19,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "power_spectrum_db",
+     "file": "sat_tool/dsp.py",
+     "params": [
+      "iq",
+      "fft_size"
+     ],
+     "line": 187,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "float_to_pcm16",
+     "file": "sat_tool/dsp.py",
+     "params": [
+      "audio"
+     ],
+     "line": 198,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_bundle_root",
+     "file": "sat_tool/rtl_driver.py",
+     "params": [],
+     "line": 41,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "wdi_simple_path",
+     "file": "sat_tool/rtl_driver.py",
+     "params": [],
+     "line": 45,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "parse_pnp_json",
+     "file": "sat_tool/rtl_driver.py",
+     "params": [
+      "text"
+     ],
+     "line": 53,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "windows_interfaces",
+     "file": "sat_tool/rtl_driver.py",
+     "params": [],
+     "line": 80,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "windows_needs_winusb",
+     "file": "sat_tool/rtl_driver.py",
+     "params": [
+      "interfaces"
+     ],
+     "line": 94,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "wdi_arguments",
+     "file": "sat_tool/rtl_driver.py",
+     "params": [
+      "pid",
+      "workdir"
+     ],
+     "line": 98,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "install_winusb",
+     "file": "sat_tool/rtl_driver.py",
+     "params": [
+      "pid"
+     ],
+     "line": 105,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "linux_usb_present",
+     "file": "sat_tool/rtl_driver.py",
+     "params": [
+      "sys_root"
+     ],
+     "line": 146,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "linux_needs_setup",
+     "file": "sat_tool/rtl_driver.py",
+     "params": [
+      "rules_dirs",
+      "module_dir"
+     ],
+     "line": 158,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "linux_setup_script",
+     "file": "sat_tool/rtl_driver.py",
+     "params": [],
+     "line": 177,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "linux_setup",
+     "file": "sat_tool/rtl_driver.py",
+     "params": [],
+     "line": 185,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "needs_preparation",
+     "file": "sat_tool/rtl_driver.py",
+     "params": [],
+     "line": 199,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "prepare",
+     "file": "sat_tool/rtl_driver.py",
+     "params": [],
+     "line": 214,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "diagnose",
+     "file": "sat_tool/rtl_driver.py",
+     "params": [],
+     "line": 225,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_stamp",
+     "file": "sat_tool/rx_debug.py",
+     "params": [],
+     "line": 28,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "crc_x25",
+     "file": "sat_tool/ax25.py",
+     "params": [
+      "data"
+     ],
+     "line": 15,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "fcs_ok",
+     "file": "sat_tool/ax25.py",
+     "params": [
+      "frame"
+     ],
+     "line": 24,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "encode_address",
+     "file": "sat_tool/ax25.py",
+     "params": [
+      "call",
+      "last"
+     ],
+     "line": 107,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "build_ui_frame",
+     "file": "sat_tool/ax25.py",
+     "params": [
+      "dest",
+      "source",
+      "path",
+      "info"
+     ],
+     "line": 113,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "decode_address",
+     "file": "sat_tool/ax25.py",
+     "params": [
+      "raw"
+     ],
+     "line": 119,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "frame_to_text",
+     "file": "sat_tool/ax25.py",
+     "params": [
+      "frame"
+     ],
+     "line": 125,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "modulate_afsk",
+     "file": "sat_tool/ax25.py",
+     "params": [
+      "frame",
+      "rate",
+      "flags"
+     ],
+     "line": 142,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "kiss_unescape",
+     "file": "sat_tool/ax25.py",
+     "params": [
+      "data"
+     ],
+     "line": 178,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "kiss_escape",
+     "file": "sat_tool/ax25.py",
+     "params": [
+      "data"
+     ],
+     "line": 191,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "latlon_to_maidenhead",
+     "file": "sat_tool/aprs_info.py",
+     "params": [
+      "lat",
+      "lon",
+      "chars"
+     ],
+     "line": 12,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "distance_bearing",
+     "file": "sat_tool/aprs_info.py",
+     "params": [
+      "lat1",
+      "lon1",
+      "lat2",
+      "lon2"
+     ],
+     "line": 22,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "parse",
+     "file": "sat_tool/aprs_info.py",
+     "params": [
+      "text"
+     ],
+     "line": 31,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "describe",
+     "file": "sat_tool/aprs_info.py",
+     "params": [
+      "pkt",
+      "station"
+     ],
+     "line": 53,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "pipeline_for",
+     "file": "sat_tool/telemetry.py",
+     "params": [
+      "row"
+     ],
+     "line": 28,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "make_record",
+     "file": "sat_tool/telemetry.py",
+     "params": [
+      "frame",
+      "norad",
+      "satellite",
+      "source",
+      "decoder_name",
+      "fields",
+      "when"
+     ],
+     "line": 170,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_coord",
+     "file": "sat_tool/telemetry.py",
+     "params": [
+      "value",
+      "pos",
+      "neg"
+     ],
+     "line": 183,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "sids_payload",
+     "file": "sat_tool/telemetry.py",
+     "params": [
+      "frame",
+      "norad",
+      "callsign",
+      "lat",
+      "lon",
+      "when"
+     ],
+     "line": 187,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "upload_to_satnogs",
+     "file": "sat_tool/telemetry.py",
+     "params": [
+      "frame",
+      "norad",
+      "callsign",
+      "lat",
+      "lon"
+     ],
+     "line": 196,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "colormap",
+     "file": "sat_tool/sdr_panel.py",
+     "params": [],
+     "line": 72,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "make_dock",
+     "file": "sat_tool/sdr_panel.py",
+     "params": [
+      "window"
+     ],
+     "line": 1290,
+     "confidence": "confirmed"
+    }
+   ],
+   "entities": [
+    {
+     "name": "SdrDevice",
+     "file": "sat_tool/sdr.py",
+     "line": 38,
+     "bases": [],
+     "methods": [
+      "label"
+     ],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "SdrSettings",
+     "file": "sat_tool/sdr.py",
+     "line": 104,
+     "bases": [],
+     "methods": [],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "RtlSource",
+     "file": "sat_tool/sdr.py",
+     "line": 112,
+     "bases": [],
+     "methods": [
+      "__init__",
+      "set_center",
+      "_start_async",
+      "read",
+      "close"
+     ],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "SimulatedSource",
+     "file": "sat_tool/sdr.py",
+     "line": 199,
+     "bases": [],
+     "methods": [
+      "__init__",
+      "set_center",
+      "read",
+      "close"
+     ],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "ReceiverStatus",
+     "file": "sat_tool/sdr.py",
+     "line": 237,
+     "bases": [],
+     "methods": [],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "PassRecorder",
+     "file": "sat_tool/sdr.py",
+     "line": 250,
+     "bases": [],
+     "methods": [
+      "__init__",
+      "write",
+      "close"
+     ],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "SdrReceiver",
+     "file": "sat_tool/sdr.py",
+     "line": 273,
+     "bases": [],
+     "methods": [
+      "__init__",
+      "start",
+      "stop",
+      "tune",
+      "set_mode",
+      "set_squelch_pct",
+      "set_spectrum_rate",
+      "set_decoder",
+      "set_squelch",
+      "set_volume",
+      "start_recording",
+      "stop_recording",
+      "_decode_loop",
+      "_run",
+      "_process"
+     ],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "FirDecimator",
+     "file": "sat_tool/dsp.py",
+     "line": 26,
+     "bases": [],
+     "methods": [
+      "__init__",
+      "process"
+     ],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "Mixer",
+     "file": "sat_tool/dsp.py",
+     "line": 44,
+     "bases": [],
+     "methods": [
+      "__init__",
+      "process"
+     ],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "Demodulator",
+     "file": "sat_tool/dsp.py",
+     "line": 61,
+     "bases": [],
+     "methods": [
+      "__init__",
+      "set_mode",
+      "offset_hz",
+      "offset_hz",
+      "process",
+      "_apply_squelch"
+     ],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "AudioRing",
+     "file": "sat_tool/audio_ring.py",
+     "line": 17,
+     "bases": [],
+     "methods": [
+      "__init__",
+      "level_ms",
+      "push",
+      "pull",
+      "clear"
+     ],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "UsbInterface",
+     "file": "sat_tool/rtl_driver.py",
+     "line": 24,
+     "bases": [],
+     "methods": [
+      "radio_interface",
+      "ready"
+     ],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "RxAudioDebug",
+     "file": "sat_tool/rx_debug.py",
+     "line": 32,
+     "bases": [],
+     "methods": [
+      "__init__",
+      "_reset",
+      "start",
+      "stop",
+      "event",
+      "sdr_block",
+      "retune",
+      "pull",
+      "heartbeat",
+      "second",
+      "_watchdog"
+     ],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "AfskDemodulator",
+     "file": "sat_tool/ax25.py",
+     "line": 28,
+     "bases": [],
+     "methods": [
+      "__init__",
+      "process"
+     ],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "HdlcDeframer",
+     "file": "sat_tool/ax25.py",
+     "line": 62,
+     "bases": [],
+     "methods": [
+      "__init__",
+      "push_level",
+      "push_bit"
+     ],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "KissDecoder",
+     "file": "sat_tool/ax25.py",
+     "line": 195,
+     "bases": [],
+     "methods": [
+      "__init__",
+      "feed"
+     ],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "KissTcpClient",
+     "file": "sat_tool/telemetry.py",
+     "line": 52,
+     "bases": [],
+     "methods": [
+      "__init__",
+      "start",
+      "stop",
+      "_run"
+     ],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "TelemetryDecoder",
+     "file": "sat_tool/telemetry.py",
+     "line": 98,
+     "bases": [],
+     "methods": [
+      "__init__",
+      "decoder_names",
+      "decode_with",
+      "decode"
+     ],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "TelemetryLog",
+     "file": "sat_tool/telemetry.py",
+     "line": 150,
+     "bases": [],
+     "methods": [
+      "__init__",
+      "append"
+     ],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "RingDevice",
+     "file": "sat_tool/sdr_panel.py",
+     "line": 37,
+     "bases": [
+      "QIODevice"
+     ],
+     "methods": [
+      "__init__",
+      "readData",
+      "writeData",
+      "bytesAvailable",
+      "isSequential"
+     ],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "WaterfallWidget",
+     "file": "sat_tool/sdr_panel.py",
+     "line": 88,
+     "bases": [
+      "QWidget"
+     ],
+     "methods": [
+      "__init__",
+      "push",
+      "resizeEvent",
+      "_x",
+      "paintEvent",
+      "_edge_hit",
+      "mousePressEvent",
+      "mouseMoveEvent",
+      "mouseReleaseEvent"
+     ],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "SdrPanel",
+     "file": "sat_tool/sdr_panel.py",
+     "line": 194,
+     "bases": [
+      "QWidget"
+     ],
+     "methods": [
+      "__init__",
+      "_build",
+      "_scroll",
+      "_select",
+      "_fill_ports",
+      "_fill_audio_devices",
+      "_led",
+      "save_settings",
+      "show_dock_automatically",
+      "detect",
+      "check_preparation",
+      "_prep_result",
+      "_prepared",
+      "diagnose_rtl",
+      "_show_diag",
+      "toggle_sdr",
+      "start_sdr",
+      "stop_sdr",
+      "_on_audio",
+      "_on_spectrum",
+      "_open_audio",
+      "_close_audio",
+      "change_volume",
+      "change_squelch",
+      "_mode_key",
+      "refresh_filter_choices",
+      "change_filter",
+      "drag_filter",
+      "change_wf_speed",
+      "change_wf_height",
+      "toggle_detached",
+      "click_tune",
+      "fast_tick",
+      "_recording",
+      "connect_rigs",
+      "disconnect_rigs",
+      "toggle_rx_debug",
+      "toggle_dde",
+      "arm_rig_doppler",
+      "_dispatch_rigs",
+      "rig_result",
+      "toggle_kiss",
+      "start_kiss",
+      "_handle_frame",
+      "_add_frame_row",
+      "_record_visible",
+      "apply_tlm_filter",
+      "show_frame_detail",
+      "push_heard",
+      "export_json",
+      "feed_display_scope",
+      "drain",
+      "shutdown"
+     ],
+     "confidence": "confirmed"
+    }
+   ],
+   "business_rules": [
+    {
+     "description": "Retune só fora da margem; offset de FI",
+     "location": "sat_tool/sdr.py:383",
+     "confidence": "confirmed"
+    },
+    {
+     "description": "Envio ao SatNOGS só com opção ligada e indicativo",
+     "location": "sat_tool/sdr_panel.py:1116",
+     "confidence": "confirmed"
+    }
+   ],
+   "dependencies": [
+    "cat-e-doppler",
+    "orbita-e-passagens"
+   ],
+   "algorithms": [
+    "FIR + decimação",
+    "demod FM/SSB/CW/AM",
+    "AFSK 1200 com PLL",
+    "HDLC/CRC-X25"
+   ],
+   "complexity": "high"
+  },
+  {
+   "name": "sstv",
+   "path": "sat_tool/",
+   "purpose": "Codificação e decodificação SSTV com Doppler residual e transmissão pela placa de som",
+   "primary_files": [
+    "sat_tool/sstv.py",
+    "sat_tool/sstv_panel.py"
+   ],
+   "functions": [
+    {
+     "name": "_martin",
+     "file": "sat_tool/sstv.py",
+     "params": [
+      "name",
+      "vis",
+      "scan"
+     ],
+     "line": 56,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_scottie",
+     "file": "sat_tool/sstv.py",
+     "params": [
+      "name",
+      "vis",
+      "scan"
+     ],
+     "line": 61,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_pd",
+     "file": "sat_tool/sstv.py",
+     "params": [
+      "name",
+      "vis",
+      "width",
+      "height",
+      "pixel_ms"
+     ],
+     "line": 66,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "rgb_to_ycc",
+     "file": "sat_tool/sstv.py",
+     "params": [
+      "rgb"
+     ],
+     "line": 88,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "ycc_to_rgb",
+     "file": "sat_tool/sstv.py",
+     "params": [
+      "y",
+      "cr",
+      "cb"
+     ],
+     "line": 96,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "value_to_hz",
+     "file": "sat_tool/sstv.py",
+     "params": [
+      "v"
+     ],
+     "line": 104,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "hz_to_value",
+     "file": "sat_tool/sstv.py",
+     "params": [
+      "f"
+     ],
+     "line": 108,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "fit_image",
+     "file": "sat_tool/sstv.py",
+     "params": [
+      "rgb",
+      "mode"
+     ],
+     "line": 113,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "vis_header",
+     "file": "sat_tool/sstv.py",
+     "params": [
+      "tone",
+      "vis"
+     ],
+     "line": 151,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "encode",
+     "file": "sat_tool/sstv.py",
+     "params": [
+      "rgb",
+      "mode_name",
+      "rate",
+      "amplitude"
+     ],
+     "line": 160,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "write_wav",
+     "file": "sat_tool/sstv.py",
+     "params": [
+      "path",
+      "audio",
+      "rate"
+     ],
+     "line": 196,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "read_wav",
+     "file": "sat_tool/sstv.py",
+     "params": [
+      "path"
+     ],
+     "line": 203,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_lowpass",
+     "file": "sat_tool/sstv.py",
+     "params": [
+      "cutoff",
+      "rate",
+      "taps"
+     ],
+     "line": 220,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "decode_audio",
+     "file": "sat_tool/sstv.py",
+     "params": [
+      "audio",
+      "rate"
+     ],
+     "line": 476,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "qimage_from_rgb",
+     "file": "sat_tool/sstv_panel.py",
+     "params": [
+      "rgb"
+     ],
+     "line": 31,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "rgb_from_qimage",
+     "file": "sat_tool/sstv_panel.py",
+     "params": [
+      "image"
+     ],
+     "line": 37,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "stamp",
+     "file": "sat_tool/sstv_panel.py",
+     "params": [
+      "image",
+      "text"
+     ],
+     "line": 50,
+     "confidence": "confirmed"
+    }
+   ],
+   "entities": [
+    {
+     "name": "Mode",
+     "file": "sat_tool/sstv.py",
+     "line": 19,
+     "bases": [],
+     "methods": [
+      "line_ms",
+      "lines",
+      "sync_offset_ms",
+      "sync_ms",
+      "duration_s"
+     ],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_Tone",
+     "file": "sat_tool/sstv.py",
+     "line": 125,
+     "bases": [],
+     "methods": [
+      "__init__",
+      "add",
+      "audio"
+     ],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "Image",
+     "file": "sat_tool/sstv.py",
+     "line": 227,
+     "bases": [],
+     "methods": [],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "Decoder",
+     "file": "sat_tool/sstv.py",
+     "line": 236,
+     "bases": [],
+     "methods": [
+      "__init__",
+      "reset",
+      "cancel_image",
+      "force_mode",
+      "_demod",
+      "feed",
+      "_trim",
+      "_mean",
+      "_find_vis",
+      "_begin",
+      "_samples",
+      "_line_start",
+      "_measure_sync",
+      "_component",
+      "_decode_lines",
+      "_render"
+     ],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "SstvWorker",
+     "file": "sat_tool/sstv_panel.py",
+     "line": 66,
+     "bases": [],
+     "methods": [
+      "__init__",
+      "start",
+      "stop",
+      "push",
+      "_run"
+     ],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "SstvPanel",
+     "file": "sat_tool/sstv_panel.py",
+     "line": 113,
+     "bases": [
+      "QWidget"
+     ],
+     "methods": [
+      "__init__",
+      "_build",
+      "_set",
+      "_devices",
+      "_inputs",
+      "_outputs",
+      "toggle_rx",
+      "listening_sdr",
+      "feed_sdr",
+      "_open_input",
+      "_read_input",
+      "_close_input",
+      "force_start",
+      "drain",
+      "_meta",
+      "_finish",
+      "auto_path",
+      "_show",
+      "save_as",
+      "show_folder",
+      "pick_image",
+      "load_tx_image",
+      "_tx_changed",
+      "save_wav",
+      "transmit",
+      "_tx_state",
+      "stop_tx",
+      "shutdown"
+     ],
+     "confidence": "confirmed"
+    }
+   ],
+   "business_rules": [
+    {
+     "description": "PTT pelo VOX; o programa nunca aciona PTT",
+     "location": "sat_tool/sstv_panel.py:1",
+     "confidence": "confirmed"
+    }
+   ],
+   "dependencies": [
+    "sdr-e-telemetria"
+   ],
+   "algorithms": [
+    "VIS",
+    "sincronismo por linha e correção de inclinação"
+   ],
+   "complexity": "medium"
+  },
+  {
+   "name": "atualizacao-ota",
+   "path": "sat_tool/",
+   "purpose": "Verificação, download verificado e instalação de versões a partir de www.pt2vhf.com",
+   "primary_files": [
+    "sat_tool/updater.py"
+   ],
+   "functions": [
+    {
+     "name": "version_tuple",
+     "file": "sat_tool/updater.py",
+     "params": [
+      "raw"
+     ],
+     "line": 39,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "install_flavor",
+     "file": "sat_tool/updater.py",
+     "params": [
+      "qt_binding"
+     ],
+     "line": 44,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "versioned_portable_target",
+     "file": "sat_tool/updater.py",
+     "params": [
+      "exe",
+      "version"
+     ],
+     "line": 65,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "rename_portable_to_version",
+     "file": "sat_tool/updater.py",
+     "params": [
+      "version",
+      "exe_path"
+     ],
+     "line": 74,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "asset_name",
+     "file": "sat_tool/updater.py",
+     "params": [
+      "version",
+      "variant",
+      "kind"
+     ],
+     "line": 101,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "is_official_asset",
+     "file": "sat_tool/updater.py",
+     "params": [
+      "url",
+      "name"
+     ],
+     "line": 108,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "select_release",
+     "file": "sat_tool/updater.py",
+     "params": [
+      "manifest",
+      "current_version",
+      "variant",
+      "kind"
+     ],
+     "line": 121,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "callsign_param",
+     "file": "sat_tool/updater.py",
+     "params": [
+      "callsign"
+     ],
+     "line": 167,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "update_url",
+     "file": "sat_tool/updater.py",
+     "params": [
+      "callsign"
+     ],
+     "line": 173,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "check_for_update",
+     "file": "sat_tool/updater.py",
+     "params": [
+      "current_version",
+      "variant",
+      "kind"
+     ],
+     "line": 178,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "parse_checksum_manifest",
+     "file": "sat_tool/updater.py",
+     "params": [
+      "text",
+      "name"
+     ],
+     "line": 191,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "download_update",
+     "file": "sat_tool/updater.py",
+     "params": [
+      "update",
+      "progress"
+     ],
+     "line": 199,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "safe_extract_portable",
+     "file": "sat_tool/updater.py",
+     "params": [
+      "zip_path"
+     ],
+     "line": 235,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "update_script_args",
+     "file": "sat_tool/updater.py",
+     "params": [
+      "helper"
+     ],
+     "line": 260,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "read_update_result",
+     "file": "sat_tool/updater.py",
+     "params": [
+      "temp_dir"
+     ],
+     "line": 269,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "mark_update_pending",
+     "file": "sat_tool/updater.py",
+     "params": [
+      "version",
+      "temp_dir"
+     ],
+     "line": 285,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "check_pending_update",
+     "file": "sat_tool/updater.py",
+     "params": [
+      "current_version",
+      "temp_dir"
+     ],
+     "line": 295,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "update_failure_message",
+     "file": "sat_tool/updater.py",
+     "params": [
+      "detail"
+     ],
+     "line": 322,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "launch_staged_update",
+     "file": "sat_tool/updater.py",
+     "params": [
+      "package"
+     ],
+     "line": 331,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "helper_creation_flags",
+     "file": "sat_tool/updater.py",
+     "params": [
+      "breakaway"
+     ],
+     "line": 354,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "start_update_helper",
+     "file": "sat_tool/updater.py",
+     "params": [
+      "args",
+      "workdir",
+      "temp_dir",
+      "popen"
+     ],
+     "line": 367,
+     "confidence": "confirmed"
+    }
+   ],
+   "entities": [
+    {
+     "name": "AvailableUpdate",
+     "file": "sat_tool/updater.py",
+     "line": 90,
+     "bases": [],
+     "methods": [],
+     "confidence": "confirmed"
+    }
+   ],
+   "business_rules": [
+    {
+     "description": "Só https://www.pt2vhf.com/downloads/sat-tool/<nome>, sem redirecionamento",
+     "location": "sat_tool/updater.py:108",
+     "confidence": "confirmed"
+    },
+    {
+     "description": "Tamanho e SHA-256 obrigatórios",
+     "location": "sat_tool/updater.py:199",
+     "confidence": "confirmed"
+    },
+    {
+     "description": "Build de código-fonte nunca se atualiza",
+     "location": "sat_tool/updater.py:44",
+     "confidence": "confirmed"
+    }
+   ],
+   "dependencies": [
+    "diagnostico"
+   ],
+   "algorithms": [
+    "SHA-256 em fluxo"
+   ],
+   "complexity": "medium"
+  },
+  {
+   "name": "painel-web",
+   "path": "sat_tool/",
+   "purpose": "Painel web local/LAN com controles opcionais protegidos por PIN",
+   "primary_files": [
+    "sat_tool/web_ui.py"
+   ],
+   "functions": [
+    {
+     "name": "_private_ipv4",
+     "file": "sat_tool/web_ui.py",
+     "params": [
+      "raw"
+     ],
+     "line": 127,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "lan_ipv4_candidates",
+     "file": "sat_tool/web_ui.py",
+     "params": [
+      "max_age"
+     ],
+     "line": 138,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "detect_lan_ipv4",
+     "file": "sat_tool/web_ui.py",
+     "params": [],
+     "line": 172,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "client_allowed",
+     "file": "sat_tool/web_ui.py",
+     "params": [
+      "raw"
+     ],
+     "line": 177,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "pin_hash",
+     "file": "sat_tool/web_ui.py",
+     "params": [
+      "pin",
+      "salt"
+     ],
+     "line": 188,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "valid_pin",
+     "file": "sat_tool/web_ui.py",
+     "params": [
+      "pin"
+     ],
+     "line": 192,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "validate_control",
+     "file": "sat_tool/web_ui.py",
+     "params": [
+      "payload"
+     ],
+     "line": 197,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "firewall_rule_name",
+     "file": "sat_tool/web_ui.py",
+     "params": [
+      "port"
+     ],
+     "line": 220,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "firewall_rule_args",
+     "file": "sat_tool/web_ui.py",
+     "params": [
+      "port"
+     ],
+     "line": 224,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_hidden",
+     "file": "sat_tool/web_ui.py",
+     "params": [],
+     "line": 230,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "firewall_rule_present",
+     "file": "sat_tool/web_ui.py",
+     "params": [
+      "port",
+      "runner",
+      "platform"
+     ],
+     "line": 236,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "request_windows_firewall_rule",
+     "file": "sat_tool/web_ui.py",
+     "params": [
+      "port",
+      "runner",
+      "platform"
+     ],
+     "line": 248,
+     "confidence": "confirmed"
+    }
+   ],
+   "entities": [
+    {
+     "name": "_QuickHTTPServer",
+     "file": "sat_tool/web_ui.py",
+     "line": 265,
+     "bases": [
+      "ThreadingHTTPServer"
+     ],
+     "methods": [
+      "server_bind"
+     ],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "LocalStatusServer",
+     "file": "sat_tool/web_ui.py",
+     "line": 275,
+     "bases": [],
+     "methods": [
+      "__init__",
+      "url",
+      "url_for",
+      "urls",
+      "listening",
+      "note_remote_request",
+      "remote_active",
+      "diagnostics",
+      "rotate_key",
+      "browser_recent",
+      "publish",
+      "publish_display",
+      "drain_commands",
+      "_event",
+      "_new_session",
+      "_session_ok",
+      "check_pin",
+      "start",
+      "stop"
+     ],
+     "confidence": "confirmed"
+    }
+   ],
+   "business_rules": [
+    {
+     "description": "Só rede privada ou loopback",
+     "location": "sat_tool/web_ui.py:177",
+     "confidence": "confirmed"
+    },
+    {
+     "description": "Controles exigem cabeçalho próprio, mesma origem e PIN",
+     "location": "sat_tool/web_ui.py:497",
+     "confidence": "confirmed"
+    },
+    {
+     "description": "5 PIN errados travam o IP por 5 min",
+     "location": "sat_tool/web_ui.py:37",
+     "confidence": "confirmed"
+    }
+   ],
+   "dependencies": [],
+   "algorithms": [
+    "PBKDF2-SHA256"
+   ],
+   "complexity": "medium"
+  },
+  {
+   "name": "interface-e-idiomas",
+   "path": "sat_tool/",
+   "purpose": "Janela principal, idiomas, temas, escala, medidor de recursos e compatibilidade Qt",
+   "primary_files": [
+    "sat_tool/app.py",
+    "sat_tool/i18n.py",
+    "sat_tool/i18n_runtime.py",
+    "sat_tool/appearance.py",
+    "sat_tool/form_sizing.py",
+    "sat_tool/ui_scale.py",
+    "sat_tool/resource_meter.py",
+    "sat_tool/qt_compat.py",
+    "sat_tool/frequency.py"
+   ],
+   "functions": [
+    {
+     "name": "top_button_style",
+     "file": "sat_tool/app.py",
+     "params": [
+      "colors"
+     ],
+     "line": 63,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "branding_asset",
+     "file": "sat_tool/app.py",
+     "params": [
+      "name"
+     ],
+     "line": 68,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "label",
+     "file": "sat_tool/app.py",
+     "params": [
+      "t"
+     ],
+     "line": 107,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "group",
+     "file": "sat_tool/app.py",
+     "params": [
+      "title"
+     ],
+     "line": 113,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_single_instance_mutex",
+     "file": "sat_tool/app.py",
+     "params": [],
+     "line": 5178,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "main",
+     "file": "sat_tool/app.py",
+     "params": [],
+     "line": 5189,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "translated",
+     "file": "sat_tool/i18n.py",
+     "params": [
+      "original",
+      "locale"
+     ],
+     "line": 446,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_load_locale_files",
+     "file": "sat_tool/i18n.py",
+     "params": [],
+     "line": 451,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "resolve_language",
+     "file": "sat_tool/i18n.py",
+     "params": [
+      "saved",
+      "system_name"
+     ],
+     "line": 483,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "flag_icon",
+     "file": "sat_tool/i18n.py",
+     "params": [
+      "code",
+      "width",
+      "height"
+     ],
+     "line": 514,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_load_dynamic",
+     "file": "sat_tool/i18n_runtime.py",
+     "params": [],
+     "line": 32,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_templates",
+     "file": "sat_tool/i18n_runtime.py",
+     "params": [
+      "locale"
+     ],
+     "line": 56,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_fill",
+     "file": "sat_tool/i18n_runtime.py",
+     "params": [
+      "template",
+      "parts"
+     ],
+     "line": 72,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "tr",
+     "file": "sat_tool/i18n_runtime.py",
+     "params": [
+      "text",
+      "locale"
+     ],
+     "line": 83,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_upper_table",
+     "file": "sat_tool/i18n_runtime.py",
+     "params": [
+      "locale"
+     ],
+     "line": 123,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_keep_space",
+     "file": "sat_tool/i18n_runtime.py",
+     "params": [
+      "chunk",
+      "locale"
+     ],
+     "line": 129,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "translate_page",
+     "file": "sat_tool/i18n_runtime.py",
+     "params": [
+      "html",
+      "texts",
+      "locale"
+     ],
+     "line": 142,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "set_locale",
+     "file": "sat_tool/i18n_runtime.py",
+     "params": [
+      "locale"
+     ],
+     "line": 152,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "locale",
+     "file": "sat_tool/i18n_runtime.py",
+     "params": [],
+     "line": 156,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_wrap_text_setter",
+     "file": "sat_tool/i18n_runtime.py",
+     "params": [
+      "cls",
+      "name",
+      "getter"
+     ],
+     "line": 161,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_original",
+     "file": "sat_tool/i18n_runtime.py",
+     "params": [
+      "widget",
+      "getter"
+     ],
+     "line": 177,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_wrap_messagebox",
+     "file": "sat_tool/i18n_runtime.py",
+     "params": [
+      "QMessageBox"
+     ],
+     "line": 185,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_wrap_combo",
+     "file": "sat_tool/i18n_runtime.py",
+     "params": [
+      "QComboBox"
+     ],
+     "line": 198,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_translate_item",
+     "file": "sat_tool/i18n_runtime.py",
+     "params": [
+      "item"
+     ],
+     "line": 232,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_wrap_table",
+     "file": "sat_tool/i18n_runtime.py",
+     "params": [
+      "QTableWidget"
+     ],
+     "line": 248,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "install",
+     "file": "sat_tool/i18n_runtime.py",
+     "params": [
+      "qt"
+     ],
+     "line": 257,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "translate_widget",
+     "file": "sat_tool/i18n_runtime.py",
+     "params": [
+      "widget"
+     ],
+     "line": 290,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "combo_items",
+     "file": "sat_tool/i18n_runtime.py",
+     "params": [
+      "widget"
+     ],
+     "line": 316,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "table_items",
+     "file": "sat_tool/i18n_runtime.py",
+     "params": [
+      "widget"
+     ],
+     "line": 327,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "retranslate_all",
+     "file": "sat_tool/i18n_runtime.py",
+     "params": [
+      "app",
+      "adopt"
+     ],
+     "line": 335,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_rgb",
+     "file": "sat_tool/appearance.py",
+     "params": [
+      "hexcolor"
+     ],
+     "line": 26,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_hex",
+     "file": "sat_tool/appearance.py",
+     "params": [
+      "rgb"
+     ],
+     "line": 33,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "is_alert",
+     "file": "sat_tool/appearance.py",
+     "params": [
+      "hexcolor"
+     ],
+     "line": 37,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "transform",
+     "file": "sat_tool/appearance.py",
+     "params": [
+      "hexcolor",
+      "opts"
+     ],
+     "line": 44,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "transform_qss",
+     "file": "sat_tool/appearance.py",
+     "params": [
+      "qss",
+      "opts"
+     ],
+     "line": 69,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "luminance",
+     "file": "sat_tool/appearance.py",
+     "params": [
+      "hexcolor"
+     ],
+     "line": 77,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "contrast_ratio",
+     "file": "sat_tool/appearance.py",
+     "params": [
+      "a",
+      "b"
+     ],
+     "line": 84,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "text_contrast",
+     "file": "sat_tool/appearance.py",
+     "params": [
+      "opts"
+     ],
+     "line": 89,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "display_dim",
+     "file": "sat_tool/appearance.py",
+     "params": [
+      "opts"
+     ],
+     "line": 94,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_advance",
+     "file": "sat_tool/form_sizing.py",
+     "params": [
+      "widget",
+      "text"
+     ],
+     "line": 29,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "combo_width",
+     "file": "sat_tool/form_sizing.py",
+     "params": [
+      "combo"
+     ],
+     "line": 34,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "spin_width",
+     "file": "sat_tool/form_sizing.py",
+     "params": [
+      "spin"
+     ],
+     "line": 43,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "text_width",
+     "file": "sat_tool/form_sizing.py",
+     "params": [
+      "edit",
+      "chars"
+     ],
+     "line": 48,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "fit_widget",
+     "file": "sat_tool/form_sizing.py",
+     "params": [
+      "widget",
+      "chars",
+      "max_length"
+     ],
+     "line": 52,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_add_trailing_space",
+     "file": "sat_tool/form_sizing.py",
+     "params": [
+      "layout",
+      "seen"
+     ],
+     "line": 70,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "fit_settings",
+     "file": "sat_tool/form_sizing.py",
+     "params": [
+      "window",
+      "root"
+     ],
+     "line": 105,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "fit_combo_to_current",
+     "file": "sat_tool/form_sizing.py",
+     "params": [
+      "combo",
+      "min_text"
+     ],
+     "line": 126,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "keep_combo_fitted",
+     "file": "sat_tool/form_sizing.py",
+     "params": [
+      "combo",
+      "min_text"
+     ],
+     "line": 152,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "clamp",
+     "file": "sat_tool/ui_scale.py",
+     "params": [
+      "value"
+     ],
+     "line": 25,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "windows_work_area_height",
+     "file": "sat_tool/ui_scale.py",
+     "params": [],
+     "line": 30,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "choose_scale",
+     "file": "sat_tool/ui_scale.py",
+     "params": [
+      "setting",
+      "screen_height",
+      "learned"
+     ],
+     "line": 49,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "apply_before_qt",
+     "file": "sat_tool/ui_scale.py",
+     "params": [
+      "values"
+     ],
+     "line": 67,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "current_scale",
+     "file": "sat_tool/ui_scale.py",
+     "params": [],
+     "line": 80,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "learn_from_window",
+     "file": "sat_tool/ui_scale.py",
+     "params": [
+      "window",
+      "scroll",
+      "available_height"
+     ],
+     "line": 87,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "qt_exec",
+     "file": "sat_tool/qt_compat.py",
+     "params": [
+      "app"
+     ],
+     "line": 49,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "format_frequency",
+     "file": "sat_tool/frequency.py",
+     "params": [
+      "hz",
+      "style"
+     ],
+     "line": 8,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "parse_mhz_input",
+     "file": "sat_tool/frequency.py",
+     "params": [
+      "text"
+     ],
+     "line": 25,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "frequency_label",
+     "file": "sat_tool/frequency.py",
+     "params": [
+      "hz",
+      "style"
+     ],
+     "line": 41,
+     "confidence": "confirmed"
+    }
+   ],
+   "entities": [
+    {
+     "name": "Events",
+     "file": "sat_tool/app.py",
+     "line": 100,
+     "bases": [
+      "QObject"
+     ],
+     "methods": [],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "MainWindow",
+     "file": "sat_tool/app.py",
+     "line": 118,
+     "bases": [
+      "RotorUiMixin",
+      "QMainWindow"
+     ],
+     "methods": [
+      "__init__",
+      "top_control_height",
+      "align_top_controls",
+      "install_display_shortcuts",
+      "show_fitted",
+      "check_ui_scale",
+      "show_official_site_notice",
+      "log",
+      "_append_log",
+      "background",
+      "init_ui",
+      "init_sdr_dock",
+      "toggle_sdr_dock",
+      "_remember_sdr_dock",
+      "doppler_snapshot",
+      "retune_nominal_downlink",
+      "load_fields",
+      "ui_language",
+      "capture_static_language",
+      "apply_language",
+      "build_language_menu",
+      "set_language",
+      "change_language",
+      "change_frequency_style",
+      "save_update_preferences",
+      "check_for_updates",
+      "update_callsign",
+      "request_update",
+      "operation_busy",
+      "try_auto_update",
+      "show_tray_message",
+      "maybe_prompt_update",
+      "download_progress",
+      "update_ready",
+      "selftest_ota",
+      "show_last_update_result",
+      "station",
+      "saved_station",
+      "stored_map_position",
+      "begin_station_map",
+      "show_station_map_preview",
+      "poll_station_map",
+      "receive_station_map_pick",
+      "update_station_map_numeric",
+      "copy_station_map",
+      "restore_station_map",
+      "cancel_station_map",
+      "confirm_station_map",
+      "save_station",
+      "apply_grid_locator",
+      "geolocate",
+      "grant_browser_geo",
+      "finish_browser_geolocation",
+      "poll_browser_geolocation",
+      "browser_geolocation_result",
+      "apply_location_fix",
+      "update_ports",
+      "change_startup_connect",
+      "startup_cat_connect",
+      "request_cat_connection"
+     ],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "PolishTranslator",
+     "file": "sat_tool/i18n_runtime.py",
+     "line": 345,
+     "bases": [],
+     "methods": [
+      "__init__"
+     ],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_RefitOnFont",
+     "file": "sat_tool/form_sizing.py",
+     "line": 141,
+     "bases": [
+      "QObject"
+     ],
+     "methods": [
+      "__init__",
+      "eventFilter"
+     ],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "ProcessUsage",
+     "file": "sat_tool/resource_meter.py",
+     "line": 27,
+     "bases": [],
+     "methods": [
+      "__init__",
+      "cpu_percent",
+      "rss_bytes",
+      "total_bytes"
+     ],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "ResourceMeter",
+     "file": "sat_tool/resource_meter.py",
+     "line": 82,
+     "bases": [
+      "QWidget"
+     ],
+     "methods": [
+      "__init__",
+      "sample",
+      "text",
+      "_color",
+      "paintEvent"
+     ],
+     "confidence": "confirmed"
+    }
+   ],
+   "business_rules": [
+    {
+     "description": "Qt só na thread da GUI; trabalhos em background por chave",
+     "location": "sat_tool/app.py:432",
+     "confidence": "confirmed"
+    },
+    {
+     "description": "Escala 80–100 % antes da QApplication",
+     "location": "sat_tool/ui_scale.py:67",
+     "confidence": "confirmed"
+    }
+   ],
+   "dependencies": [
+    "orbita-e-passagens",
+    "catalogo-e-tle",
+    "cat-e-doppler",
+    "rotor",
+    "display-lcd",
+    "sdr-e-telemetria",
+    "atualizacao-ota",
+    "painel-web",
+    "diagnostico"
+   ],
+   "algorithms": [],
+   "complexity": "high"
+  },
+  {
+   "name": "diagnostico",
+   "path": "sat_tool/",
+   "purpose": "Diagnóstico de falhas, autoteste do binário, diário de eventos e debug do áudio RX",
+   "primary_files": [
+    "sat_tool/crash_diagnostics.py",
+    "sat_tool/diagnostics.py",
+    "sat_tool/log_journal.py",
+    "sat_tool/rx_debug.py"
+   ],
+   "functions": [
+    {
+     "name": "utc_time",
+     "file": "sat_tool/crash_diagnostics.py",
+     "params": [],
+     "line": 23,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "diagnostic_dir",
+     "file": "sat_tool/crash_diagnostics.py",
+     "params": [],
+     "line": 27,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_rotate",
+     "file": "sat_tool/crash_diagnostics.py",
+     "params": [
+      "path",
+      "max_size"
+     ],
+     "line": 36,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_append_event",
+     "file": "sat_tool/crash_diagnostics.py",
+     "params": [
+      "message"
+     ],
+     "line": 46,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_state",
+     "file": "sat_tool/crash_diagnostics.py",
+     "params": [
+      "status"
+     ],
+     "line": 57,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "install_diagnostics",
+     "file": "sat_tool/crash_diagnostics.py",
+     "params": [],
+     "line": 72,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "heartbeat",
+     "file": "sat_tool/crash_diagnostics.py",
+     "params": [],
+     "line": 111,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "report_exception",
+     "file": "sat_tool/crash_diagnostics.py",
+     "params": [
+      "source",
+      "exception"
+     ],
+     "line": 116,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "report_event",
+     "file": "sat_tool/crash_diagnostics.py",
+     "params": [
+      "message"
+     ],
+     "line": 122,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "clean_shutdown",
+     "file": "sat_tool/crash_diagnostics.py",
+     "params": [],
+     "line": 126,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "run_self_test",
+     "file": "sat_tool/diagnostics.py",
+     "params": [
+      "report_path",
+      "expected_qt"
+     ],
+     "line": 11,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "_stamp",
+     "file": "sat_tool/rx_debug.py",
+     "params": [],
+     "line": 28,
+     "confidence": "confirmed"
+    }
+   ],
+   "entities": [
+    {
+     "name": "EventJournal",
+     "file": "sat_tool/log_journal.py",
+     "line": 11,
+     "bases": [],
+     "methods": [
+      "__init__",
+      "append",
+      "export"
+     ],
+     "confidence": "confirmed"
+    },
+    {
+     "name": "RxAudioDebug",
+     "file": "sat_tool/rx_debug.py",
+     "line": 32,
+     "bases": [],
+     "methods": [
+      "__init__",
+      "_reset",
+      "start",
+      "stop",
+      "event",
+      "sdr_block",
+      "retune",
+      "pull",
+      "heartbeat",
+      "second",
+      "_watchdog"
+     ],
+     "confidence": "confirmed"
+    }
+   ],
+   "business_rules": [
+    {
+     "description": "Diagnóstico sem coordenadas, CAT ou configurações pessoais",
+     "location": "sat_tool/crash_diagnostics.py:1",
+     "confidence": "confirmed"
+    }
+   ],
+   "dependencies": [],
+   "algorithms": [],
+   "complexity": "low"
+  },
+  {
+   "name": "build-e-publicacao",
+   "path": "sat_tool/",
+   "purpose": "CI, empacotamento Windows/Linux/macOS e publicação no site",
+   "primary_files": [
+    "scripts/build_deb.py",
+    "scripts/build_brand_assets.py",
+    "scripts/publish_sat_to_site.py"
+   ],
+   "functions": [
+    {
+     "name": "build",
+     "file": "scripts/build_deb.py",
+     "params": [
+      "version",
+      "app_dir",
+      "out"
+     ],
+     "line": 60,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "main",
+     "file": "scripts/build_deb.py",
+     "params": [],
+     "line": 126,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "build",
+     "file": "scripts/build_brand_assets.py",
+     "params": [
+      "output"
+     ],
+     "line": 11,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "vtuple",
+     "file": "scripts/publish_sat_to_site.py",
+     "params": [
+      "raw"
+     ],
+     "line": 39,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "sha256",
+     "file": "scripts/publish_sat_to_site.py",
+     "params": [
+      "path"
+     ],
+     "line": 43,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "write_parts",
+     "file": "scripts/publish_sat_to_site.py",
+     "params": [
+      "source",
+      "target"
+     ],
+     "line": 51,
+     "confidence": "confirmed"
+    },
+    {
+     "name": "main",
+     "file": "scripts/publish_sat_to_site.py",
+     "params": [],
+     "line": 68,
+     "confidence": "confirmed"
+    }
+   ],
+   "entities": [],
+   "business_rules": [
+    {
+     "description": "Versão fixa no workflow precisa bater com __version__",
+     "location": ".github/workflows/windows.yml:29",
+     "confidence": "confirmed"
+    }
+   ],
+   "dependencies": [
+    "atualizacao-ota"
+   ],
+   "algorithms": [],
+   "complexity": "medium"
+  }
+ ]
+}

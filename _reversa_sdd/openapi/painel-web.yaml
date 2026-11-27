@@ -1,0 +1,83 @@
+openapi: 3.0.3
+info:
+  title: PT2VHF SAT Tool, painel web local
+  version: 1.9.7
+  description: Servidor embutido (web_ui.LocalStatusServer). Extraído pelo Reversa em 27/11/2026.
+servers:
+  - url: http://127.0.0.1:8094
+    description: Padrão, só o próprio computador
+  - url: http://{ip}:8094
+    description: Modo LAN (rede privada)
+    variables:
+      ip: {default: 192.168.0.10}
+components:
+  securitySchemes:
+    session:
+      type: apiKey
+      in: cookie
+      name: PT2VHFSession
+      description: Criado ao abrir / com ?key= (só no modo LAN).
+  schemas:
+    Control:
+      type: object
+      required: [action, pin]
+      properties:
+        action:
+          type: string
+          enum: [select_satellite, auto_cat, ab, rx_only, rotor_track, rotor_park, rotor_stop]
+        value: {}
+        pin: {type: string}
+    Error:
+      type: object
+      properties: {error: {type: string}}
+paths:
+  /:
+    get:
+      summary: Página do painel
+      parameters:
+        - {name: key, in: query, required: false, schema: {type: string}}
+      responses:
+        '200': {description: HTML}
+        '303': {description: Chave aceita; cookie de sessão criado}
+        '401': {description: Sem chave ou sessão (modo LAN)}
+  /api/status:
+    get:
+      summary: Estado atual
+      security: [{session: []}]
+      responses:
+        '200':
+          description: Snapshot do SAT Tool
+          content:
+            application/json:
+              schema: {type: object, properties: {controls: {type: boolean}}, additionalProperties: true}
+  /api/display.png:
+    get:
+      summary: Imagem do display LCD
+      security: [{session: []}]
+      responses:
+        '200': {description: PNG, content: {image/png: {}}}
+        '404': {description: Display indisponível}
+  /map:
+    get:
+      summary: Mapa vetorial offline
+      security: [{session: []}]
+      responses:
+        '200': {description: HTML}
+        '404': {description: Mapa indisponível}
+  /api/control:
+    post:
+      summary: Ação de controle (exige controles ligados, X-PT2VHF e PIN)
+      security: [{session: []}]
+      parameters:
+        - {name: X-PT2VHF, in: header, required: true, schema: {type: string, enum: ['1']}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/Control'}
+      responses:
+        '202': {description: Ação enfileirada}
+        '400': {description: Pedido inválido, content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
+        '403': {description: Controles desligados, origem não autorizada, ação proibida ou PIN incorreto}
+        '405': {description: POST em rota que não é /api/control}
+        '429': {description: PIN errado várias vezes; aguarde 5 minutos}

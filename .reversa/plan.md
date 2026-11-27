@@ -8,9 +8,9 @@
 
 ## Fase 1: Reconhecimento 🔍
 
-- [ ] **Scout** — Mapeamento de estrutura de pastas e tecnologias
-- [ ] **Scout** — Análise de dependências e gerenciadores de pacotes
-- [ ] **Scout** — Identificação de entry points, CI/CD e configurações
+- [x] ✅ **Scout** — Mapeamento de estrutura de pastas e tecnologias
+- [x] ✅ **Scout** — Análise de dependências e gerenciadores de pacotes
+- [x] ✅ **Scout** — Identificação de entry points, CI/CD e configurações
 
 ## Decisão de organização das specs 🗂️
 
@@ -20,29 +20,40 @@
 
 > O Reversa preenche esta seção com os módulos reais após o Scout concluir o reconhecimento.
 
-- [ ] **Arqueólogo** — Análise dos módulos identificados pelo Scout
+- [x] ✅ **Arqueólogo** — Análise do módulo `orbita-e-passagens`
+- [x] ✅ **Arqueólogo** — Análise do módulo `catalogo-e-tle`
+- [x] ✅ **Arqueólogo** — Análise do módulo `cat-e-doppler`
+- [x] ✅ **Arqueólogo** — Análise do módulo `rotor`
+- [x] ✅ **Arqueólogo** — Análise do módulo `display-lcd`
+- [x] ✅ **Arqueólogo** — Análise do módulo `sdr-e-telemetria`
+- [x] ✅ **Arqueólogo** — Análise do módulo `sstv`
+- [x] ✅ **Arqueólogo** — Análise do módulo `atualizacao-ota`
+- [x] ✅ **Arqueólogo** — Análise do módulo `painel-web`
+- [x] ✅ **Arqueólogo** — Análise do módulo `interface-e-idiomas`
+- [x] ✅ **Arqueólogo** — Análise do módulo `diagnostico`
+- [x] ✅ **Arqueólogo** — Análise do módulo `build-e-publicacao`
 
 ## Fase 3: Interpretação 🧠
 
-- [ ] **Detetive** — Arqueologia Git e ADRs retroativos
-- [ ] **Detetive** — Regras de negócio implícitas e máquinas de estado
-- [ ] **Detetive** — Matriz de permissões (RBAC/ACL)
-- [ ] **Arquiteto** — Diagramas C4 (Contexto, Containers, Componentes)
-- [ ] **Arquiteto** — ERD completo e integrações externas
-- [ ] **Arquiteto** — Spec Impact Matrix
+- [x] ✅ **Detetive** — Arqueologia Git e ADRs retroativos
+- [x] ✅ **Detetive** — Regras de negócio implícitas e máquinas de estado
+- [x] ✅ **Detetive** — Matriz de permissões (RBAC/ACL)
+- [x] ✅ **Arquiteto** — Diagramas C4 (Contexto, Containers, Componentes)
+- [x] ✅ **Arquiteto** — ERD completo e integrações externas
+- [x] ✅ **Arquiteto** — Spec Impact Matrix
 
 ## Fase 4: Geração 📝
 
-- [ ] **Redator** — Specs SDD por componente
-- [ ] **Redator** — OpenAPI (se aplicável)
-- [ ] **Redator** — User Stories (se aplicável)
-- [ ] **Redator** — Code/Spec Matrix
+- [x] ✅ **Redator** — Specs SDD por componente
+- [x] ✅ **Redator** — OpenAPI (se aplicável)
+- [x] ✅ **Redator** — User Stories (se aplicável)
+- [x] ✅ **Redator** — Code/Spec Matrix
 
 ## Fase 5: Revisão ✅
 
-- [ ] **Revisor** — Revisão cruzada de specs
-- [ ] **Revisor** — Resolução de lacunas com o usuário
-- [ ] **Revisor** — Relatório de confiança final
+- [x] ✅ **Revisor** — Revisão cruzada de specs
+- [x] ✅ **Revisor** — Resolução de lacunas com o usuário
+- [x] ✅ **Revisor** — Relatório de confiança final
 
 ---
 
@@ -50,10 +61,10 @@
 
 > Execute estes agentes quando os recursos estiverem disponíveis — podem rodar em qualquer fase.
 
-- [ ] **Visor** — Análise de interface via screenshots
-- [ ] **Data Master** — Análise completa do banco de dados
-- [ ] **Design System** — Extração de tokens de design
-- [ ] **Tracer** — Análise dinâmica (requer sistema acessível)
+- [~] **Visor** — Análise de interface via screenshots — não se aplica nesta rodada: sem capturas de tela
+- [~] **Data Master** — Análise completa do banco de dados — não se aplica: o app não usa banco de dados
+- [~] **Design System** — Extração de tokens de design — não se aplica: temas em `appearance.py` já documentados
+- [~] **Tracer** — Análise dinâmica (requer sistema acessível) — não se aplica: exige rádio/rotor/SDR reais
 
 ---
 

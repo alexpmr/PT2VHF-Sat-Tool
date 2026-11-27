@@ -4,20 +4,72 @@
   "user_name": "Alex",
   "chat_language": "pt-br",
   "doc_language": "Português",
-  "answer_mode": "chat",
+  "answer_mode": "file",
   "doc_level": "completo",
   "output_folder": "_reversa_sdd",
   "forward_folder": "_reversa_forward",
-  "phase": null,
-  "completed": [],
-  "pending": [
+  "phase": "concluido",
+  "completed": [
     "reconhecimento",
     "escavacao",
     "interpretacao",
     "geracao",
     "revisao"
   ],
-  "checkpoints": {},
+  "pending": [],
+  "checkpoints": {
+    "scout": {
+      "completed_at": "2026-11-27T15:17:44Z",
+      "files": [
+        "_reversa_sdd/inventory.md",
+        "_reversa_sdd/dependencies.md",
+        ".reversa/context/surface.json"
+      ]
+    },
+    "archaeologist": {
+      "completed_at": "2026-11-27T15:22:43Z",
+      "files": [
+        "_reversa_sdd/code-analysis.md",
+        "_reversa_sdd/data-dictionary.md",
+        "_reversa_sdd/flowcharts/",
+        ".reversa/context/modules.json"
+      ]
+    },
+    "detective": {
+      "completed_at": "2026-11-27T15:24:56Z",
+      "files": [
+        "_reversa_sdd/domain.md",
+        "_reversa_sdd/state-machines.md",
+        "_reversa_sdd/permissions.md",
+        "_reversa_sdd/adrs/"
+      ]
+    },
+    "architect": {
+      "completed_at": "2026-11-27T15:26:23Z",
+      "files": [
+        "_reversa_sdd/architecture.md",
+        "_reversa_sdd/c4-context.md",
+        "_reversa_sdd/c4-containers.md",
+        "_reversa_sdd/c4-components.md",
+        "_reversa_sdd/erd-complete.md",
+        "_reversa_sdd/traceability/spec-impact-matrix.md"
+      ]
+    },
+    "writer": {
+      "completed_at": "2026-11-27T15:32:34Z",
+      "files": [
+        "_reversa_sdd/"
+      ]
+    },
+    "reviewer": {
+      "completed_at": "2026-11-27T15:33:31Z",
+      "files": [
+        "_reversa_sdd/questions.md",
+        "_reversa_sdd/gaps.md",
+        "_reversa_sdd/confidence-report.md"
+      ]
+    }
+  },
   "engines": [
     "claude-code"
   ],
@@ -281,5 +333,16 @@
     ".reversa/plan.md",
     ".reversa/version",
     ".reversa/_config/manifest.yaml"
-  ]
+  ],
+  "specs_choice": "auto",
+  "redator_progress": {
+    "done": 36,
+    "total": 36,
+    "units": 12,
+    "globals": [
+      "openapi/painel-web.yaml",
+      "user-stories/",
+      "traceability/code-spec-matrix.md"
+    ]
+  }
 }
