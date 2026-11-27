@@ -182,6 +182,24 @@
 
 ## Pendentes
 
+- **Achados da análise Reversa (27/11/2026)** (registrado em 27/11/2026; operador pediu "gere nova versão completa"
+  após rodar o /reversa; specs em `_reversa_sdd/`, detalhes em `_reversa_sdd/gaps.md`)
+  - [ ] A1 · SDR: o gravador é pego sob o lock mas escrito fora dele em `SdrReceiver._process`; parar a gravação no meio
+    de um `write()` pode derrubar a thread de recepção (o SDR para depois de gravar uma passagem).
+  - [ ] A2 · FT-817/818: se a leitura inicial falha em `FT817.connect`, a porta fica aberta e a próxima tentativa acusa
+    "porta em uso".
+  - [ ] A3 · rigctld: falha na leitura inicial deixa o socket aberto; timeout no meio de uma resposta deixa bytes no
+    buffer e as respostas seguintes saem defasadas.
+  - [ ] A4 · `settings.json` com JSON quebrado impede o programa de abrir: abrir com os padrões e guardar uma cópia do
+    arquivo ruim.
+  - [ ] A5 · Painel web em modo só localhost não confere o cabeçalho `Host` (DNS rebinding poderia ler `/api/status`;
+    controles continuam com PIN).
+  - [ ] A6 · User-Agent do catálogo fixo em `PT2VHF-Sat-Tool/1.3.0`: usar a versão real.
+  - [ ] A7 · Telemetria sem rede tenta o SatNOGS a cada quadro (até 15 s por quadro): lembrar a falha por um tempo.
+  - [ ] A8 · `.reversa/config.user.toml` (arquivo pessoal do Reversa) versionado: tirar do Git e pôr no `.gitignore`.
+  - Perguntas ao operador (sem implementar): leitura AZ 140° EL 175° do rotor; faixa UHF 420 vs 430 MHz; bloquear
+    segunda instância do programa; edição Windows 7 ainda suportada? (`_reversa_sdd/questions.md`)
+
 - **Atualizar frequências demorava horas ("SatNOGS: 14 de 12535 satélites", 6h40)** (registrado em 22/11/2026, relato do operador)
   - Causa: o botão consultava o SatNOGS um satélite por vez para o catálogo inteiro (~12.500 requisições com pausa de
     0,4 s); o SatNOGS também recusa consultas em sequência (provável causa da falha no NORAD 27848).
